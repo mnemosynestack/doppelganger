@@ -8,7 +8,8 @@ on:
 env:
   GH_REGISTRY: ghcr.io
   GH_IMAGE_NAME: mnemosyne-artificial-intelligence/doppelganger
-  DOCKER_IMAGE_NAME: mnemosyneai/doppelganger
+  # Docker Hub info
+  D_HUB_REPO: mnemosyneai/doppelganger
 
 jobs:
   build-and-push:
@@ -29,10 +30,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        # Use an environment variable to safely check for secret existence in the 'if' condition
-        env:
-          D_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        if: "${{ env.D_TOKEN != '' }}"
+        # Only run if Docker Hub secrets are set
+        if: "${{ secrets.DOCKERHUB_TOKEN != '' && (secrets.DOCKERHUB_USERNAME != '' || vars.DOCKERHUB_USERNAME != '') }}"
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME || vars.DOCKERHUB_USERNAME }}
@@ -42,9 +41,10 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
+          # This generates tags for both registries only if the Docker Hub token is available
           images: |
             ${{ env.GH_REGISTRY }}/${{ env.GH_IMAGE_NAME }}
-            ${{ env.DOCKER_IMAGE_NAME }}
+            ${{ secrets.DOCKERHUB_TOKEN != '' && env.D_HUB_REPO || '' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
