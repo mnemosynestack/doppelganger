@@ -590,14 +590,16 @@
             }
             if (act.type === 'press') {
                 const keys = [
-                    'Enter', 'Tab', 'Escape', 'Backspace', 'Delete',
+                    'Enter', 'Tab', 'Escape', 'Backspace', 'Delete', 'Space',
                     'ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft',
-                    'abcdefghijklmnopqrstuvwxyz', '0123456789', '!@#$%^&*()_+{}|:"<>?~'
-                ].flatMap(k => k.length > 1 && !k.includes('Enter') && !k.includes('Arrow') && !k.length > 10 ? k.split('') : [k]);
+                    ...'abcdefghijklmnopqrstuvwxyz'.split(''),
+                    ...'0123456789'.split(''),
+                    ...'!@#$%^&*()_+{}|:"<>?~-=[]\\;\',./'.split('')
+                ];
 
                 html += `<select class="${inputClass.replace('a-selector', 'a-key')} mt-2 cursor-pointer" onchange="syncFromVisual()">`;
                 keys.forEach(k => {
-                    html += `<option class="bg-bg text-white" value="${k}" ${act.key === k ? 'selected' : ''}>${k}</option>`;
+                    html += `<option class="bg-bg text-white" value="${k}" ${act.key === k ? 'selected' : ''}>${k === ' ' ? 'Space' : k}</option>`;
                 });
                 html += `</select>`;
             }
