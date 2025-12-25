@@ -7,7 +7,6 @@ on:
 
 env:
   GH_REGISTRY: ghcr.io
-  GH_IMAGE_NAME: mnemosyne-artificial-intelligence/doppelganger
   D_HUB_REPO: mnemosyneai/doppelganger
 
 jobs:
@@ -16,7 +15,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    # Map secrets to env vars here to make them safely accessible to logic below
     env:
       D_HUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       D_HUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || vars.DOCKERHUB_USERNAME }}
@@ -33,21 +31,23 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        # Safely check environment variables
-        if: env.D_HUB_TOKEN != '' && env.D_HUB_USERNAME != ''
+        if: env.D_HUB_TOKEN != ''
         uses: docker/login-action@v3
         with:
           username: ${{ env.D_HUB_USERNAME }}
           password: ${{ env.D_HUB_TOKEN }}
 
+      # Build tags dynamically
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          # Use a simple list; docker-publish action will handle empty lines/tags gracefully
           images: |
-            ${{ env.GH_REGISTRY }}/${{ env.GH_IMAGE_NAME }}
+            ghcr.io/${{ github.repository }}
             ${{ env.D_HUB_TOKEN != '' && env.D_HUB_REPO || '' }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
