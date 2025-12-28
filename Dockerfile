@@ -18,6 +18,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
+# Ensure Playwright browsers + OS deps are available
+RUN npx playwright install --with-deps chromium chrome firefox
+
 # Copy server and built assets
 COPY --from=build /app/dist /app/dist
 COPY --from=build /app/public /app/public

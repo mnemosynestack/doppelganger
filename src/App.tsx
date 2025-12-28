@@ -8,6 +8,7 @@ import EditorScreen from './components/EditorScreen';
 import SettingsScreen from './components/SettingsScreen';
 import LoadingScreen from './components/LoadingScreen';
 import ExecutionsScreen from './components/ExecutionsScreen';
+import NotFoundScreen from './components/NotFoundScreen';
 
 export default function App() {
     const navigate = useNavigate();
@@ -374,7 +375,6 @@ export default function App() {
         if (!Array.isArray(merged.actions)) merged.actions = [];
         delete merged.versions;
         delete merged.last_opened;
-        delete merged.id;
         return merged;
     };
 
@@ -391,7 +391,7 @@ export default function App() {
             const prepared = list
                 .map((raw, index) => normalizeImportedTask(raw, index))
                 .filter((task): task is Task => !!task)
-                .map((task, index) => ({ ...task, id: `task_${stamp}_${index}` }));
+                .map((task) => (task.id ? task : { ...task, id: `task_${stamp}` }));
 
             if (prepared.length === 0) {
                 showAlert('No tasks to import.', 'error');
@@ -470,6 +470,7 @@ export default function App() {
                         />
                     } />
                     <Route path="/executions" element={<ExecutionsScreen onConfirm={requestConfirm} onNotify={showAlert} />} />
+                    <Route path="*" element={<NotFoundScreen onBack={() => navigate('/dashboard')} />} />
                 </Routes>
             </div>
         );
@@ -523,13 +524,16 @@ export default function App() {
 
 function EditorLoader({ tasks, loadTasks, touchTask, currentTask, setCurrentTask, ...props }: any) {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const [notFound, setNotFound] = useState(false);
 
     useEffect(() => {
         const init = async () => {
             if (currentTask?.id === id) return;
 
             setLoading(true);
+            setNotFound(false);
             let targetTasks = tasks;
             if (tasks.length === 0) {
                 targetTasks = await loadTasks();
@@ -546,11 +550,23 @@ function EditorLoader({ tasks, loadTasks, touchTask, currentTask, setCurrentTask
                 if ('includeShadowDom' in migrated) delete (migrated as any).includeShadowDom;
                 setCurrentTask(migrated);
                 if (id) touchTask(id);
+            } else {
+                setNotFound(true);
             }
             setLoading(false);
         };
         init();
     }, [id, tasks]);
+
+    if (notFound) {
+        return (
+            <NotFoundScreen
+                title="Task Not Found"
+                subtitle="This task does not exist or was deleted."
+                onBack={() => navigate('/dashboard')}
+            />
+        );
+    }
 
     if (loading || !currentTask || String(currentTask.id) !== String(id)) {
         return <LoadingScreen title="Loading Mission Data" subtitle="Syncing task payload" />;
