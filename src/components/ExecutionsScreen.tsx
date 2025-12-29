@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw, Trash2, Monitor, Cloud } from 'lucide-react';
-import { Execution } from '../types';
+import { Execution, ConfirmRequest } from '../types';
 
 interface ExecutionsScreenProps {
-    onConfirm: (message: string) => Promise<boolean>;
+    onConfirm: (request: string | ConfirmRequest) => Promise<boolean>;
     onNotify: (message: string, tone?: 'success' | 'error') => void;
 }
 

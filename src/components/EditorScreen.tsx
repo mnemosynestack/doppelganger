@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Play, Copy, Terminal, X, Check, History as HistoryIcon } from 'lucide-react';
-import { Task, TaskMode, ViewMode, VarType, Action, Results } from '../types';
+import { Task, TaskMode, ViewMode, VarType, Action, Results, ConfirmRequest } from '../types';
 import RichInput from './RichInput';
 import CodeEditor from './CodeEditor';
 import { SyntaxLanguage } from '../utils/syntaxHighlight';
@@ -15,7 +15,7 @@ interface EditorScreenProps {
     onRun: () => void;
     results: Results | null;
     saveMsg: string;
-    onConfirm: (message: string) => Promise<boolean>;
+    onConfirm: (request: string | ConfirmRequest) => Promise<boolean>;
     onNotify: (message: string, tone?: 'success' | 'error') => void;
 }
 
@@ -187,9 +187,14 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         }
         let copyText = text;
         if (text.length > MAX_COPY_CHARS) {
-            const confirmed = await onConfirm(`Copying ${formatSize(text.length)} may freeze your browser. Copy the first ${formatSize(MAX_COPY_CHARS)} instead?`);
-            if (!confirmed) return;
-            copyText = text.slice(0, MAX_COPY_CHARS);
+            const confirmed = await onConfirm({
+                message: `Copying ${formatSize(text.length)} may freeze your browser.`,
+                confirmLabel: 'Copy full',
+                cancelLabel: 'Copy segment'
+            });
+            if (!confirmed) {
+                copyText = text.slice(0, MAX_COPY_CHARS);
+            }
         }
 
         try {

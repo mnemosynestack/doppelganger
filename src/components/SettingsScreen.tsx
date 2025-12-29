@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Database, Image as ImageIcon, Eye, EyeOff, Copy } from 'lucide-react';
+import { ConfirmRequest } from '../types';
 
 interface SettingsScreenProps {
     onClearStorage: (type: 'screenshots' | 'cookies') => void;
-    onConfirm: (message: string) => Promise<boolean>;
+    onConfirm: (request: string | ConfirmRequest) => Promise<boolean>;
     onNotify: (message: string, tone?: 'success' | 'error') => void;
 }
 

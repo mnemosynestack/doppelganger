@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { User, Task, ViewMode, Results } from './types';
+import { User, Task, ViewMode, Results, ConfirmRequest } from './types';
 import Sidebar from './components/Sidebar';
 import AuthScreen from './components/AuthScreen';
 import DashboardScreen from './components/DashboardScreen';
@@ -30,7 +30,7 @@ export default function App() {
     const [saveMsg, setSaveMsg] = useState('');
 
     const [centerAlert, setCenterAlert] = useState<{ message: string; tone?: 'success' | 'error' } | null>(null);
-    const [centerConfirm, setCenterConfirm] = useState<{ message: string } | null>(null);
+    const [centerConfirm, setCenterConfirm] = useState<ConfirmRequest | null>(null);
     const confirmResolverRef = useRef<((value: boolean) => void) | null>(null);
     const showAlert = (message: string, tone: 'success' | 'error' = 'success') => {
         setCenterAlert({ message, tone });
@@ -40,10 +40,14 @@ export default function App() {
             }, 2000);
         }
     };
-    const requestConfirm = (message: string) => {
+    const requestConfirm = (request: string | ConfirmRequest) => {
         return new Promise<boolean>((resolve) => {
             confirmResolverRef.current = resolve;
-            setCenterConfirm({ message });
+            if (typeof request === 'string') {
+                setCenterConfirm({ message: request });
+            } else {
+                setCenterConfirm(request);
+            }
         });
     };
     const closeConfirm = (result: boolean) => {
@@ -498,20 +502,20 @@ export default function App() {
             {centerConfirm && (
                 <div className="fixed inset-0 z-[201] flex items-center justify-center bg-black/70 backdrop-blur-sm px-6">
                     <div className="glass-card w-full max-w-md rounded-[32px] border border-white/10 p-8 text-center shadow-2xl">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-500">Confirm</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-500">{centerConfirm.title ?? 'Confirm'}</p>
                         <p className="mt-4 font-mono text-sm text-white">{centerConfirm.message}</p>
                         <div className="mt-6 flex gap-4">
                             <button
                                 onClick={() => closeConfirm(false)}
                                 className="w-full rounded-2xl px-6 py-3 text-[9px] font-bold uppercase tracking-[0.3em] transition-all bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10"
                             >
-                                Cancel
+                                {centerConfirm.cancelLabel ?? 'Cancel'}
                             </button>
                             <button
                                 onClick={() => closeConfirm(true)}
                                 className="w-full rounded-2xl px-6 py-3 text-[9px] font-bold uppercase tracking-[0.3em] transition-all bg-white text-black hover:scale-105 shadow-xl shadow-white/10"
                             >
-                                Confirm
+                                {centerConfirm.confirmLabel ?? 'Confirm'}
                             </button>
                         </div>
                     </div>

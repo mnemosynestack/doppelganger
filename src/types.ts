@@ -77,3 +77,10 @@ export interface User {
     name: string;
     email: string;
 }
+
+export interface ConfirmRequest {
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    title?: string;
+}
