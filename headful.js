@@ -23,12 +23,30 @@ const userAgents = [
 
 let activeSession = null;
 
+const teardownActiveSession = async () => {
+    if (!activeSession) return;
+    try {
+        if (activeSession.interval) clearInterval(activeSession.interval);
+    } catch {}
+    try {
+        if (activeSession.context) {
+            await activeSession.context.storageState({ path: STORAGE_STATE_FILE });
+        }
+    } catch {}
+    try {
+        if (activeSession.browser) {
+            await activeSession.browser.close();
+        }
+    } catch {}
+    activeSession = null;
+};
+
 async function handleHeadful(req, res) {
     if (activeSession) {
-        return res.status(409).json({ error: 'HEADFUL_ALREADY_RUNNING' });
+        await teardownActiveSession();
     }
 
-    activeSession = { status: 'starting' };
+    activeSession = { status: 'starting', startedAt: Date.now() };
 
     const url = req.body.url || req.query.url || 'https://www.google.com';
 
@@ -42,11 +60,16 @@ async function handleHeadful(req, res) {
         browser = await chromium.launch({
             headless: false,
             channel: 'chrome',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--window-size=1280,720',
+                '--window-position=80,80'
+            ]
         });
 
         const contextOptions = {
-            viewport: { width: 1280, height: 720 },
+            viewport: null,
             userAgent: selectedUA,
             locale: 'en-US',
             timezoneId: 'America/New_York'
@@ -58,7 +81,31 @@ async function handleHeadful(req, res) {
         }
 
         const context = await browser.newContext(contextOptions);
+        await context.addInitScript(() => {
+            window.open = (url) => {
+                if (url) window.location.href = url;
+                return window;
+            };
+            document.addEventListener('click', (event) => {
+                const target = event.target;
+                const anchor = target && target.closest ? target.closest('a[target="_blank"]') : null;
+                if (anchor && anchor.href) {
+                    event.preventDefault();
+                    window.location.href = anchor.href;
+                }
+            }, true);
+        });
         const page = await context.newPage();
+
+        const closeIfExtra = async (extraPage) => {
+            if (!extraPage || extraPage === page) return;
+            try {
+                await extraPage.close();
+            } catch {}
+        };
+
+        context.on('page', closeIfExtra);
+        page.on('popup', closeIfExtra);
 
         await page.goto(url);
 
@@ -78,7 +125,7 @@ async function handleHeadful(req, res) {
         // Auto-save every 10 seconds while the window is open
         const interval = setInterval(saveState, 10000);
 
-        activeSession = { browser, context, interval, status: 'running' };
+        activeSession = { browser, context, interval, status: 'running', startedAt: activeSession.startedAt };
 
         // Save when the page is closed
         page.on('close', async () => {
@@ -105,7 +152,14 @@ async function handleHeadful(req, res) {
         console.error('Headful Error:', error);
         if (browser) await browser.close();
         activeSession = null;
-        res.status(500).json({ error: 'Failed to start headful session', details: error.message });
+        const message = String(error && error.message ? error.message : error);
+        const displayUnavailable = /missing x server|\$display|platform failed to initialize/i.test(message);
+        if (!res.headersSent && displayUnavailable) {
+            return res.status(409).json({ error: 'HEADFUL_DISPLAY_UNAVAILABLE', details: message });
+        }
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to start headful session', details: message });
+        }
     }
 }
 
@@ -114,20 +168,7 @@ async function stopHeadful(req, res) {
         return res.status(200).json({ message: 'No active headful session.' });
     }
 
-    try {
-        if (activeSession.interval) clearInterval(activeSession.interval);
-        if (activeSession.context) {
-            await activeSession.context.storageState({ path: STORAGE_STATE_FILE });
-        }
-    } catch {}
-
-    try {
-        if (activeSession.browser) {
-            await activeSession.browser.close();
-        }
-    } catch {}
-
-    activeSession = null;
+    await teardownActiveSession();
     res.json({ message: 'Headful session stopped.' });
 }
 

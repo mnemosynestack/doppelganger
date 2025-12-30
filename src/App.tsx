@@ -58,6 +58,39 @@ export default function App() {
     };
     const formatLabel = (value: string) => value ? value[0].toUpperCase() + value.slice(1) : value;
 
+    const formatExecutionError = (rawMessage: string, mode?: string) => {
+        const message = String(rawMessage || '').trim();
+        if (!message) return 'Execution failed.';
+
+        const lower = message.toLowerCase();
+        if (mode === 'headful') {
+            if (lower.includes('missing x server') || lower.includes('$display')) {
+                return 'Headful browser could not start because no display server is available.';
+            }
+            if (lower.includes('failed to connect to the bus')) {
+                return 'Headful browser could not start due to missing system services.';
+            }
+        }
+
+        let cleaned = message;
+        const flagsIndex = cleaned.indexOf('--disable-');
+        if (flagsIndex > 0) {
+            cleaned = cleaned.slice(0, flagsIndex).trim();
+        }
+        if (cleaned.length > 240) {
+            cleaned = `${cleaned.slice(0, 240)}...`;
+        }
+        return cleaned || 'Execution failed.';
+    };
+
+    const isDisplayUnavailable = (message: string) => {
+        const lower = String(message || '').toLowerCase();
+        return lower.includes('missing x server')
+            || lower.includes('$display')
+            || lower.includes('platform failed to initialize')
+            || lower.includes('no display server');
+    };
+
     const makeDefaultTask = () => ({
         name: "Imported Task",
         url: "",
@@ -266,6 +299,8 @@ export default function App() {
             timestamp: 'Running...',
         });
 
+        let payload: any = null;
+
         try {
             const cleanedVars: Record<string, any> = {};
             Object.entries(currentTask.variables).forEach(([name, def]) => {
@@ -298,7 +333,7 @@ export default function App() {
                 }))
             };
 
-            const payload = {
+            payload = {
                 ...resolvedTask,
                 taskVariables: cleanedVars,
                 variables: cleanedVars,
@@ -307,18 +342,29 @@ export default function App() {
                 taskName: currentTask.name
             };
 
-            const res = await fetch(`/${currentTask.mode}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const executeTask = async (mode: 'scrape' | 'agent' | 'headful') => {
+                const res = await fetch(`/${mode}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.details || errorData.error || "Request failed");
-            }
+                if (!res.ok) {
+                    let errorData: any = null;
+                    try {
+                        errorData = await res.json();
+                    } catch {
+                        errorData = null;
+                    }
+                    const error = new Error(errorData?.details || errorData?.error || "Request failed");
+                    (error as any).code = errorData?.error;
+                    throw error;
+                }
 
-            const data = await res.json();
+                return res.json();
+            };
+
+            const data = await executeTask(currentTask.mode);
 
             setResults({
                 url: currentTask.url,
@@ -330,7 +376,48 @@ export default function App() {
                 timestamp: new Date().toLocaleTimeString(),
             });
         } catch (e: any) {
-            showAlert("Execution crash: " + e.message, 'error');
+            if (
+                currentTask?.mode === 'headful'
+                && payload
+                && (e?.code === 'HEADFUL_DISPLAY_UNAVAILABLE' || isDisplayUnavailable(e?.message || String(e)))
+            ) {
+                try {
+                    const data = await (async () => {
+                        const res = await fetch(`/scrape`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!res.ok) {
+                            const errorData = await res.json();
+                            throw new Error(errorData.details || errorData.error || "Request failed");
+                        }
+                        return res.json();
+                    })();
+                    data.logs = [`Headful display unavailable; ran headless instead.`, ...(data.logs || [])];
+                    setResults({
+                        url: currentTask.url,
+                        finalUrl: data.final_url,
+                        html: data.html,
+                        data: data.data ?? data.html ?? "No data captured.",
+                        screenshotUrl: data.screenshot_url,
+                        logs: data.logs || [],
+                        timestamp: new Date().toLocaleTimeString(),
+                    });
+                    setIsExecuting(false);
+                    return;
+                } catch (fallbackError: any) {
+                    const errorMessage = formatExecutionError(fallbackError?.message || String(fallbackError), currentTask?.mode);
+                    showAlert(`Execution crash: ${errorMessage}`, 'error');
+                    setIsExecuting(false);
+                    return;
+                }
+            }
+            const errorMessage = formatExecutionError(e?.message || String(e), currentTask?.mode);
+            showAlert(`Execution crash: ${errorMessage}`, 'error');
+            if (currentTask?.mode === 'headful') {
+                setIsExecuting(false);
+            }
         } finally {
             if (currentTask.mode !== 'headful') {
                 setIsExecuting(false);

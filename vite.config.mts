@@ -10,15 +10,15 @@ export default defineConfig({
         },
     },
     server: {
-        port: 11345,
+        port: Number(process.env.VITE_DEV_PORT || 5173),
         proxy: {
-            '/api': 'http://localhost:11345',
-            '/scrape': 'http://localhost:11345',
-            '/scraper': 'http://localhost:11345',
-            '/agent': 'http://localhost:11345',
-            '/headful': 'http://localhost:11345',
-            '/tasks': 'http://localhost:11345',
-            '/screenshots': 'http://localhost:11345',
+            '/api': `http://localhost:${process.env.VITE_BACKEND_PORT || 11345}`,
+            '/scrape': `http://localhost:${process.env.VITE_BACKEND_PORT || 11345}`,
+            '/scraper': `http://localhost:${process.env.VITE_BACKEND_PORT || 11345}`,
+            '/agent': `http://localhost:${process.env.VITE_BACKEND_PORT || 11345}`,
+            '/headful': `http://localhost:${process.env.VITE_BACKEND_PORT || 11345}`,
+            '/tasks': `http://localhost:${process.env.VITE_BACKEND_PORT || 11345}`,
+            '/screenshots': `http://localhost:${process.env.VITE_BACKEND_PORT || 11345}`,
         },
     },
     build: {

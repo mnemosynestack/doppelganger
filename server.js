@@ -8,7 +8,23 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 11345;
 const DIST_DIR = path.join(__dirname, 'dist');
-const SESSION_SECRET = process.env.SESSION_SECRET;
+const SESSION_SECRET_FILE = path.join(__dirname, 'data', 'session_secret.txt');
+let SESSION_SECRET = process.env.SESSION_SECRET;
+
+if (!SESSION_SECRET) {
+    if (process.env.NODE_ENV !== 'production') {
+        try {
+            if (fs.existsSync(SESSION_SECRET_FILE)) {
+                SESSION_SECRET = fs.readFileSync(SESSION_SECRET_FILE, 'utf8').trim();
+            } else {
+                SESSION_SECRET = crypto.randomBytes(48).toString('hex');
+                fs.writeFileSync(SESSION_SECRET_FILE, SESSION_SECRET);
+            }
+        } catch (e) {
+            console.warn('Failed to load session secret from disk, falling back to process env only.');
+        }
+    }
+}
 
 if (!SESSION_SECRET) {
     throw new Error('SESSION_SECRET environment variable is required');
@@ -651,6 +667,8 @@ if (!fs.existsSync(screenshotsDir)) {
 app.use('/screenshots', express.static(screenshotsDir));
 app.use(express.static(DIST_DIR));
 
-app.listen(port, '0.0.0.0', () => {
-    console.log(`Doppelgänger Station Running at http://0.0.0.0:${port}`);
+const server = app.listen(port, '0.0.0.0', () => {
+    const address = server.address();
+    const displayPort = typeof address === 'object' && address ? address.port : port;
+    console.log(`Doppelgänger Station Running at http://0.0.0.0:${displayPort}`);
 });

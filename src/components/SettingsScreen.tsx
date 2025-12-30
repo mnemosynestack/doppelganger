@@ -19,6 +19,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     const [cookieOrigins, setCookieOrigins] = useState<any[]>([]);
     const [dataLoading, setDataLoading] = useState(false);
     const [expandedCookies, setExpandedCookies] = useState<Record<string, boolean>>({});
+    const [decodedCookies, setDecodedCookies] = useState<Record<string, boolean>>({});
     const [apiKey, setApiKey] = useState<string | null>(null);
     const [apiKeyLoading, setApiKeyLoading] = useState(false);
     const [apiKeySaving, setApiKeySaving] = useState(false);
@@ -77,9 +78,51 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         return `${cookie.name}|${cookie.domain || ''}|${cookie.path || ''}|${cookie.expires || ''}`;
     };
 
+    const isMostlyPrintable = (value: string) => {
+        if (!value) return false;
+        let printable = 0;
+        for (let i = 0; i < value.length; i += 1) {
+            const code = value.charCodeAt(i);
+            if (code === 9 || code === 10 || code === 13 || (code >= 32 && code <= 126)) {
+                printable += 1;
+            }
+        }
+        return printable / value.length >= 0.85;
+    };
+
+    const decodeCookieValue = (value: string) => {
+        if (!value) return null;
+        if (/%[0-9A-Fa-f]{2}/.test(value)) {
+            try {
+                const decoded = decodeURIComponent(value);
+                if (decoded !== value && isMostlyPrintable(decoded)) {
+                    return { value: decoded, kind: 'URL' as const };
+                }
+            } catch {
+                // Ignore invalid URI sequences
+            }
+        }
+        if (/^[A-Za-z0-9+/=]+$/.test(value) && value.length >= 12 && value.length % 4 === 0) {
+            try {
+                const decoded = atob(value);
+                if (decoded && isMostlyPrintable(decoded)) {
+                    return { value: decoded, kind: 'Base64' as const };
+                }
+            } catch {
+                // Ignore invalid base64
+            }
+        }
+        return null;
+    };
+
     const toggleCookie = (cookie: { name: string; domain?: string; path?: string; expires?: number }) => {
         const key = cookieKey(cookie);
         setExpandedCookies((prev) => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const toggleDecodedCookie = (cookie: { name: string; domain?: string; path?: string; expires?: number }) => {
+        const key = cookieKey(cookie);
+        setDecodedCookies((prev) => ({ ...prev, [key]: !prev[key] }));
     };
 
     const loadApiKey = async () => {
@@ -195,11 +238,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
                             </div>
                             <div className="flex flex-col gap-4">
                                 <div className="rounded-2xl bg-black/40 border border-white/10 px-4 py-3 font-mono text-[10px] text-blue-200/80 break-all min-h-[44px] flex items-center justify-between gap-3">
-                                    <span>
+                                    <span className={apiKey && !apiKeyVisible ? 'text-[14px] leading-none' : undefined}>
                                         {apiKeyLoading
                                             ? 'Loading...'
                                             : (apiKey
-                                                ? (apiKeyVisible ? apiKey : '•'.repeat(Math.max(12, apiKey.length)))
+                                                ? (apiKeyVisible ? apiKey : '••••••••••••••••••••••••••••••••••••••••')
                                                 : 'No API key set')}
                                     </span>
                                     <button
@@ -291,7 +334,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
                                         <div className="flex-1 min-w-0">
                                             <div className="text-[10px] font-bold text-white uppercase tracking-widest truncate">{shot.name}</div>
                                             <div className="text-[8px] text-gray-500 uppercase tracking-[0.2em]">
-                                                {new Date(shot.modified).toLocaleString()} • {(shot.size / 1024).toFixed(1)} KB
+                                                {new Date(shot.modified).toLocaleString()} | {(shot.size / 1024).toFixed(1)} KB
                                             </div>
                                         </div>
                                         <button
@@ -330,25 +373,38 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
                                     const key = cookieKey(cookie);
                                     const isExpanded = !!expandedCookies[key];
                                     const value = cookie.value || '';
-                                    const displayValue = isExpanded || value.length <= 120
-                                        ? value
-                                        : `${value.slice(0, 120)}…`;
+                                    const decodedCandidate = decodeCookieValue(value);
+                                    const showDecoded = !!decodedCandidate && !!decodedCookies[key];
+                                    const fullValue = showDecoded && decodedCandidate ? decodedCandidate.value : value;
+                                    const displayValue = isExpanded || fullValue.length <= 120
+                                        ? fullValue
+                                        : `${fullValue.slice(0, 120)}...`;
                                     return (
                                         <div key={key} className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="min-w-0">
                                                     <div className="text-[10px] font-bold text-white uppercase tracking-widest truncate">{cookie.name}</div>
                                                     <div className="text-[8px] text-gray-500 uppercase tracking-[0.2em]">
-                                                        {(cookie.domain || 'local')} • {(cookie.path || '/')}
-                                                        {cookie.expires ? ` • ${new Date(cookie.expires * 1000).toLocaleString()}` : ''}
+                                                        {(cookie.domain || 'local')} | {(cookie.path || '/')}
+                                                        {cookie.expires ? ` | ${new Date(cookie.expires * 1000).toLocaleString()}` : ''}
                                                     </div>
                                                 </div>
-                                                <button
-                                                    onClick={() => deleteCookie(cookie)}
-                                                    className="px-3 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-red-500/5 border border-red-500/10 text-red-400 hover:bg-red-500/10 transition-all"
-                                                >
-                                                    Delete
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    {decodedCandidate && (
+                                                        <button
+                                                            onClick={() => toggleDecodedCookie(cookie)}
+                                                            className="px-3 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                                                        >
+                                                            {showDecoded ? 'Show Raw' : `Decode ${decodedCandidate.kind}`}
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => deleteCookie(cookie)}
+                                                        className="px-3 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-red-500/5 border border-red-500/10 text-red-400 hover:bg-red-500/10 transition-all"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div
                                                 onClick={() => toggleCookie(cookie)}

@@ -120,23 +120,67 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         return { text: text.slice(0, limit), truncated: true };
     };
 
-    const getResultsCopyText = (payload: Results | null) => {
+    const getResultsCopyPayload = (payload: Results | null) => {
         if (!payload || payload.data === undefined || payload.data === null) return { reason: 'No data to copy.' };
-        const raw = payload.data;
-        if (typeof raw === 'string') return { text: raw };
-        if (Array.isArray(raw) && raw.length > MAX_COPY_ITEMS) {
-            return { reason: `Array has ${raw.length} items.` };
+        return { raw: payload.data };
+    };
+
+    const clampWithReason = (text: string, limit: number, reasons: string[]) => {
+        if (text.length <= limit) return text;
+        reasons.push(`first ${limit.toLocaleString()} chars`);
+        return text.slice(0, limit);
+    };
+
+    const getTruncatedCopyText = (raw: any) => {
+        const reasons: string[] = [];
+        if (typeof raw === 'string') {
+            const text = clampWithReason(raw, MAX_COPY_CHARS, reasons);
+            return { text, truncated: reasons.length > 0, reason: reasons.join(', ') };
+        }
+        if (Array.isArray(raw)) {
+            let snapshot = raw;
+            if (raw.length > MAX_COPY_ITEMS) {
+                snapshot = raw.slice(0, MAX_COPY_ITEMS);
+                reasons.push(`first ${MAX_COPY_ITEMS.toLocaleString()} items`);
+            }
+            let text = '';
+            try {
+                text = JSON.stringify(snapshot, null, 2);
+            } catch {
+                text = String(snapshot);
+            }
+            text = clampWithReason(text, MAX_COPY_CHARS, reasons);
+            return { text, truncated: reasons.length > 0, reason: reasons.join(', ') };
         }
         if (raw && typeof raw === 'object') {
+            let snapshot = raw;
             const keys = Object.keys(raw);
             if (keys.length > MAX_COPY_KEYS) {
-                return { reason: `Object has ${keys.length} keys.` };
+                snapshot = keys.slice(0, MAX_COPY_KEYS).reduce<Record<string, any>>((acc, key) => {
+                    acc[key] = (raw as Record<string, any>)[key];
+                    return acc;
+                }, {});
+                reasons.push(`first ${MAX_COPY_KEYS.toLocaleString()} keys`);
             }
+            let text = '';
+            try {
+                text = JSON.stringify(snapshot, null, 2);
+            } catch {
+                text = String(snapshot);
+            }
+            text = clampWithReason(text, MAX_COPY_CHARS, reasons);
+            return { text, truncated: reasons.length > 0, reason: reasons.join(', ') };
         }
+        const text = clampWithReason(String(raw), MAX_COPY_CHARS, reasons);
+        return { text, truncated: reasons.length > 0, reason: reasons.join(', ') };
+    };
+
+    const getFullCopyText = (raw: any) => {
+        if (typeof raw === 'string') return raw;
         try {
-            return { text: JSON.stringify(raw, null, 2) };
+            return JSON.stringify(raw, null, 2);
         } catch {
-            return { text: String(raw) };
+            return String(raw);
         }
     };
 
@@ -180,13 +224,13 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         return { text: clamped.text, truncated: clamped.truncated, language: 'plain' as const };
     };
 
-    const handleCopy = async (text: string, id: string) => {
+    const handleCopy = async (text: string, id: string, options?: { skipSizeConfirm?: boolean; truncatedNotice?: boolean }) => {
         if (!text) {
             onNotify('Nothing to copy.', 'error');
             return;
         }
         let copyText = text;
-        if (text.length > MAX_COPY_CHARS) {
+        if (!options?.skipSizeConfirm && text.length > MAX_COPY_CHARS) {
             const confirmed = await onConfirm({
                 message: `Copying ${formatSize(text.length)} may freeze your browser.`,
                 confirmLabel: 'Copy full',
@@ -215,7 +259,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             }
             setCopied(id);
             setTimeout(() => setCopied(null), 2000);
-            if (copyText.length !== text.length) {
+            if (options?.truncatedNotice) {
+                onNotify('Copied truncated data.', 'success');
+            } else if (copyText.length !== text.length) {
                 onNotify('Copied a truncated preview.', 'success');
             }
         } catch (err) {
@@ -454,7 +500,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                 onClick={() => setCurrentTask({ ...currentTask, mode: m })}
                                 className={`flex-1 py-2 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${currentTask.mode === m ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
                             >
-                                {m === 'scrape' ? 'Scraper' : m === 'agent' ? 'Agent (Beta)' : 'Headful'}
+                                {m === 'scrape' ? 'Scraper' : m === 'agent' ? 'Agent' : 'Headful'}
                             </button>
                         ))}
                     </div>
@@ -527,7 +573,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
                             <details className="border-t border-white/10 pt-6 font-sans">
                                 <summary className="cursor-pointer text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] hover:text-gray-400 transition-all">
-                                    Extraction Script (Beta)
+                                    Extraction Script
                                 </summary>
                                 <div className="space-y-3 mt-3">
                                     <p className="text-[8px] text-gray-600">Process scraped HTML with JavaScript. Use <code className="text-blue-400 bg-white/5 px-1 py-0.5 rounded">$$data.html()</code> to access the raw HTML.</p>
@@ -1034,13 +1080,43 @@ return JSON.stringify(links, null, 2);`}
                             <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
                                 <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Data</span>
                                 <button
-                                    onClick={() => {
-                                        const { text, reason } = getResultsCopyText(results);
-                                        if (!text) {
-                                            onNotify(reason || 'Data too large to copy safely.', 'error');
+                                    onClick={async () => {
+                                        const payload = getResultsCopyPayload(results);
+                                        if (payload.reason) {
+                                            onNotify(payload.reason || 'Data too large to copy safely.', 'error');
                                             return;
                                         }
-                                        void handleCopy(text, 'data');
+                                        const preview = getResultsPreview(results);
+                                        const fullText = getFullCopyText(payload.raw);
+                                        let copyText = fullText;
+                                        let usedTruncated = false;
+
+                                        if (preview.truncated) {
+                                            const confirmed = await onConfirm({
+                                                message: 'Preview is truncated for performance.',
+                                                confirmLabel: 'Copy full',
+                                                cancelLabel: 'Copy preview'
+                                            });
+                                            if (!confirmed) {
+                                                copyText = preview.text || '';
+                                                usedTruncated = true;
+                                            }
+                                        }
+
+                                        if (copyText.length > MAX_COPY_CHARS) {
+                                            const proceed = await onConfirm({
+                                                message: `Copying ${formatSize(copyText.length)} may freeze your browser.`,
+                                                confirmLabel: 'Copy full',
+                                                cancelLabel: usedTruncated ? 'Copy preview' : 'Copy truncated'
+                                            });
+                                            if (!proceed) {
+                                                const truncated = getTruncatedCopyText(payload.raw);
+                                                copyText = truncated.text;
+                                                usedTruncated = true;
+                                            }
+                                        }
+
+                                        void handleCopy(copyText, 'data', { skipSizeConfirm: true, truncatedNotice: usedTruncated });
                                     }}
                                     className={`px-3 py-2 border text-[9px] font-bold rounded-xl uppercase transition-all flex items-center gap-2 ${copied === 'data' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}
                                     title="Copy extracted data"

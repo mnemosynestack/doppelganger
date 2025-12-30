@@ -1,4 +1,4 @@
-import { Plus, Home, Settings as SettingsIcon, LogOut, Activity } from 'lucide-react';
+import { Plus, Home, Settings as SettingsIcon, LogOut, List } from 'lucide-react';
 
 interface SidebarProps {
     onNavigate: (screen: 'dashboard' | 'editor' | 'settings' | 'executions') => void;
@@ -43,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onNewTask, onLogout, curr
                     className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${currentScreen === 'executions' ? 'bg-white/10 text-white' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
                     title="Executions"
                 >
-                    <Activity className="w-6 h-6" />
+                    <List className="w-6 h-6" />
                 </button>
             </div>
 
