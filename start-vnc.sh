@@ -26,9 +26,11 @@ if [ ! -d "$NOVNC_DIR" ]; then
 fi
 
 echo "[vnc] Serving noVNC on 0.0.0.0:54311"
+pkill -f websockify >/dev/null 2>&1 || true
+pkill -f novnc_proxy >/dev/null 2>&1 || true
 NOVNC_PROXY="$NOVNC_DIR/utils/novnc_proxy"
 if [ -x "$NOVNC_PROXY" ]; then
-  "$NOVNC_PROXY" --web "$NOVNC_DIR" --listen 54311 --vnc localhost:5900 >> /app/data/novnc.log 2>&1 &
+  "$NOVNC_PROXY" --web "$NOVNC_DIR" --listen 54311 --vnc localhost:5900 --heartbeat 30 --idle-timeout 0 >> /app/data/novnc.log 2>&1 &
 elif command -v websockify >/dev/null 2>&1; then
   for _ in {1..50}; do
     if bash -c "echo > /dev/tcp/127.0.0.1/5900" >/dev/null 2>&1; then
