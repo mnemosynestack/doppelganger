@@ -12,17 +12,16 @@ echo "[vnc] Starting x11vnc on :5900"
 X11VNC_OPTS="-display $DISPLAY -forever -shared -nopw -rfbport 5900 -wait 5"
 x11vnc $X11VNC_OPTS >> /app/data/x11vnc.log 2>&1 &
 
-NOVNC_DIR="/usr/share/novnc"
-if [ ! -d "$NOVNC_DIR" ]; then
-  NOVNC_DIR="/opt/novnc"
-fi
-
+NOVNC_DIR="/opt/novnc"
 if [ ! -d "$NOVNC_DIR" ]; then
   echo "[vnc] noVNC not found, downloading..."
   mkdir -p /opt/novnc
-  curl -fsSL https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz \
-    | tar -xz --strip-components=1 -C /opt/novnc
-  NOVNC_DIR="/opt/novnc"
+  if curl -fsSL https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz \
+    | tar -xz --strip-components=1 -C /opt/novnc; then
+    NOVNC_DIR="/opt/novnc"
+  elif [ -d "/usr/share/novnc" ]; then
+    NOVNC_DIR="/usr/share/novnc"
+  fi
 fi
 
 echo "[vnc] Serving noVNC on 0.0.0.0:54311"
