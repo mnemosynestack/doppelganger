@@ -60,15 +60,9 @@ async function handleHeadful(req, res) {
         browser = await chromium.launch({
             headless: false,
             channel: 'chrome',
-            ignoreDefaultArgs: ['--enable-automation'],
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--disable-blink-features=AutomationControlled',
-                '--disable-infobars',
-                '--disable-dev-shm-usage',
-                '--no-first-run',
-                '--no-default-browser-check',
                 '--window-size=1280,720',
                 '--window-position=80,80'
             ]
@@ -88,10 +82,6 @@ async function handleHeadful(req, res) {
 
         const context = await browser.newContext(contextOptions);
         await context.addInitScript(() => {
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-            window.chrome = window.chrome || { runtime: {} };
             window.open = (url) => {
                 if (url) window.location.href = url;
                 return window;
