@@ -66,7 +66,7 @@ export default function App() {
 
     const openHeadfulViewer = () => {
         const { protocol, hostname } = window.location;
-        const url = `${protocol}//${hostname}:54311/vnc.html`;
+        const url = `${protocol}//${hostname}:54311/vnc.html?host=${hostname}&port=54311&path=websockify&autoconnect=true`;
         try {
             if (!headfulViewerRef.current || headfulViewerRef.current.closed) {
                 headfulViewerRef.current = window.open(url, '_blank', 'noopener,noreferrer');
