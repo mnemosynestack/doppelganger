@@ -37,6 +37,7 @@ export default function App() {
     const [centerAlert, setCenterAlert] = useState<{ message: string; tone?: 'success' | 'error' } | null>(null);
     const [centerConfirm, setCenterConfirm] = useState<ConfirmRequest | null>(null);
     const confirmResolverRef = useRef<((value: boolean) => void) | null>(null);
+    const headfulViewerRef = useRef<Window | null>(null);
     const showAlert = (message: string, tone: 'success' | 'error' = 'success') => {
         setCenterAlert({ message, tone });
         if (tone === 'success') {
@@ -62,6 +63,18 @@ export default function App() {
         if (resolver) resolver(result);
     };
     const formatLabel = (value: string) => value ? value[0].toUpperCase() + value.slice(1) : value;
+
+    const openHeadfulViewer = () => {
+        const { protocol, hostname } = window.location;
+        const url = `${protocol}//${hostname}:54311/vnc.html`;
+        try {
+            if (!headfulViewerRef.current || headfulViewerRef.current.closed) {
+                headfulViewerRef.current = window.open(url, '_blank', 'noopener,noreferrer');
+            } else {
+                headfulViewerRef.current.focus();
+            }
+        } catch {}
+    };
 
     const pinnedResultsKey = 'doppelganger.pinnedResults';
     const getTaskKey = (task?: Task | null) => task?.id ? String(task.id) : 'new';
@@ -353,6 +366,10 @@ export default function App() {
         if (isExecuting && taskToRun.mode === 'headful') {
             await stopHeadful();
             return;
+        }
+
+        if (taskToRun.mode === 'headful') {
+            openHeadfulViewer();
         }
 
         setIsExecuting(true);
