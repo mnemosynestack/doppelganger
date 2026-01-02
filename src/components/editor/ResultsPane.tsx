@@ -8,6 +8,7 @@ interface ResultsPaneProps {
     results: Results | null;
     pinnedResults?: Results | null;
     isExecuting: boolean;
+    isHeadful?: boolean;
     onConfirm: (request: ConfirmRequest) => Promise<boolean>;
     onNotify: (message: string, tone?: 'success' | 'error') => void;
     onPin?: (results: Results) => void;
@@ -249,7 +250,7 @@ const downloadText = (filename: string, content: string, mime: string) => {
     URL.revokeObjectURL(url);
 };
 
-const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExecuting, onConfirm, onNotify, onPin, onUnpin }) => {
+const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExecuting, isHeadful, onConfirm, onNotify, onPin, onUnpin }) => {
     const [copied, setCopied] = useState<string | null>(null);
     const [dataView, setDataView] = useState<'raw' | 'table'>('raw');
     const [resultView, setResultView] = useState<'latest' | 'pinned'>(() => (pinnedResults && !results ? 'pinned' : 'latest'));
@@ -336,6 +337,20 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
             onNotify('Copy failed.', 'error');
         }
     };
+
+    if (isHeadful && resultView === 'latest') {
+        const { protocol, hostname } = window.location;
+        const headfulUrl = `${protocol}//${hostname}:54311/vnc.html?host=${hostname}&port=54311&path=websockify&autoconnect=true&reconnect=true&resize=scale`;
+        return (
+            <div className="glass-card rounded-[32px] overflow-hidden h-[75vh] relative">
+                <iframe
+                    src={headfulUrl}
+                    className="absolute inset-0 w-full h-full"
+                    title="Headful Browser"
+                />
+            </div>
+        );
+    }
 
     if (!activeResults && !(isExecuting && resultView === 'latest')) {
         return (

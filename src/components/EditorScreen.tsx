@@ -1399,6 +1399,7 @@ return JSON.stringify(links, null, 2);`}
                     results={results}
                     pinnedResults={pinnedResults}
                     isExecuting={isExecuting}
+                    isHeadful={currentTask.mode === 'headful'}
                     onConfirm={onConfirm}
                     onNotify={onNotify}
                     onPin={onPinResults}
