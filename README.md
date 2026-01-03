@@ -129,5 +129,5 @@ The software is provided "as-is" without warranty. You are solely responsible fo
 Do not use this tool in ways that violate laws or third-party terms.
 
 ## Links
-- Homepage/Docs: https://doppelganger-site.vercel.app
+- Homepage/Docs: https://doppelgangerdev.com
 - Docker Hub: https://hub.docker.com/r/mnemosyneai/doppelganger
