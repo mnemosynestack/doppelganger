@@ -261,7 +261,9 @@ app.use(session({
 
 // Auth Middleware
 const requireAuth = (req, res, next) => {
-    console.log(`[AUTH] Path: ${req.path}, Session: ${req.session.user ? 'YES' : 'NO'}`);
+    if (process.env.NODE_ENV !== 'production') {
+        console.log(`[AUTH] Path: ${req.path}, Session: ${req.session.user ? 'YES' : 'NO'}`);
+    }
     if (req.session.user) {
         next();
     } else {
@@ -303,10 +305,14 @@ const requireApiKey = (req, res, next) => {
 
 // --- AUTH API ---
 app.get('/api/auth/check-setup', (req, res) => {
-    console.log("DEBUG: Hit check-setup");
+    if (process.env.NODE_ENV !== 'production') {
+        console.log("DEBUG: Hit check-setup");
+    }
     try {
         const users = loadUsers();
-        console.log("DEBUG: check-setup users length:", users.length);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log("DEBUG: check-setup users length:", users.length);
+        }
         res.json({ setupRequired: users.length === 0 });
     } catch (e) {
         console.error("DEBUG: check-setup error", e);
