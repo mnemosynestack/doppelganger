@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 ENV DOPPELGANGER_SKIP_PLAYWRIGHT_INSTALL=1 \
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-RUN npm ci --include=dev
+RUN npm ci --include=dev --no-audit --no-fund --loglevel=verbose
 
 # Build frontend
 COPY . .
