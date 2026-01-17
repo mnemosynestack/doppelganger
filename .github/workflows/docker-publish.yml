@@ -2,7 +2,7 @@ name: Publish Docker Image
 
 on:
   push:
-    branches: ['main', 'beta']
+    branches: ['main']
     tags: ['v*']
 
 env:
@@ -22,9 +22,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -50,8 +47,8 @@ jobs:
             ${{ env.D_HUB_TOKEN != '' && env.D_HUB_REPO || '' }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=beta,enable=${{ github.ref == 'refs/heads/beta' }}
-            type=raw,value=${{ github.ref_name }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{version}}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
