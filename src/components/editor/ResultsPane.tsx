@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Terminal } from 'lucide-react';
 import { ConfirmRequest, Results } from '../../types';
 import CodeEditor from '../CodeEditor';
@@ -256,6 +256,7 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
     const [dataView, setDataView] = useState<'raw' | 'table'>('raw');
     const [resultView, setResultView] = useState<'latest' | 'pinned'>(() => (pinnedResults && !results ? 'pinned' : 'latest'));
     const [headfulViewer, setHeadfulViewer] = useState<'checking' | 'native' | 'novnc'>('checking');
+    const headfulFrameRef = useRef<HTMLDivElement | null>(null);
     const activeResults = resultView === 'pinned' && pinnedResults ? pinnedResults : results;
     const tableData = getTableData(activeResults?.data);
     const preview = activeResults && activeResults.data !== undefined && activeResults.data !== null && activeResults.data !== ''
@@ -300,19 +301,8 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
         let cancelled = false;
         const checkHeadful = async () => {
             try {
-                const res = await fetch('/api/headful/status', { cache: 'no-store' });
-                const data = res.ok ? await res.json() : { useNovnc: false };
-                if (cancelled) return;
-                if (data && data.useNovnc) {
-                    try {
-                        const test = await fetch('/novnc/core/rfb.js', { method: 'HEAD', cache: 'no-store' });
-                        if (!cancelled) setHeadfulViewer(test.ok ? 'novnc' : 'native');
-                    } catch {
-                        if (!cancelled) setHeadfulViewer('native');
-                    }
-                } else {
-                    if (!cancelled) setHeadfulViewer('native');
-                }
+                const test = await fetch('/novnc/core/rfb.js', { method: 'HEAD', cache: 'no-store' });
+                if (!cancelled) setHeadfulViewer(test.ok ? 'novnc' : 'native');
             } catch {
                 if (!cancelled) setHeadfulViewer('native');
             }
@@ -371,6 +361,19 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
     if (isHeadful && resultView === 'latest') {
         const { origin, hostname } = window.location;
         const headfulUrl = `${origin}/novnc.html?host=${hostname}&path=websockify`;
+        const requestFullscreen = () => {
+            const target = headfulFrameRef.current;
+            if (!target) return;
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {
+                    // ignore
+                });
+                return;
+            }
+            target.requestFullscreen?.().catch(() => {
+                // ignore
+            });
+        };
         if (headfulViewer === 'native') {
             return (
                 <div className="glass-card rounded-[32px] overflow-hidden h-[80vh] w-full relative flex items-center justify-center">
@@ -390,7 +393,15 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
             );
         }
         return (
-            <div className="glass-card rounded-[32px] overflow-hidden h-[80vh] w-full relative">
+            <div ref={headfulFrameRef} className="glass-card rounded-[32px] overflow-hidden h-[80vh] w-full relative">
+                <button
+                    type="button"
+                    onClick={requestFullscreen}
+                    className="absolute top-4 right-4 z-10 px-3 py-2 rounded-xl border border-white/20 bg-black/40 text-[9px] font-bold uppercase tracking-widest text-white/80 hover:bg-black/60 transition-all"
+                    title="Toggle fullscreen"
+                >
+                    Fullscreen
+                </button>
                 <iframe
                     src={headfulUrl}
                     className="absolute inset-0 w-full h-full"
