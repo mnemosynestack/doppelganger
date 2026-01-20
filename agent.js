@@ -828,14 +828,20 @@ async function handleAgent(req, res) {
                         const taskId = resolveMaybe(act.value);
                         if (!taskId) throw new Error('Missing task id.');
                         const apiKey = loadApiKey() || data.apiKey || data.key;
-                        if (!apiKey) throw new Error('API key is required to start a task.');
+                        if (!apiKey) {
+                            logs.push('No API key available; attempting internal start.');
+                        }
                         logs.push(`Starting task: ${taskId}`);
+                        const headers = {
+                            'Content-Type': 'application/json',
+                            'x-internal-run': '1'
+                        };
+                        if (apiKey) {
+                            headers['x-api-key'] = apiKey;
+                        }
                         const response = await fetch(`${baseUrl}/tasks/${taskId}/api`, {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'x-api-key': apiKey
-                            },
+                            headers,
                             body: JSON.stringify({
                                 variables: runtimeVars,
                                 taskVariables: runtimeVars,

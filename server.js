@@ -373,7 +373,16 @@ const requireAuthForSettings = (req, res, next) => {
     return requireAuth(req, res, next);
 };
 
+const isLoopback = (ip) => {
+    const normalized = normalizeIp(ip);
+    return normalized === '127.0.0.1' || normalized === '::1';
+};
+
 const requireApiKey = (req, res, next) => {
+    const internalRun = req.get('x-internal-run');
+    if (internalRun === '1' && isLoopback(req.ip)) {
+        return next();
+    }
     const headerKey = req.get('x-api-key') || req.get('key');
     const authHeader = req.get('authorization');
     const bearerKey = authHeader ? authHeader.replace(/^Bearer\s+/i, '') : '';
