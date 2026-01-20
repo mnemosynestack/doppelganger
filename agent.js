@@ -198,7 +198,9 @@ async function handleAgent(req, res) {
         });
     }
 
-    const baseUrl = `${req.protocol || 'http'}://${req.get('host')}`;
+    const localPort = req.socket && req.socket.localPort;
+    const localHost = localPort ? `127.0.0.1:${localPort}` : req.get('host');
+    const baseUrl = `${req.protocol || 'http'}://${localHost}`;
     const runtimeVars = { ...(data.taskVariables || data.variables || {}) };
     let lastBlockOutput = null;
     runtimeVars['block.output'] = lastBlockOutput;
@@ -855,6 +857,7 @@ async function handleAgent(req, res) {
                             throw new Error(`Start task failed: ${detail}`);
                         }
                         result = payload?.data ?? payload?.html ?? payload;
+                        setBlockOutput(result);
                         break;
                     }
                 }
