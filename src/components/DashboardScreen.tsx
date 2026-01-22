@@ -74,49 +74,52 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 overflow-y-auto custom-scrollbar pb-12 pr-4">
-                    {tasks.map(task => {
-                        const favicon = getFavicon(task.url);
-                        return (
-                            <div key={task.id} className="glass-card p-8 rounded-[40px] flex flex-col gap-6 group hover:-translate-y-1">
-                                <div className="flex justify-between items-start">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
-                                        {favicon ? (
-                                            <img
-                                                src={favicon}
-                                                alt=""
-                                                className="w-6 h-6 object-contain"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                }}
-                                            />
-                                        ) : (
-                                            <Globe className="w-5 h-5 text-gray-500" />
-                                        )}
+                <div className="relative flex-1 min-h-0">
+                    <div className="pointer-events-none absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-[#050505] via-[#050505]/50 to-transparent z-10" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 overflow-y-auto custom-scrollbar pb-12 pr-4 h-full">
+                        {tasks.map(task => {
+                            const favicon = getFavicon(task.url);
+                            return (
+                                <div key={task.id} className="glass-card p-8 rounded-[40px] flex flex-col gap-6 group hover:-translate-y-1">
+                                    <div className="flex justify-between items-start">
+                                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+                                            {favicon ? (
+                                                <img
+                                                    src={favicon}
+                                                    alt=""
+                                                    className="w-6 h-6 object-contain"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <Globe className="w-5 h-5 text-gray-500" />
+                                            )}
+                                        </div>
+                                        <div className="px-3 py-1 rounded-full bg-white/5 text-[7px] font-bold uppercase tracking-widest text-gray-500">{task.mode}</div>
                                     </div>
-                                    <div className="px-3 py-1 rounded-full bg-white/5 text-[7px] font-bold uppercase tracking-widest text-gray-500">{task.mode}</div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white truncate">{task.name || 'Untitled'}</h3>
+                                        <p className="text-[10px] text-gray-600 font-mono truncate mt-1">{task.url || 'Target undefined'}</p>
+                                    </div>
+                                    <div className="flex gap-3 pt-4 border-t border-white/5">
+                                        <button
+                                            onClick={() => onEditTask(task)}
+                                            className="flex-1 py-2 rounded-xl bg-white text-black text-[9px] font-bold uppercase tracking-widest hover:scale-105 transition-all"
+                                        >
+                                            Edit Task
+                                        </button>
+                                        <button
+                                            onClick={() => onDeleteTask(task.id!)}
+                                            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-all"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-white truncate">{task.name || 'Untitled'}</h3>
-                                    <p className="text-[10px] text-gray-600 font-mono truncate mt-1">{task.url || 'Target undefined'}</p>
-                                </div>
-                                <div className="flex gap-3 pt-4 border-t border-white/5">
-                                    <button
-                                        onClick={() => onEditTask(task)}
-                                        className="flex-1 py-2 rounded-xl bg-white text-black text-[9px] font-bold uppercase tracking-widest hover:scale-105 transition-all"
-                                    >
-                                        Edit Task
-                                    </button>
-                                    <button
-                                        onClick={() => onDeleteTask(task.id!)}
-                                        className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-all"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
 
                 {tasks.length === 0 && (

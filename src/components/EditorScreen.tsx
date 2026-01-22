@@ -1376,7 +1376,7 @@ return JSON.stringify(links, null, 2);`}
                                 </label>
                                 <label
                                     className={`flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 transition-all ${rotateProxiesDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/[0.05] cursor-pointer group'}`}
-                                    title={rotateProxiesDisabled ? 'Add a proxy to enable rotation.' : 'Rotate proxies per task.'}
+                                    title={rotateProxiesDisabled ? 'Configure proxies in Settings → Proxies to enable rotation.' : 'Rotate proxies per task.'}
                                 >
                                     <input
                                         type="checkbox"
