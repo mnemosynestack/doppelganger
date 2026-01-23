@@ -119,8 +119,8 @@ async function humanType(page, selector, text, options = {}) {
     if (selector) await page.focus(selector);
     const chars = text.split('');
     let burstCounter = 0;
-    const burstLimit = naturalTyping ? Math.floor(randomBetween(4, 12)) : 999;
-    const baseDelay = naturalTyping ? randomBetween(30, 140) : randomBetween(25, 80);
+    const burstLimit = naturalTyping ? Math.floor(randomBetween(6, 16)) : 999;
+    const baseDelay = naturalTyping ? randomBetween(12, 55) : randomBetween(25, 80);
     const typeChar = async (char, delay) => {
         try {
             await page.keyboard.press(char, { delay });
@@ -132,7 +132,7 @@ async function humanType(page, selector, text, options = {}) {
 
     for (const char of chars) {
         if (naturalTyping && burstCounter >= burstLimit) {
-            await page.waitForTimeout(randomBetween(120, 420));
+            await page.waitForTimeout(randomBetween(60, 180));
             burstCounter = 0;
         }
 
@@ -141,7 +141,7 @@ async function humanType(page, selector, text, options = {}) {
             const typo = keys[Math.floor(Math.random() * keys.length)];
             await page.keyboard.press(typo, { delay: 40 + Math.random() * 120 });
             if (Math.random() < 0.5) {
-                await page.waitForTimeout(120 + Math.random() * 200);
+                await page.waitForTimeout(60 + Math.random() * 120);
             }
             await page.keyboard.press('Backspace', { delay: 40 + Math.random() * 120 });
             if (Math.random() < 0.3) {
@@ -150,13 +150,13 @@ async function humanType(page, selector, text, options = {}) {
             }
         }
 
-        const extra = punctuationPause.test(char) ? randomBetween(140, 320) : randomBetween(0, 90);
-        const fatiguePause = fatigue && Math.random() < 0.06 ? randomBetween(180, 420) : 0;
+        const extra = punctuationPause.test(char) ? randomBetween(60, 150) : randomBetween(0, 40);
+        const fatiguePause = fatigue && Math.random() < 0.06 ? randomBetween(90, 200) : 0;
         await typeChar(char, baseDelay + extra + fatiguePause);
         burstCounter += 1;
 
         if (naturalTyping && char === ' ') {
-            await page.waitForTimeout(randomBetween(40, 180));
+            await page.waitForTimeout(randomBetween(20, 80));
         }
     }
 }
