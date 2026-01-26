@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { User, Task, ViewMode, Results, ConfirmRequest } from './types';
+
+const serializeTaskSnapshot = (task?: Task | null) => {
+    if (!task) return '';
+    const clone = JSON.parse(JSON.stringify(task));
+    delete clone.last_opened;
+    return JSON.stringify(clone);
+};
 import Sidebar from './components/Sidebar';
 import AuthScreen from './components/AuthScreen';
 import DashboardScreen from './components/DashboardScreen';
@@ -20,6 +27,8 @@ export default function App() {
     const location = useLocation();
     const [, setUser] = useState<User | null>(null);
     const [authStatus, setAuthStatus] = useState<'checking' | 'login' | 'setup' | 'authenticated'>('checking');
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const lastSavedSnapshot = useRef('');
 
     // Auth Screen State
     const [authError, setAuthError] = useState('');
@@ -178,6 +187,26 @@ export default function App() {
         }
     }, [location.pathname, currentTask]);
 
+    useEffect(() => {
+        if (!currentTask) {
+            setHasUnsavedChanges(false);
+            return;
+        }
+        const snapshot = serializeTaskSnapshot(currentTask);
+        setHasUnsavedChanges(snapshot !== lastSavedSnapshot.current);
+    }, [currentTask]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const handler = (event: BeforeUnloadEvent) => {
+            if (!hasUnsavedChanges) return;
+            event.preventDefault();
+            event.returnValue = '';
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [hasUnsavedChanges]);
+
     const checkAuth = async () => {
         try {
             const res = await fetch('/api/auth/me');
@@ -277,6 +306,8 @@ export default function App() {
 
     const createNewTask = () => {
         const newTask = buildNewTask();
+        lastSavedSnapshot.current = '';
+        setHasUnsavedChanges(true);
         setCurrentTask(newTask);
         setResults(null);
         navigate('/tasks/new');
@@ -305,6 +336,11 @@ export default function App() {
         }
     };
 
+    const markTaskAsSaved = (task: Task | null) => {
+        lastSavedSnapshot.current = serializeTaskSnapshot(task);
+        setHasUnsavedChanges(false);
+    };
+
     const editTask = (task: Task) => {
         const migratedTask = { ...task };
         if (!migratedTask.variables || Array.isArray(migratedTask.variables)) migratedTask.variables = {};
@@ -324,6 +360,7 @@ export default function App() {
         if (migratedTask.includeShadowDom === undefined) migratedTask.includeShadowDom = true;
         const normalized = ensureActionIds(migratedTask);
         setCurrentTask(normalized);
+        markTaskAsSaved(normalized);
         setResults(null);
         navigate(`/tasks/${task.id}`);
         if (task.id) touchTask(task.id);
@@ -350,6 +387,7 @@ export default function App() {
         setCurrentTask(saved);
         setSaveMsg("SAVED");
         setTimeout(() => setSaveMsg(''), 2000);
+        markTaskAsSaved(saved);
         loadTasks();
         if (location.pathname.includes('new')) {
             navigate(`/tasks/${saved.id}`, { replace: true });
@@ -696,7 +734,35 @@ export default function App() {
                         />
                         ) : <LoadingScreen title="Initializing" subtitle="Preparing task workspace" />
                     } />
-                    <Route path="/tasks/:id" element={<EditorLoader tasks={tasks} loadTasks={loadTasks} touchTask={touchTask} currentTask={currentTask} setCurrentTask={setCurrentTask} editorView={editorView} setEditorView={setEditorView} isExecuting={isExecuting} onSave={saveTask} onRun={runTask} onRunSnapshot={runTaskWithSnapshot} results={results} pinnedResults={pinnedResults} saveMsg={saveMsg} onConfirm={requestConfirm} onNotify={showAlert} onPinResults={pinResults} onUnpinResults={unpinResults} runId={activeRunId} onStop={stopTask} />} />
+                    <Route
+                        path="/tasks/:id"
+                        element={
+                            <EditorLoader
+                                tasks={tasks}
+                                loadTasks={loadTasks}
+                                touchTask={touchTask}
+                                currentTask={currentTask}
+                                setCurrentTask={setCurrentTask}
+                                editorView={editorView}
+                                setEditorView={setEditorView}
+                                isExecuting={isExecuting}
+                                onSave={saveTask}
+                                onRun={runTask}
+                                onRunSnapshot={runTaskWithSnapshot}
+                                results={results}
+                                pinnedResults={pinnedResults}
+                                saveMsg={saveMsg}
+                                onConfirm={requestConfirm}
+                                onNotify={showAlert}
+                                onPinResults={pinResults}
+                                onUnpinResults={unpinResults}
+                                runId={activeRunId}
+                                onStop={stopTask}
+                                hasUnsavedChanges={hasUnsavedChanges}
+                                onTaskLoaded={markTaskAsSaved}
+                            />
+                        }
+                    />
                     <Route path="/settings" element={
                         <SettingsScreen
                             onClearStorage={clearStorage}

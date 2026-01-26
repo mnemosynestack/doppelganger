@@ -26,9 +26,20 @@ interface EditorLoaderProps {
     onNotify: any;
     runId?: string | null;
     onStop?: () => void;
+    hasUnsavedChanges: boolean;
+    onTaskLoaded?: (task: Task) => void;
 }
 
-const EditorLoader: React.FC<EditorLoaderProps> = ({ tasks, loadTasks, touchTask, currentTask, setCurrentTask, ...props }) => {
+const EditorLoader: React.FC<EditorLoaderProps> = ({
+    tasks,
+    loadTasks,
+    touchTask,
+    currentTask,
+    setCurrentTask,
+    hasUnsavedChanges,
+    onTaskLoaded,
+    ...props
+}) => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
@@ -60,6 +71,7 @@ const EditorLoader: React.FC<EditorLoaderProps> = ({ tasks, loadTasks, touchTask
                 }
                 if (migrated.includeShadowDom === undefined) migrated.includeShadowDom = true;
                 setCurrentTask(migrated);
+                onTaskLoaded?.(migrated);
                 if (id) touchTask(id);
             } else {
                 setNotFound(true);
@@ -83,7 +95,7 @@ const EditorLoader: React.FC<EditorLoaderProps> = ({ tasks, loadTasks, touchTask
         return <LoadingScreen title="Loading Mission Data" subtitle="Syncing task payload" />;
     }
 
-    return <EditorScreen currentTask={currentTask} setCurrentTask={setCurrentTask} tasks={tasks} {...props} />;
+    return <EditorScreen currentTask={currentTask} setCurrentTask={setCurrentTask} tasks={tasks} hasUnsavedChanges={hasUnsavedChanges} {...props} />;
 };
 
 export default EditorLoader;

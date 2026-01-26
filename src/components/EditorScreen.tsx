@@ -99,6 +99,7 @@ interface EditorScreenProps {
     onRunSnapshot?: (task: Task) => void;
     runId?: string | null;
     onStop?: () => void;
+    hasUnsavedChanges: boolean;
 }
 
 const VariableRow: React.FC<{
@@ -667,7 +668,8 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             </button>
                             <button
                                 onClick={onSave}
-                                className={`px-4 py-2 text-[9px] font-bold rounded-full uppercase tracking-widest transition-all ${saveMsg === 'SAVED' ? 'text-green-400 border border-green-400/20' : 'bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20'}`}
+                                disabled={!hasUnsavedChanges}
+                                className={`px-4 py-2 text-[9px] font-bold rounded-full uppercase tracking-widest transition-all ${saveMsg === 'SAVED' ? 'text-green-400 border border-green-400/20' : 'bg-blue-500/10 border border-white/10 text-blue-400'} ${hasUnsavedChanges ? 'hover:bg-blue-500/20' : 'opacity-50 cursor-not-allowed'}`}
                             >
                                 {saveMsg === 'SAVED' ? 'SAVED' : 'SAVE'}
                             </button>
