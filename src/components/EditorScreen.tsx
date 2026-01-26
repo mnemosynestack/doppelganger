@@ -176,7 +176,8 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     onUnpinResults,
     onRunSnapshot,
     runId,
-    onStop
+    onStop,
+    hasUnsavedChanges
 }) => {
     const [copied, setCopied] = useState<string | null>(null);
     const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);

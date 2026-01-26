@@ -731,6 +731,7 @@ export default function App() {
                             onUnpinResults={unpinResults}
                             runId={activeRunId}
                             onStop={stopTask}
+                            hasUnsavedChanges={hasUnsavedChanges}
                         />
                         ) : <LoadingScreen title="Initializing" subtitle="Preparing task workspace" />
                     } />
