@@ -7,8 +7,6 @@ Doppelganger is a self-hosted, developer-focused browser automation and extracti
 
 This project is designed for local, controlled use cases. It does not claim to bypass protections and does not encourage unlawful activity.
 
-## Demo
-
 <img src="demo-run.gif" alt="Dashboard task demo" style="max-width:100%;height:auto;border:1px solid #ccc;">
 
 ## Getting Started (npm)
