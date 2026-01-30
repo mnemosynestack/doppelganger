@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const net = require('net');
+const rateLimit = require('express-rate-limit');
 const app = express();
 const DEFAULT_PORT = 11345;
 const port = Number(process.env.PORT) || DEFAULT_PORT;
@@ -82,6 +83,14 @@ const EXECUTIONS_FILE = path.join(__dirname, 'data', 'executions.json');
 const MAX_EXECUTIONS = 500;
 const executionStreams = new Map();
 const stopRequests = new Set();
+const REQUEST_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_RATE_LIMIT_MAX = Number(process.env.AUTH_RATE_LIMIT_MAX || 10);
+const authRateLimiter = rateLimit({
+    windowMs: REQUEST_LIMIT_WINDOW_MS,
+    max: AUTH_RATE_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 const sendExecutionUpdate = (runId, payload) => {
     if (!runId) return;
@@ -423,7 +432,7 @@ app.get('/api/auth/check-setup', (req, res) => {
     }
 });
 
-app.post('/api/auth/setup', async (req, res) => {
+app.post('/api/auth/setup', authRateLimiter, async (req, res) => {
     const users = loadUsers();
     if (users.length > 0) return res.status(403).json({ error: 'ALREADY_SETUP' });
     const { name, email, password } = req.body;
@@ -437,7 +446,7 @@ app.post('/api/auth/setup', async (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authRateLimiter, async (req, res) => {
     const { email, password } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const users = loadUsers();
