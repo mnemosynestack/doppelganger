@@ -85,6 +85,7 @@ const executionStreams = new Map();
 const stopRequests = new Set();
 const REQUEST_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_RATE_LIMIT_MAX = Number(process.env.AUTH_RATE_LIMIT_MAX || 10);
+// Auth routes are sensitive to brute-force; wrap them with this limiter and note it defaults to 10 attempts per 15 minutes (override AUTH_RATE_LIMIT_MAX via env).
 const authRateLimiter = rateLimit({
     windowMs: REQUEST_LIMIT_WINDOW_MS,
     max: AUTH_RATE_LIMIT_MAX,
@@ -432,6 +433,7 @@ app.get('/api/auth/check-setup', (req, res) => {
     }
 });
 
+// Apply the same limiter to other auth-related endpoints if they should share the same brute-force guard.
 app.post('/api/auth/setup', authRateLimiter, async (req, res) => {
     const users = loadUsers();
     if (users.length > 0) return res.status(403).json({ error: 'ALREADY_SETUP' });
