@@ -1,5 +1,5 @@
-                                              Inspirative Use License (IUL)
-                                                Version 1.0, January 2026
+# Inspirative Use License (IUL)
+## Version 1.0, January 2026
 
 ---
 
