@@ -1,162 +1,178 @@
-                        SUSTAINABLE USE LICENSE (SUL) v1.0
-                                Copyright (c) 2026
+                                              Notice & Attribution License v1.0
+                                                  Version 1.0, January 2026
 
-This License governs use of the software and associated documentation (the "Software").
-By using, copying, modifying, or distributing the Software, you agree to all terms below.
 
 1. Definitions
-   1.1 "Software" means the source code, object code, binaries, and documentation.
-   1.2 "You" means any individual or entity exercising rights under this License.
-   1.3 "Non-Commercial" means not primarily intended for or directed toward commercial
-       advantage or monetary compensation.
-   1.4 "Hosted Service" means making the Software or any portion of its functionality
-       available to third parties over a network, including SaaS, managed services,
-       platform services, or public API offerings.
-   1.5 "Derivative Work" means any modification, adaptation, or other work based on
-       the Software.
-   1.6 "Distribution" means providing the Software to any third party by any means,
-       including source code, binaries, containers, or images.
-   1.7 "Competing Product" means a product or service that provides materially
-       similar functionality to the Software.
-   1.8 "Author(s)" means the copyright holder(s) of the Software.
+1.1. "Software" means all source code, binaries, scripts, libraries, components, build configurations, and other software artifacts provided under this license.
+1.2. "Documentation" means user manuals, tutorials, guides, blogs, blog images, examples, promotional materials, or any non-software content created by Authors unless otherwise stated.
+1.3. "Commercial / End-User-Facing Use" means any deployment of the Software where:
+     (a) End users interact directly with the Software, or
+     (b) The Software is used to provide a paid service, subscription, support, or monetized offering.
+1.4. "Internal / Private Use" means any deployment where the Software is used solely for personal, research, educational, hobbyist, or internal organizational purposes without access to external end users.
+1.5. "Authors" refers to Mnemosyne and its affiliates who hold copyright or other intellectual property rights in the Software.
+1.6. "Third-Party Components" means software included or bundled with the Software subject to separate licenses (e.g., MIT, BSD, Apache, GPL) as identified in Schedule B.
 
-2. Grant of Rights
-   2.1 You may read, inspect, and modify the Software for personal, internal, or
-       Non-Commercial use.
-   2.2 You may run the Software on your own machines or infrastructure.
-   2.3 You may create and share community tutorials, examples, and presets.
-   2.4 You may modify the Software for personal automation, data extraction, or
-       experimentation.
-   2.5 You may share patches or snippets for Non-Commercial purposes, provided you
-       include required attribution.
+2. License Grant
+2.1. Subject to this license's terms and conditions, Authors grant you a worldwide, royalty-free, non-exclusive license to:
+     (a) Use, reproduce, modify, and perform the Software,
+     (b) Distribute copies of the Software, and
+     (c) Create derivative works based on the Software.
+2.2. These rights are fully unrestricted for Internal / Private Use.
+2.3. Redistribution or commercial use is subject to Sections 3-5.
 
-3. Restrictions on Use
-   3.1 You may not offer the Software as a Hosted Service.
-   3.2 You may not redistribute the Software for commercial hosting or for
-       Competing Products.
-   3.3 You may not sell, sublicense, rent, lease, or commercially exploit the
-       Software as a standalone product or as part of any paid service.
-   3.4 You may not use the Software in a manner that violates applicable law or
-       third-party terms, including terms of websites or services you interact with.
-   3.5 You may not remove, alter, or obscure any copyright, license, or attribution
-       notices.
-   3.6 You may not imply endorsement, sponsorship, or affiliation by the Author(s)
-       without prior written permission.
-   3.7 You may not circumvent technological restrictions or access controls in
-       violation of applicable law.
+3. Commercial / End-User-Facing Use Obligations
+3.1. Notice Requirement: Users engaging in Commercial / End-User-Facing Use must notify Authors by:
+     (a) Sending an email to [licensing@doppelgangerdev.com], or
+     (b) No response from Authors is required for the use to be valid.
+3.2. Hybrid Submission / Open-Source Requirement: Users must provide the modified or used portion of the Software by either:
+     (a) Open-sourcing the portion (in which case the repository URL must be included in the Commercial Use Statement), or
+     (b) Submitting it to the Authors privately (Authors do not gain the right to publicly release or open-source that portion).
+3.3. Licensing Flexibility:
+     (a) Users may license the submitted/open-sourced portion under any license they choose.
+     (b) Authors automatically retain the Inspirative Use License (IUL) over submitted portions regardless of the user's chosen license.
+3.4. Attribution Requirement: All Commercial / End-User-Facing deployments must display clear attribution to Authors in product UI, documentation, outputs, or other public-facing materials.
+3.5. Examples of Use Cases (specific but not limiting):
+     (a) Internal price monitoring dashboards: Treated as Internal / Private Use (no notice, attribution, or open-source required).
+     (b) A user-facing AI that can browse the web (even if browsing is not its core feature): Treated as External / Commercial Use (notice, attribution, and open-source or submission required).
+     (c) Internal research deployment of modified software on intranet: Treated as Internal / Private Use (no obligations).
+     (d) Public-facing analytics service for clients: Treated as Commercial / End-User-Facing Use (obligations apply).
 
-4. Redistribution and Attribution
-   4.1 Any Distribution of source code or Derivative Works must retain this License
-       and all notices.
-   4.2 If you redistribute source code that includes any part of the Software and
-       the redistribution is not a Hosted Service, you must credit the Author(s)
-       prominently in the source and in accompanying documentation.
-   4.3 You may not impose additional restrictions that conflict with this License.
-   4.4 Distribution of binaries or compiled artifacts is prohibited unless expressly
-       permitted in writing by the Author(s).
-   4.5 Public repositories containing the Software must retain this License file.
+4. Documentation, Blogs, Tutorials, And Media
+4.1. Documentation, blogs, blog images, tutorials, guides, promotional materials, or other creative content created by Authors are not included in this Software License.
+4.2. Such content is licensed separately under CC BY-SA 4.0, unless otherwise stated.
+4.3. Users may not claim ownership of, remove, or modify attribution for such content outside CC BY-SA 4.0 terms.
 
-5. Ownership and IP
-   5.1 The Software is licensed, not sold.
-   5.2 Title, ownership, and intellectual property rights in the Software remain
-       with the Author(s).
-   5.3 This License does not grant rights in any trademarks, logos, or branding.
+5. Third-Party Components
+5.1. The Software may include Third-Party Components subject to their own licenses.
+5.2. Users must comply with the licenses of all Third-Party Components (including attribution, copyright notices, and other conditions).
 
-6. Compliance and Lawful Use
-   6.1 You are solely responsible for your use of the Software and compliance with
-       all applicable laws, regulations, and third-party terms.
-   6.2 The Software does not grant any right to access systems, data, or content
-       without permission.
-   6.3 You must not use the Software for unlawful, harmful, or unauthorized
-       activities.
-   6.4 You are solely responsible for obtaining any required permissions, consents,
-       or licenses.
-   6.5 You bear all responsibility for the accuracy, integrity, and legality of
-       any data processed or collected using the Software.
+6. Intellectual Property
+6.1. All copyrights, patents, and trademarks remain with the Authors.
+6.2. No intellectual property rights are transferred to the User.
+6.3. All rights not expressly granted under this license are reserved.
 
-7. Security and Misuse
-   7.1 The Software may be used for automation, testing, or data extraction; such
-       use is at your own risk.
-   7.2 You are responsible for securing your systems, credentials, and any data
-       generated or stored by the Software.
-   7.3 The Author(s) do not monitor, control, or endorse your usage.
-   7.4 You agree to indemnify and hold harmless the Author(s) against any claims,
-       damages, losses, or liabilities arising from your use of the Software.
+7. Contributions
+7.1. Contributions to official repositories follow terms chosen by Authors.
+7.2. Authors retain the right to incorporate any feedback or code.
+7.3. IUL rights are maintained for all submitted contributions.
 
-8. No Warranty
-   8.1 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-       IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
-       FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
-   8.2 The Author(s) make no representations about accuracy, reliability, or
-       availability of the Software.
-   8.3 You assume all risk for use of the Software.
+8. Disclaimer of Warranties
+8.1. The Software is provided "as is" without any express warranties.
+8.2. No implied warranties of merchantability are provided.
+8.3. Authors do not guarantee the Software is error-free or fit for purpose.
 
 9. Limitation of Liability
-   9.1 IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-       DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR
-       OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE
-       USE OR OTHER DEALINGS IN THE SOFTWARE.
-   9.2 The foregoing limitation applies even if the Author(s) have been advised of
-       the possibility of such damages.
-   9.3 In jurisdictions that do not allow limitation of liability, liability is
-       limited to the maximum extent permitted by law.
+9.1. Authors are not liable for direct or indirect damages from use.
+9.2. No liability exists for data loss or business interruptions.
+9.3. Total liability is limited to the extent permitted by law.
 
-10. Third-Party Components
-   10.1 The Software may include or depend on third-party libraries or services.
-   10.2 Those components are subject to their own licenses and terms.
-   10.3 You are responsible for compliance with any third-party requirements.
+10. Governing Law & Jurisdiction
+10.1. The laws of the Authors' home jurisdiction govern this license.
+10.2. Disputes shall be resolved in the Authors' local courts.
+10.3. Alternative venues must be agreed upon in writing by all parties.
 
-11. Privacy and Data
-   11.1 You are responsible for handling personal data lawfully and securely.
-   11.2 The Author(s) do not collect, transmit, or store your data unless you
-       explicitly configure the Software to do so.
-   11.3 You are responsible for any disclosures or notices required by law.
+11. Severability
+11.1. Invalid provisions shall not affect the validity of the remainder.
+11.2. Unenforceable terms shall be modified to reflect original intent.
+11.3. The remaining agreement shall continue in full legal force.
 
-12. Export and Sanctions
-   12.1 You must comply with all applicable export control and sanctions laws.
-   12.2 You may not use or export the Software in violation of such laws.
+12. Assignment
+12.1. Users may not transfer their rights without written consent.
+12.2. Obligations under this license cannot be delegated to others.
+12.3. Unauthorized assignments shall be considered null and void.
 
-13. Commercial Licensing
-   13.1 This License does not grant any commercial rights beyond those expressly
-       permitted.
-   13.2 The Author(s) reserve the right to offer separate commercial licenses,
-       Hosted Services, or enterprise features at their discretion.
-   13.3 If you seek commercial rights, you must obtain a separate written license.
+13. Export Control
+13.1. Users must follow all local and international export laws.
+13.2. Software may not be exported to prohibited countries or entities.
+13.3. Compliance with all trade sanctions and regulations is required.
 
-14. Feedback
-   14.1 You may provide feedback, suggestions, or improvements.
-   14.2 You grant the Author(s) a perpetual, irrevocable, worldwide, royalty-free
-       license to use, modify, and incorporate feedback into the Software.
+14. Patent Rights
+14.1. No separate patent license is implied by this agreement.
+14.2. Rights are limited to the use of the provided Software only.
+14.3. Patent claims against the Authors terminate this license instantly.
 
-15. Termination
-   15.1 Any breach of this License automatically terminates your rights to use the
-       Software.
-   15.2 Upon termination, you must cease all use and delete all copies in your
-       possession or control.
-   15.3 Sections that by their nature should survive termination shall survive,
-       including Sections 5 through 15.
+15. Compliance with Laws
+15.1. Users are responsible for following all applicable statutes.
+15.2. Use of Software must not violate third-party legal rights.
+15.3. Regulatory compliance remains the sole duty of the User.
 
-16. Notice of Violations
-   16.1 The Author(s) may enforce this License at their discretion.
-   16.2 Failure to enforce any provision is not a waiver of future enforcement.
+16. Privacy and Data Protection
+16.1. Users must manage personal data according to privacy laws.
+16.2. Software use must comply with data protection regulations.
+16.3. Authors are not responsible for the User's data handling.
 
-17. Severability
-   17.1 If any provision is held to be unenforceable, the remaining provisions
-       remain in full force and effect.
+17. Notices
+17.1. License notices must remain in all Software redistributions.
+17.2. Copyright headers in the source code must not be removed.
+17.3. Documentation must include a reference to this original license.
 
-18. Entire Agreement
-   18.1 This License constitutes the entire agreement regarding the Software and
-       supersedes prior agreements on this subject.
+18. Examples of Internal vs. Commercial Use
+18.1. Internal: Dashboards for private staff use have no obligations.
+18.2. Commercial: Public AI tools require notice and attribution.
+18.3. Hybrid: External partner access triggers Commercial Use rules.
 
-19. Changes to License
-   19.1 The Author(s) may publish updated versions of this License.
-   19.2 Continued use of the Software after an updated License is published
-       constitutes acceptance of the updated terms.
+19. Entire Agreement
+19.1. This document is the full agreement between the parties.
+19.2. No verbal agreements or prior understandings are binding.
+19.3. Modifications to these terms must be made in writing.
 
-20. Contact
-   20.1 For commercial licensing inquiries or permissions, contact the Author(s)
-       through the official project channels.
+20. Acceptance
+20.1. Downloading the Software constitutes formal acceptance.
+20.2. Modification of the code acts as agreement to these terms.
+20.3. Distribution of the Software confirms the User's consent.
 
-21. Third-Party Components
-   21.1 All third party components incorporated into the Software are licensed
-       under the original license provided by the owner of the applicable component.
+21. Definitions of Distribution
+21.1. Distribution includes the sharing of binaries and containers.
+21.2. Providing library access to external parties is distribution.
+21.3. Any deployment accessible to the public is considered distributed.
+
+22. Definitions of Derivative Works
+22.1. Any modification to the source code is a derivative work.
+22.2. Functional extensions built on the Software are derivatives.
+22.3. Translation or porting to other languages creates a derivative.
+
+23. Enforcement
+23.1. Breach of Section 3 voids the right to Commercial Use.
+23.2. Authors may demand immediate cessation of non-compliant use.
+23.3. Legal action may be taken for any material breach of terms.
+
+24. Headings
+24.1. Headings are used for organizational convenience only.
+24.2. Titles do not limit or define the scope of the sections.
+24.3. Interpretation shall be based on the text of the clauses.
+
+25. No Waiver
+25.1. Failure to enforce a term does not waive the right to do so.
+25.2. Delay in legal action does not constitute future permission.
+25.3. All rights remain enforceable regardless of past enforcement.
+
+26. Cumative Remedies
+26.1. Legal remedies under this License are not mutually exclusive.
+26.2. Authors may pursue multiple forms of relief simultaneously.
+26.3. Rights under this license add to existing statutory rights.
+
+27. Injunctive Relief
+27.1. Breaches may cause irreparable harm to the Authors.
+27.2. Authors may seek court orders to stop unauthorized use.
+27.3. Relief may be sought without the need to prove actual damages.
+
+28. Independent Contractors
+28.1. No partnership or agency is created by this License.
+28.2. Users do not have the authority to bind the Authors.
+28.3. This agreement does not establish an employment relationship.
+
+29. Force Majeure
+29.1. Authors are not liable for delays from external disasters.
+29.2. Uncontrollable events excuse performance of obligations.
+29.3. Neither party is responsible for acts of God or war.
+
+30. Survival
+30.1. Section 3 obligations continue after license termination.
+30.2. Attribution and notice requirements remain in effect.
+30.3. Liability and warranty disclaimers survive indefinitely.
+
+31. Applicability of License to Other Software
+31.1. Any person or organization may apply this license to software they own or have the right to license.
+31.2. By choosing to apply this license, the licensor agrees that the terms of this license will govern the licensed software.
+31.3. Users incorporating Third-Party Components must comply with all applicable third-party licenses in addition to this license.
+31.4. This license may be applied to original software, derivatives, plugins, or extensions created by the licensor.
