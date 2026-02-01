@@ -21,21 +21,23 @@
 2.3. Redistribution or commercial use is subject to Sections 3-5.
 
 3. Commercial / End-User-Facing Use Rights and Obligations
-3.1. Notice and Delivery of Modifications
-   Users engaging in Commercial or End-User-Facing Use must provide the Authors with the source code of any Derivative Works (as defined in Section 22) by:
-   (a) Sending the modified portions of the code, or the source code for functional extensions, directly to [licensing@doppelgangerdev.com]; or
-   (b) Providing a link to a public repository (e.g., GitHub, GitLab) containing the modifications.
-   (c) Scope of Delivery: Users are not required to send their entire software stack or unrelated proprietary code. Delivery is limited strictly to the modifications made to the Software and any new logic that functions as a derivative or extension of the Software.
-   (d) This delivery is a mandatory condition for commercial validity; failure to provide these portions at the time of deployment constitutes a material breach and voids the right to Commercial Use under Section 23.
-3.2. Original Code Display and Anonymity
-   (a) Authors may not publicly release or distribute the modified code in a way that identifies it as the User's original work unless the User explicitly chooses to open-source it (e.g., by providing a public repository link).
-   (b) This allows the User to fulfill their delivery obligation via email (Section 3.1a) without risking the public exposure of their proprietary identity or specific implementation details.
-3.3. Attribution Requirement
-   (a) Authors shall credit the User as a source of inspiration in public documentation or product materials only if the modified code is explicitly designated as open-source by the User (e.g., by providing a public repository link).
-   (b) To maintain the privacy protections in Section 3.2, no attribution shall be provided for private modifications sent via email, ensuring the User remains anonymous.
-3.4. Reciprocal Grant-Back (The "Payment")
-   (a) In exchange for Commercial Use, the User grants Authors a perpetual, worldwide, royalty-free, irrevocable license to use, modify, and commercialize the modified portions or extensions provided under Section 3.1.
-   (b) This grant-back ensures that the Authors benefit from the User's improvements to the logic while the User retains ownership of their unrelated proprietary systems.
+
+3.1. Notice: Users engaging in Commercial or End-User-Facing Use may notify Authors by
+   (a) Sending an email to licensing@doppelgangerdev.com, or  
+   (b) No response from Authors is required for the use to be valid.  
+
+3.2. Original Code Display Restrictions
+   (a) Authors may not publicly release, show, or distribute the Submitted Code as-is in a way that identifies it as the User's original code unless the User explicitly chooses to open-source it or ask otherwise in the submission.  
+   (b) Authors retain full rights to use, modify, incorporate, and commercialize derivatives of the Submitted Code in any project, product, or service.  
+
+3.3. Attribution Requirement 
+   (a) Authors shall credit the User as a source of inspiration in public documentation or product materials only if the Submitted Code is explicitly designated as open-source.
+   (b) To maintain the privacy protections in Section 3.2, no attribution shall be provided for submissions not intended for public release, unless otherwise agreed upon in writing.
+
+3.4. Licensing Flexibility
+   (a) Users may license any modifications or submissions they choose.  
+   (b) Authors’ rights to use, modify, or commercialize derivative works remain fully valid regardless of any license Users attach to their submissions.  
+
 
 4. Documentation, Blogs, Tutorials, And Media
 4.1. Documentation, blogs, blog images, tutorials, guides, promotional materials, or other creative content created by Authors are not included in this Software License.
