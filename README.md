@@ -13,7 +13,7 @@
     <img src="https://img.shields.io/badge/Forum-forum.doppelgangerdev.com-ff9900?style=for-the-badge&logo=discourse&rounded=true" alt="Forum" />
   </a>
   <a href="https://github.com/mnemosyne-artificial-intelligence/doppelganger/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/License-SUL%201.0-4caf50?style=for-the-badge&logo=github&rounded=true" alt="License" />
+    <img src="https://img.shields.io/badge/License-Open-source%201.0-4caf50?style=for-the-badge&logo=github&rounded=true" alt="License" />
   </a>
   <a href="https://www.npmjs.com/package/@doppelgangerdev/doppelganger">
     <img src="https://img.shields.io/badge/Version-0.5.5-6a8cff?style=for-the-badge&logo=npm&rounded=true" alt="Version" />
