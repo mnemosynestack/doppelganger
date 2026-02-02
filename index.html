@@ -21,7 +21,10 @@
                 autoClose: 3000,
                 doNotShowAfterSubmit: true
             };
-            const editorDelay = 300000;
+            const editorDelay = 5 * 60 * 1000;
+            const weekMs = 7 * 24 * 60 * 60 * 1000;
+            const lastShownKey = 'doppelganger.tally.lastShown';
+            const submittedKey = 'doppelganger.tally.submitted';
 
             const ensureTallyReady = (callback) => {
                 if (window.Tally) {
@@ -36,11 +39,34 @@
                 }, 200);
             };
 
+            const getLastShown = () => {
+                const value = localStorage.getItem(lastShownKey);
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed : 0;
+            };
+
+            const markShown = () => {
+                localStorage.setItem(lastShownKey, String(Date.now()));
+            };
+
+            const hasSubmitted = () => localStorage.getItem(submittedKey) === 'true';
+
             let hasOpened = false;
             let timerId;
+            let timerStarted = false;
+
+            const clearTimer = () => {
+                if (timerId) {
+                    clearTimeout(timerId);
+                    timerId = undefined;
+                }
+            };
+
             const openPopup = () => {
-                if (hasOpened) return;
+                if (hasOpened || hasSubmitted()) return;
                 hasOpened = true;
+                clearTimer();
+                markShown();
                 ensureTallyReady(() => {
                     if (window.Tally) {
                         window.Tally.openPopup(formId, popupOptions);
@@ -49,8 +75,22 @@
             };
 
             const startEditorTimer = () => {
-                if (hasOpened || timerId) return;
+                if (hasOpened || timerStarted || hasSubmitted()) return;
+                timerStarted = true;
+                const shownAt = getLastShown();
+                if (shownAt && Date.now() - shownAt < weekMs) {
+                    return;
+                }
                 timerId = window.setTimeout(openPopup, editorDelay);
+            };
+
+            const onSubmission = (event) => {
+                if (typeof event.data !== 'string' || !event.data.includes('Tally.FormSubmitted')) {
+                    return;
+                }
+                localStorage.setItem(submittedKey, 'true');
+                hasOpened = true;
+                clearTimer();
             };
 
             const onLocationChange = () => {
@@ -76,6 +116,7 @@
             }
 
             window.addEventListener('popstate', onLocationChange);
+            window.addEventListener('message', onSubmission);
             onLocationChange();
         })();
     </script>
