@@ -236,7 +236,7 @@ Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/a
 
 # Maintenance
 
-- The project is governed by the **[Sustainable Use License (SUL 1.0)](https://github.com/mnemosyne-artificial-intelligence/doppelganger/blob/main/LICENSE)**; hosting it as a competing service is prohibited.
+- The project is governed by the **[Notice & Attribution License v1.0](https://github.com/mnemosyne-artificial-intelligence/doppelganger/blob/main/LICENSE)**, which grants royalty-free internal/private rights while requiring notice, attribution, and source delivery when the software is deployed for external end users; hosting it as a competing service is prohibited.
 - Keep `data/` and `storage_state.json` backed up if you rely on historical cookies or proxies.
 - Release updates by pulling `mnemosyneai/doppelganger` (Docker) or `npm i @doppelgangerdev/doppelganger` (npm). The Settings view always displays the current package version.
 - Contributions: follow `.github/` templates, respect `CONTRIBUTING.md`, and run available lint/test scripts if you touch critical areas.
