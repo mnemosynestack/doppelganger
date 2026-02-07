@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
-const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 const { getProxySelection } = require('./proxy-rotation');
 const { selectUserAgent } = require('./user-agent-settings');
 
@@ -345,84 +345,59 @@ async function handleScrape(req, res) {
 
         const runExtractionScript = async (script, html, pageUrl) => {
             if (!script || typeof script !== 'string') return { result: undefined, logs: [] };
-            try {
-                const dom = new JSDOM(html || '');
-                const { window } = dom;
-                const logBuffer = [];
-                const consoleProxy = {
-                    log: (...args) => logBuffer.push(args.join(' ')),
-                    warn: (...args) => logBuffer.push(args.join(' ')),
-                    error: (...args) => logBuffer.push(args.join(' '))
-                };
-                const shadowHelpers = (() => {
-                    const shadowQueryAll = (selector, root = window.document) => {
-                        const results = [];
-                        const walk = (node) => {
-                            if (!node) return;
-                            if (node.nodeType === 1) {
-                                const el = node;
-                                if (selector && el.matches && el.matches(selector)) results.push(el);
-                                if (el.tagName === 'TEMPLATE' && el.hasAttribute('data-shadowroot')) {
-                                    walk(el.content);
-                                }
-                            } else if (node.nodeType === 11) {
-                                // DocumentFragment
-                            }
-                            if (node.childNodes) {
-                                node.childNodes.forEach((child) => walk(child));
-                            }
-                        };
-                        walk(root);
-                        return results;
-                    };
 
-                    const shadowText = (root = window.document) => {
-                        const texts = [];
-                        const walk = (node) => {
-                            if (!node) return;
-                            if (node.nodeType === 3) {
-                                const text = node.nodeValue ? node.nodeValue.trim() : '';
-                                if (text) texts.push(text);
-                                return;
-                            }
-                            if (node.nodeType === 1) {
-                                const el = node;
-                                if (el.tagName === 'TEMPLATE' && el.hasAttribute('data-shadowroot')) {
-                                    walk(el.content);
-                                }
-                            }
-                            if (node.childNodes) {
-                                node.childNodes.forEach((child) => walk(child));
-                            }
-                        };
-                        walk(root);
-                        return texts;
-                    };
+            return new Promise((resolve) => {
+                const worker = spawn('node', [path.join(__dirname, 'extraction-worker.js')], {
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                    env: { ...process.env, NODE_ENV: 'production' } // Minimal env
+                });
 
-                    return { shadowQueryAll, shadowText };
-                })();
+                let stdout = '';
+                let stderr = '';
 
-                const executor = new Function(
-                    '$$data',
-                    'window',
-                    'document',
-                    'DOMParser',
-                    'console',
-                    `"use strict"; return (async () => { ${script}\n})();`
-                );
-                const $$data = {
-                    html: () => html || '',
-                    url: () => pageUrl || '',
-                    window,
-                    document: window.document,
-                    shadowQueryAll: includeShadowDom ? shadowHelpers.shadowQueryAll : undefined,
-                    shadowText: includeShadowDom ? shadowHelpers.shadowText : undefined
-                };
-                const result = await executor($$data, window, window.document, window.DOMParser, consoleProxy);
-                return { result, logs: logBuffer };
-            } catch (e) {
-                return { result: `Extraction script error: ${e.message}`, logs: [] };
-            }
+                const workerTimeout = 5000;
+                const timer = setTimeout(() => {
+                    worker.kill();
+                    resolve({ result: 'Worker timed out', logs: [] });
+                }, workerTimeout);
+
+                worker.stdout.on('data', (data) => {
+                    stdout += data.toString();
+                });
+
+                worker.stderr.on('data', (data) => {
+                    stderr += data.toString();
+                });
+
+                worker.on('close', (code) => {
+                    clearTimeout(timer);
+                    if (code !== 0) {
+                        resolve({ result: `Worker exited with code ${code}: ${stderr}`, logs: [] });
+                        return;
+                    }
+                    try {
+                        const output = JSON.parse(stdout);
+                        resolve(output);
+                    } catch (e) {
+                        resolve({ result: `Worker output parse error: ${e.message}. Stdout: ${stdout}`, logs: [] });
+                    }
+                });
+
+                worker.on('error', (err) => {
+                     clearTimeout(timer);
+                     resolve({ result: `Worker spawn error: ${err.message}`, logs: [] });
+                });
+
+                const input = JSON.stringify({
+                    script,
+                    html,
+                    url: pageUrl,
+                    includeShadowDom
+                });
+
+                worker.stdin.write(input);
+                worker.stdin.end();
+            });
         };
 
         const extraction = await runExtractionScript(extractionScript, productHtml, page.url());
