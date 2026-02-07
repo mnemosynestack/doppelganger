@@ -37,7 +37,7 @@
     "bcryptjs": "^3.0.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
-    "express-session": "^1.18.2",
+    "express-session": "^1.19.0",
     "jsdom": "^22.1.0",
     "lucide-react": "^0.562.0",
     "pg": "^8.16.3",

@@ -106,6 +106,13 @@ const authRateLimiter = rateLimit({
     legacyHeaders: false
 });
 
+const settingsRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 const sendExecutionUpdate = (runId, payload) => {
     if (!runId) return;
     const clients = executionStreams.get(runId);
@@ -522,7 +529,7 @@ app.post('/api/settings/api-key', requireAuthForSettings, (req, res) => {
     }
 });
 
-app.get('/api/settings/user-agent', requireAuthForSettings, async (_req, res) => {
+app.get('/api/settings/user-agent', settingsRateLimiter, requireAuthForSettings, async (_req, res) => {
     try {
         res.json(await getUserAgentConfig());
     } catch (e) {
@@ -531,7 +538,11 @@ app.get('/api/settings/user-agent', requireAuthForSettings, async (_req, res) =>
     }
 });
 
-app.post('/api/settings/user-agent', requireAuthForSettings, async (req, res) => {
+app.post('/api/settings/user-agent', settingsRateLimiter, requireAuthForSettings, async (req, res) => {
+    // CSRF check: verify content-type is JSON (simple check to prevent simple form posts)
+    if (!req.is('application/json')) {
+        return res.status(400).json({ error: 'INVALID_CONTENT_TYPE' });
+    }
     try {
         const selection = req.body && typeof req.body.selection === 'string' ? req.body.selection : null;
         await setUserAgentSelection(selection);
