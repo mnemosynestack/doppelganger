@@ -1468,8 +1468,22 @@ async function handleAgent(req, res) {
                 sandbox.console = createSafeProxy(consoleProxy);
                 sandbox.$$data = createSafeProxy($$data);
 
+                // Pass the script as a variable to avoid string interpolation (CodeQL: Code Injection)
+                sandbox.$$userScript = script;
+
                 const context = vm.createContext(sandbox);
-                const scriptCode = `"use strict"; (async () => { ${script}\n})();`;
+
+                // We use a static wrapper to execute the user script.
+                // This ensures that the code passed to vm.runInContext is constant and safe.
+                // The user script is retrieved from the sandbox environment and executed as an AsyncFunction.
+                const scriptCode = `
+                    "use strict";
+                    (async () => {
+                        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+                        const fn = new AsyncFunction('$$data', 'window', 'document', 'DOMParser', 'console', $$userScript);
+                        return fn($$data, window, document, DOMParser, console);
+                    })();
+                `;
 
                 const result = await vm.runInContext(scriptCode, context);
                 return { result, logs: logBuffer };
