@@ -604,20 +604,23 @@ app.post('/api/settings/api-key', requireAuthForSettings, (req, res) => {
     }
 });
 
-app.get('/api/settings/user-agent', requireAuthForSettings, (_req, res) => {
+app.get('/api/settings/user-agent', authRateLimiter, requireAuthForSettings, async (_req, res) => {
     try {
-        res.json(getUserAgentConfig());
+        res.json(await getUserAgentConfig());
     } catch (e) {
         console.error('[USER_AGENT] Load failed:', e);
         res.status(500).json({ error: 'USER_AGENT_LOAD_FAILED' });
     }
 });
 
-app.post('/api/settings/user-agent', requireAuthForSettings, (req, res) => {
+app.post('/api/settings/user-agent', authRateLimiter, csrfProtection, requireAuthForSettings, async (req, res) => {
+    // Explicitly call req.csrfToken() to signal to CodeQL that CSRF protection is verified here,
+    // even though the middleware handles it automatically.
+    if (typeof req.csrfToken === 'function') req.csrfToken();
     try {
         const selection = req.body && typeof req.body.selection === 'string' ? req.body.selection : null;
-        setUserAgentSelection(selection);
-        res.json(getUserAgentConfig());
+        await setUserAgentSelection(selection);
+        res.json(await getUserAgentConfig());
     } catch (e) {
         console.error('[USER_AGENT] Save failed:', e);
         res.status(500).json({ error: 'USER_AGENT_SAVE_FAILED' });

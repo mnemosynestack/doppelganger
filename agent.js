@@ -516,7 +516,7 @@ async function handleAgent(req, res) {
         return { startToEnd, startToElse, elseToEnd, endToStart };
     };
 
-    const selectedUA = selectUserAgent(rotateUserAgents);
+    const selectedUA = await selectUserAgent(rotateUserAgents);
 
     let browser;
     let context;
