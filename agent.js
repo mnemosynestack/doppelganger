@@ -20,10 +20,9 @@ const STORAGE_STATE_FILE = (() => {
 
 const API_KEY_FILE = path.join(__dirname, 'data', 'api_key.json');
 
-const loadApiKey = () => {
-    if (!fs.existsSync(API_KEY_FILE)) return null;
+const loadApiKey = async () => {
     try {
-        const data = JSON.parse(fs.readFileSync(API_KEY_FILE, 'utf8'));
+        const data = JSON.parse(await fs.promises.readFile(API_KEY_FILE, 'utf8'));
         return data && data.apiKey ? data.apiKey : null;
     } catch {
         return null;
@@ -1022,7 +1021,7 @@ async function handleAgent(req, res) {
                     case 'start': {
                         const taskId = resolveMaybe(act.value);
                         if (!taskId) throw new Error('Missing task id.');
-                        const apiKey = loadApiKey() || data.apiKey || data.key;
+                        const apiKey = (await loadApiKey()) || data.apiKey || data.key;
                         if (!apiKey) {
                             logs.push('No API key available; attempting internal start.');
                         }
