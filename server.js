@@ -106,6 +106,17 @@ const authRateLimiter = rateLimit({
     legacyHeaders: false
 });
 
+// Data routes involve file system access; wrap them with this limiter to prevent DoS.
+const DATA_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const DATA_RATE_LIMIT_MAX = Number(process.env.DATA_RATE_LIMIT_MAX || 100);
+const dataRateLimiter = rateLimit({
+    windowMs: DATA_RATE_LIMIT_WINDOW_MS,
+    max: DATA_RATE_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'TOO_MANY_REQUESTS' }
+});
+
 const csrfProtection = (req, res, next) => {
     // Mock csrfToken for compatibility with security scanners looking for this pattern
     req.csrfToken = () => 'protected-by-origin-check';
@@ -713,7 +724,7 @@ app.post('/api/settings/proxies/rotation', requireAuthForSettings, (req, res) =>
 });
 
 
-app.post('/api/clear-screenshots', requireAuth, (req, res) => {
+app.post('/api/clear-screenshots', requireAuth, dataRateLimiter, (req, res) => {
     const capturesDir = path.join(__dirname, 'public', 'captures');
     if (fs.existsSync(capturesDir)) {
         for (const entry of fs.readdirSync(capturesDir)) {
@@ -726,7 +737,7 @@ app.post('/api/clear-screenshots', requireAuth, (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/api/clear-cookies', requireAuth, (req, res) => {
+app.post('/api/clear-cookies', requireAuth, dataRateLimiter, (req, res) => {
     if (fs.existsSync(STORAGE_STATE_FILE)) {
         fs.unlinkSync(STORAGE_STATE_FILE);
     }
@@ -734,11 +745,11 @@ app.post('/api/clear-cookies', requireAuth, (req, res) => {
 });
 
 // --- TASKS API ---
-app.get('/api/tasks', requireAuth, async (req, res) => {
+app.get('/api/tasks', requireAuth, dataRateLimiter, async (req, res) => {
     res.json(await loadTasks());
 });
 
-app.get('/api/tasks/list', requireApiKey, async (req, res) => {
+app.get('/api/tasks/list', requireApiKey, dataRateLimiter, async (req, res) => {
     const tasks = await loadTasks();
     const summary = tasks.map((task) => ({
         id: task.id,
@@ -747,7 +758,7 @@ app.get('/api/tasks/list', requireApiKey, async (req, res) => {
     res.json({ tasks: summary });
 });
 
-app.post('/api/tasks', requireAuth, async (req, res) => {
+app.post('/api/tasks', requireAuth, dataRateLimiter, async (req, res) => {
     await taskMutex.lock();
     try {
         const tasks = await loadTasks();
@@ -771,7 +782,7 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/tasks/:id/touch', requireAuth, async (req, res) => {
+app.post('/api/tasks/:id/touch', requireAuth, dataRateLimiter, async (req, res) => {
     await taskMutex.lock();
     try {
         const tasks = await loadTasks();
@@ -785,7 +796,7 @@ app.post('/api/tasks/:id/touch', requireAuth, async (req, res) => {
     }
 });
 
-app.delete('/api/tasks/:id', requireAuth, async (req, res) => {
+app.delete('/api/tasks/:id', requireAuth, dataRateLimiter, async (req, res) => {
     await taskMutex.lock();
     try {
         let tasks = await loadTasks();
@@ -863,7 +874,7 @@ app.delete('/api/executions/:id', requireAuth, (req, res) => {
 });
 
 
-app.get('/api/tasks/:id/versions', requireAuth, async (req, res) => {
+app.get('/api/tasks/:id/versions', requireAuth, dataRateLimiter, async (req, res) => {
     const tasks = await loadTasks();
     const task = tasks.find(t => t.id === req.params.id);
     if (!task) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
@@ -875,7 +886,7 @@ app.get('/api/tasks/:id/versions', requireAuth, async (req, res) => {
     }));
     res.json({ versions });
 });
-app.get('/api/tasks/:id/versions/:versionId', requireAuth, async (req, res) => {
+app.get('/api/tasks/:id/versions/:versionId', requireAuth, dataRateLimiter, async (req, res) => {
     const tasks = await loadTasks();
     const task = tasks.find(t => t.id === req.params.id);
     if (!task) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
@@ -885,7 +896,7 @@ app.get('/api/tasks/:id/versions/:versionId', requireAuth, async (req, res) => {
     res.json({ snapshot: version.snapshot, metadata: { id: version.id, timestamp: version.timestamp } });
 });
 
-app.post('/api/tasks/:id/versions/clear', requireAuth, async (req, res) => {
+app.post('/api/tasks/:id/versions/clear', requireAuth, dataRateLimiter, async (req, res) => {
     await taskMutex.lock();
     try {
         const tasks = await loadTasks();
@@ -899,7 +910,7 @@ app.post('/api/tasks/:id/versions/clear', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/tasks/:id/rollback', requireAuth, async (req, res) => {
+app.post('/api/tasks/:id/rollback', requireAuth, dataRateLimiter, async (req, res) => {
     await taskMutex.lock();
     try {
         const { versionId } = req.body || {};
@@ -923,7 +934,7 @@ app.post('/api/tasks/:id/rollback', requireAuth, async (req, res) => {
     }
 });
 
-app.get('/api/data/captures', requireAuth, (_req, res) => {
+app.get('/api/data/captures', requireAuth, dataRateLimiter, (_req, res) => {
     const capturesDir = path.join(__dirname, 'public', 'captures');
     if (!fs.existsSync(capturesDir)) return res.json({ captures: [] });
     const runId = String(_req.query?.runId || '').trim();
@@ -947,7 +958,7 @@ app.get('/api/data/captures', requireAuth, (_req, res) => {
     res.json({ captures: entries });
 });
 
-app.get('/api/data/screenshots', requireAuth, (_req, res) => {
+app.get('/api/data/screenshots', requireAuth, dataRateLimiter, (_req, res) => {
     const capturesDir = path.join(__dirname, 'public', 'captures');
     if (!fs.existsSync(capturesDir)) return res.json({ screenshots: [] });
     const entries = fs.readdirSync(capturesDir)
@@ -966,7 +977,7 @@ app.get('/api/data/screenshots', requireAuth, (_req, res) => {
     res.json({ screenshots: entries });
 });
 
-app.delete('/api/data/captures/:name', requireAuth, (req, res) => {
+app.delete('/api/data/captures/:name', requireAuth, dataRateLimiter, (req, res) => {
     const name = req.params.name;
     if (name.includes('..') || name.includes('/') || name.includes('\\')) {
         return res.status(400).json({ error: 'INVALID_NAME' });
@@ -978,7 +989,7 @@ app.delete('/api/data/captures/:name', requireAuth, (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/api/data/cookies', requireAuth, (req, res) => {
+app.get('/api/data/cookies', requireAuth, dataRateLimiter, (req, res) => {
     if (!fs.existsSync(STORAGE_STATE_FILE)) return res.json({ cookies: [], origins: [] });
     try {
         const data = JSON.parse(fs.readFileSync(STORAGE_STATE_FILE, 'utf8'));
@@ -991,7 +1002,7 @@ app.get('/api/data/cookies', requireAuth, (req, res) => {
     }
 });
 
-app.post('/api/data/cookies/delete', requireAuth, (req, res) => {
+app.post('/api/data/cookies/delete', requireAuth, dataRateLimiter, (req, res) => {
     const { name, domain, path: cookiePath } = req.body || {};
     if (!name) return res.status(400).json({ error: 'MISSING_NAME' });
     if (!fs.existsSync(STORAGE_STATE_FILE)) return res.json({ success: true });
