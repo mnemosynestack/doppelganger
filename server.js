@@ -522,20 +522,20 @@ app.post('/api/settings/api-key', requireAuthForSettings, (req, res) => {
     }
 });
 
-app.get('/api/settings/user-agent', requireAuthForSettings, (_req, res) => {
+app.get('/api/settings/user-agent', requireAuthForSettings, async (_req, res) => {
     try {
-        res.json(getUserAgentConfig());
+        res.json(await getUserAgentConfig());
     } catch (e) {
         console.error('[USER_AGENT] Load failed:', e);
         res.status(500).json({ error: 'USER_AGENT_LOAD_FAILED' });
     }
 });
 
-app.post('/api/settings/user-agent', requireAuthForSettings, (req, res) => {
+app.post('/api/settings/user-agent', requireAuthForSettings, async (req, res) => {
     try {
         const selection = req.body && typeof req.body.selection === 'string' ? req.body.selection : null;
-        setUserAgentSelection(selection);
-        res.json(getUserAgentConfig());
+        await setUserAgentSelection(selection);
+        res.json(await getUserAgentConfig());
     } catch (e) {
         console.error('[USER_AGENT] Save failed:', e);
         res.status(500).json({ error: 'USER_AGENT_SAVE_FAILED' });

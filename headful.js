@@ -57,7 +57,7 @@ async function handleHeadful(req, res) {
 
     activeSession = { status: 'starting', startedAt: Date.now(), stateless: statelessExecution };
 
-    const selectedUA = selectUserAgent(false);
+    const selectedUA = await selectUserAgent(false);
 
     console.log(`Opening headful browser for: ${url}`);
 
