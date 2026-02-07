@@ -153,7 +153,7 @@ const VariableRow: React.FC<{
                     />
                 )}
             </div>
-            <button onClick={() => removeVariable(name)} className="p-2 text-red-500 hover:text-red-400">×</button>
+            <button onClick={() => removeVariable(name)} className="p-2 text-red-500 hover:text-red-400" aria-label="Remove variable" title="Remove variable">×</button>
         </div>
     );
 };
@@ -664,6 +664,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                 onClick={() => setEditorView('history')}
                                 className="w-8 h-8 rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center"
                                 title="Task History"
+                                aria-label="Task History"
                             >
                                 <HistoryIcon className="w-3.5 h-3.5" />
                             </button>
@@ -837,7 +838,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                         <button
                                                             data-no-drag="true"
                                                             onClick={() => removeAction(action.id)}
-                                                            className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover/item:opacity-100"
+                                                            className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover/item:opacity-100 focus:opacity-100"
+                                                            aria-label="Delete action"
+                                                            title="Delete action"
                                                         >
                                                             <X className="w-4 h-4" />
                                                         </button>
@@ -1708,6 +1711,7 @@ return JSON.stringify(links, null, 2);`}
                                 onClick={() => onStop?.()}
                                 className="w-12 h-12 rounded-2xl border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center"
                                 title="Stop task"
+                                aria-label="Stop task"
                             >
                                 <Square className="w-4 h-4" />
                             </button>
