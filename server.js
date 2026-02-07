@@ -255,7 +255,8 @@ function generateApiKey() {
     return crypto.randomBytes(32).toString('hex');
 }
 
-let allowedIpsCache = { env: null, file: null, mtimeMs: 0, set: null };
+let allowedIpsCache = { env: null, file: null, mtimeMs: 0, set: null, lastCheck: 0 };
+const ALLOWED_IPS_TTL_MS = 5000;
 
 const normalizeIp = (raw) => {
     if (!raw) return '';
@@ -275,18 +276,22 @@ const parseIpList = (input) => {
     return [];
 };
 
-const loadAllowedIps = () => {
+const loadAllowedIps = async () => {
     const envRaw = String(process.env.ALLOWED_IPS || '').trim();
+    const now = Date.now();
+
+    if (allowedIpsCache.set && (now - allowedIpsCache.lastCheck < ALLOWED_IPS_TTL_MS)) {
+        return allowedIpsCache.set;
+    }
+
     let filePath = null;
     let fileMtime = 0;
     let fileEntries = [];
 
     try {
-        if (fs.existsSync(ALLOWED_IPS_FILE)) {
-            filePath = ALLOWED_IPS_FILE;
-            const stat = fs.statSync(ALLOWED_IPS_FILE);
-            fileMtime = stat.mtimeMs || 0;
-        }
+        const stat = await fs.promises.stat(ALLOWED_IPS_FILE);
+        filePath = ALLOWED_IPS_FILE;
+        fileMtime = stat.mtimeMs || 0;
     } catch {
         filePath = null;
     }
@@ -297,12 +302,13 @@ const loadAllowedIps = () => {
         allowedIpsCache.file === filePath &&
         allowedIpsCache.mtimeMs === fileMtime
     ) {
+        allowedIpsCache.lastCheck = now;
         return allowedIpsCache.set;
     }
 
     if (filePath) {
         try {
-            const raw = fs.readFileSync(filePath, 'utf8');
+            const raw = await fs.promises.readFile(filePath, 'utf8');
             const parsed = JSON.parse(raw);
             fileEntries = Array.isArray(parsed)
                 ? parsed
@@ -322,19 +328,19 @@ const loadAllowedIps = () => {
         .filter(Boolean);
 
     const set = new Set(combined);
-    allowedIpsCache = { env: envRaw, file: filePath, mtimeMs: fileMtime, set };
+    allowedIpsCache = { env: envRaw, file: filePath, mtimeMs: fileMtime, set, lastCheck: now };
     return set;
 };
 
-const isIpAllowed = (ip) => {
-    const allowlist = loadAllowedIps();
+const isIpAllowed = async (ip) => {
+    const allowlist = await loadAllowedIps();
     if (!allowlist || allowlist.size === 0) return true;
     return allowlist.has(normalizeIp(ip));
 };
 
-const requireIpAllowlist = (req, res, next) => {
+const requireIpAllowlist = async (req, res, next) => {
     const ip = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress;
-    if (isIpAllowed(ip)) return next();
+    if (await isIpAllowed(ip)) return next();
     if (req.xhr || req.path.startsWith('/api/')) {
         return res.status(403).json({ error: 'IP_NOT_ALLOWED' });
     }
@@ -1229,8 +1235,8 @@ findAvailablePort(port, 20)
             const displayPort = typeof address === 'object' && address ? address.port : availablePort;
             console.log(`Server running at http://localhost:${displayPort}`);
         });
-        server.on('upgrade', (req, socket, head) => {
-            if (!isIpAllowed(req.socket?.remoteAddress)) {
+        server.on('upgrade', async (req, socket, head) => {
+            if (!await isIpAllowed(req.socket?.remoteAddress)) {
                 try {
                     socket.destroy();
                 } catch {
