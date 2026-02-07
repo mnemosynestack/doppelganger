@@ -1022,7 +1022,9 @@ app.get('/tasks/new', requireAuth, (req, res) => {
 
 // Task editor - existing task
 app.get('/tasks/:id', requireAuth, (req, res) => {
-    console.log(`[ROUTE] /tasks/:id matched with id: ${req.params.id}`);
+    if (process.env.NODE_ENV !== 'production') {
+        console.log(`[ROUTE] /tasks/:id matched with id: ${req.params.id}`);
+    }
     res.sendFile(path.join(DIST_DIR, 'index.html'));
 });
 
