@@ -131,9 +131,7 @@ async function handleScrape(req, res) {
         browser = await chromium.launch(launchOptions);
 
         const recordingsDir = path.join(__dirname, 'data', 'recordings');
-        if (!fs.existsSync(recordingsDir)) {
-            fs.mkdirSync(recordingsDir, { recursive: true });
-        }
+        await fs.promises.mkdir(recordingsDir, { recursive: true });
 
         const viewport = rotateViewport
             ? { width: 1280 + Math.floor(Math.random() * 640), height: 720 + Math.floor(Math.random() * 360) }
