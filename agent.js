@@ -543,9 +543,7 @@ async function handleAgent(req, res) {
         browser = await chromium.launch(launchOptions);
 
         const recordingsDir = path.join(__dirname, 'data', 'recordings');
-        if (!fs.existsSync(recordingsDir)) {
-            fs.mkdirSync(recordingsDir, { recursive: true });
-        }
+        await fs.promises.mkdir(recordingsDir, { recursive: true });
 
         const rotateViewport = String(data.rotateViewport).toLowerCase() === 'true' || data.rotateViewport === true;
         const viewport = rotateViewport

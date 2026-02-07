@@ -106,6 +106,15 @@ const authRateLimiter = rateLimit({
     legacyHeaders: false
 });
 
+const DATA_RATE_LIMIT_MAX = Number(process.env.DATA_RATE_LIMIT_MAX || 100);
+const dataRateLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: DATA_RATE_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'TOO_MANY_REQUESTS' }
+});
+
 const csrfProtection = (req, res, next) => {
     // Mock csrfToken for compatibility with security scanners looking for this pattern
     req.csrfToken = () => 'protected-by-origin-check';
@@ -923,7 +932,7 @@ app.post('/api/tasks/:id/rollback', requireAuth, async (req, res) => {
     }
 });
 
-app.get('/api/data/captures', requireAuth, (_req, res) => {
+app.get('/api/data/captures', requireAuth, dataRateLimiter, (_req, res) => {
     const capturesDir = path.join(__dirname, 'public', 'captures');
     if (!fs.existsSync(capturesDir)) return res.json({ captures: [] });
     const runId = String(_req.query?.runId || '').trim();
@@ -947,7 +956,7 @@ app.get('/api/data/captures', requireAuth, (_req, res) => {
     res.json({ captures: entries });
 });
 
-app.get('/api/data/screenshots', requireAuth, (_req, res) => {
+app.get('/api/data/screenshots', requireAuth, dataRateLimiter, (_req, res) => {
     const capturesDir = path.join(__dirname, 'public', 'captures');
     if (!fs.existsSync(capturesDir)) return res.json({ screenshots: [] });
     const entries = fs.readdirSync(capturesDir)
@@ -1013,7 +1022,7 @@ app.post('/api/data/cookies/delete', requireAuth, (req, res) => {
 });
 
 // --- TASK API EXECUTION ---
-app.post('/tasks/:id/api', requireApiKey, async (req, res) => {
+app.post('/tasks/:id/api', requireApiKey, dataRateLimiter, async (req, res) => {
     const tasks = await loadTasks();
     const task = tasks.find(t => String(t.id) === String(req.params.id));
     if (!task) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
@@ -1143,15 +1152,15 @@ app.get('/executions/:id', requireAuth, (req, res) => {
 });
 
 // Execution endpoints
-app.all('/scrape', requireAuth, (req, res) => {
+app.all('/scrape', requireAuth, dataRateLimiter, (req, res) => {
     registerExecution(req, res, { mode: 'scrape' });
     return handleScrape(req, res);
 });
-app.all('/scraper', requireAuth, (req, res) => {
+app.all('/scraper', requireAuth, dataRateLimiter, (req, res) => {
     registerExecution(req, res, { mode: 'scrape' });
     return handleScrape(req, res);
 });
-app.all('/agent', requireAuth, (req, res) => {
+app.all('/agent', requireAuth, dataRateLimiter, (req, res) => {
     registerExecution(req, res, { mode: 'agent' });
     try {
         const runId = String((req.body && req.body.runId) || req.query.runId || '').trim();
@@ -1163,7 +1172,7 @@ app.all('/agent', requireAuth, (req, res) => {
     }
     return handleAgent(req, res);
 });
-app.post('/headful', requireAuth, (req, res) => {
+app.post('/headful', requireAuth, dataRateLimiter, (req, res) => {
     registerExecution(req, res, { mode: 'headful' });
     if (req.body && typeof req.body.url === 'string') {
         const vars = req.body.taskVariables || req.body.variables || {};
