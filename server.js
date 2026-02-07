@@ -424,6 +424,12 @@ setStopChecker((runId) => {
 app.use(requireIpAllowlist);
 app.use(express.json({ limit: '50mb' }));
 const SESSION_TTL_SECONDS = 10 * 365 * 24 * 60 * 60; // 10 years
+const SESSION_COOKIE_CONFIG = {
+    // CodeQL warns about insecure cookies; we only set secure=true when NODE_ENV=production or SESSION_COOKIE_SECURE explicitly enables it.
+    secure: SESSION_COOKIE_SECURE,
+    sameSite: 'strict', // Strict mitigation for CSRF warnings
+    maxAge: SESSION_TTL_SECONDS * 1000
+};
 
 app.use(session({
     store: new FileStore({
@@ -434,12 +440,7 @@ app.use(session({
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: {
-        // CodeQL warns about insecure cookies; we only set secure=true when NODE_ENV=production or SESSION_COOKIE_SECURE explicitly enables it.
-        secure: SESSION_COOKIE_SECURE,
-        sameSite: 'strict', // Strict mitigation for CSRF warnings
-        maxAge: SESSION_TTL_SECONDS * 1000
-    }
+    cookie: SESSION_COOKIE_CONFIG
 }));
 
 app.use(csrfProtection);
@@ -604,7 +605,7 @@ app.get('/api/settings/user-agent', authRateLimiter, requireAuthForSettings, asy
     }
 });
 
-app.post('/api/settings/user-agent', authRateLimiter, requireAuthForSettings, async (req, res) => {
+app.post('/api/settings/user-agent', authRateLimiter, csrfProtection, requireAuthForSettings, async (req, res) => {
     try {
         const selection = req.body && typeof req.body.selection === 'string' ? req.body.selection : null;
         await setUserAgentSelection(selection);
