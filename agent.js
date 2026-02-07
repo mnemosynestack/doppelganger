@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
+const { ensureCapturesDir } = require('./fs-utils');
 const { getProxySelection } = require('./proxy-rotation');
 const { selectUserAgent } = require('./user-agent-settings');
 
@@ -740,14 +741,6 @@ async function handleAgent(req, res) {
             return merged;
         };
 
-        const ensureCapturesDir = () => {
-            const capturesDir = path.join(__dirname, 'public', 'captures');
-            if (!fs.existsSync(capturesDir)) {
-                fs.mkdirSync(capturesDir, { recursive: true });
-            }
-            return capturesDir;
-        };
-
         const captureScreenshot = async (label) => {
             const capturesDir = ensureCapturesDir();
             const safeLabel = label ? String(label).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) : '';
@@ -1418,10 +1411,7 @@ async function handleAgent(req, res) {
         };
 
         // Ensure the public/screenshots directory exists
-        const capturesDir = path.join(__dirname, 'public', 'captures');
-        if (!fs.existsSync(capturesDir)) {
-            fs.mkdirSync(capturesDir, { recursive: true });
-        }
+        const capturesDir = ensureCapturesDir();
 
         const screenshotName = `${captureRunId}_agent_${Date.now()}.png`;
         const screenshotPath = path.join(capturesDir, screenshotName);

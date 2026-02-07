@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { ensureCapturesDir } = require('./fs-utils');
 const net = require('net');
 const rateLimit = require('express-rate-limit');
 const app = express();
@@ -1080,10 +1081,7 @@ app.post('/headful', requireAuth, (req, res) => {
 app.post('/headful/stop', requireAuth, stopHeadful);
 
 // Ensure public/captures directory exists
-const capturesDir = path.join(__dirname, 'public', 'captures');
-if (!fs.existsSync(capturesDir)) {
-    fs.mkdirSync(capturesDir, { recursive: true });
-}
+const capturesDir = ensureCapturesDir();
 
 const novncDirCandidates = [
     '/opt/novnc',
