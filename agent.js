@@ -970,8 +970,13 @@ async function handleAgent(req, res) {
                         logs.push('Running custom JavaScript...');
                         if (act.value) {
                             result = await page.evaluate((code) => {
-                                // eslint-disable-next-line no-eval
-                                return eval(code);
+                                try {
+                                    // eslint-disable-next-line no-new-func
+                                    return new Function(`return (${code})`)();
+                                } catch {
+                                    // eslint-disable-next-line no-new-func
+                                    return new Function(code)();
+                                }
                             }, resolveMaybe(act.value));
                         }
                         break;
