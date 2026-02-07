@@ -135,12 +135,6 @@ function saveTasks(tasks) {
     fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2));
 }
 
-function cloneTaskForVersion(task) {
-    const copy = JSON.parse(JSON.stringify(task || {}));
-    if (copy.versions) delete copy.versions;
-    return copy;
-}
-
 function appendTaskVersion(task) {
     if (!task) return;
     if (!task.versions) task.versions = [];
@@ -346,6 +340,7 @@ const { handleAgent, setProgressReporter, setStopChecker } = require('./agent');
 const { handleHeadful, stopHeadful } = require('./headful');
 const { listProxies, addProxy, addProxies, updateProxy, deleteProxy, setDefaultProxy, setIncludeDefaultInRotation, setRotationMode } = require('./proxy-rotation');
 const { getUserAgentConfig, setUserAgentSelection } = require('./user-agent-settings');
+const { cloneTaskForVersion } = require('./lib/task-utils');
 
 setProgressReporter(sendExecutionUpdate);
 setStopChecker((runId) => {
