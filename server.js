@@ -380,7 +380,8 @@ app.use(session({
     cookie: {
         // CodeQL warns about insecure cookies; we only set secure=true when NODE_ENV=production or SESSION_COOKIE_SECURE explicitly enables it.
         secure: SESSION_COOKIE_SECURE,
-        maxAge: SESSION_TTL_SECONDS * 1000
+        maxAge: SESSION_TTL_SECONDS * 1000,
+        sameSite: 'lax'
     }
 }));
 
@@ -542,6 +543,18 @@ app.post('/api/settings/user-agent', settingsRateLimiter, requireAuthForSettings
     // CSRF check: verify content-type is JSON (simple check to prevent simple form posts)
     if (!req.is('application/json')) {
         return res.status(400).json({ error: 'INVALID_CONTENT_TYPE' });
+    }
+    // CSRF check: verify Origin matches Host (if present)
+    const origin = req.get('Origin');
+    if (origin) {
+        try {
+            const originHost = new URL(origin).host;
+            if (originHost !== req.get('host')) {
+                return res.status(403).json({ error: 'CSRF_ORIGIN_MISMATCH' });
+            }
+        } catch {
+            return res.status(403).json({ error: 'INVALID_ORIGIN' });
+        }
     }
     try {
         const selection = req.body && typeof req.body.selection === 'string' ? req.body.selection : null;
