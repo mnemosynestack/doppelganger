@@ -357,39 +357,58 @@ async function handleAgent(req, res) {
 
     const parseCsv = (input) => {
         const text = typeof input === 'string' ? input : String(input || '');
+        const len = text.length;
         const rows = [];
         let row = [];
         let current = '';
         let inQuotes = false;
+        const specialChar = /[",\n\r]/g;
 
-        for (let i = 0; i < text.length; i += 1) {
-            const char = text[i];
+        let i = 0;
+        while (i < len) {
             if (inQuotes) {
-                if (char === '"') {
-                    if (text[i + 1] === '"') {
-                        current += '"';
-                        i += 1;
-                    } else {
-                        inQuotes = false;
-                    }
+                const nextQuote = text.indexOf('"', i);
+                if (nextQuote === -1) {
+                    current += text.slice(i);
+                    i = len;
+                    break;
+                }
+                current += text.slice(i, nextQuote);
+                i = nextQuote;
+                if (i + 1 < len && text[i + 1] === '"') {
+                    current += '"';
+                    i += 2;
                 } else {
-                    current += char;
+                    inQuotes = false;
+                    i += 1;
                 }
             } else {
+                specialChar.lastIndex = i;
+                const match = specialChar.exec(text);
+                if (!match) {
+                    current += text.slice(i);
+                    i = len;
+                    break;
+                }
+                const idx = match.index;
+                const char = match[0];
+                current += text.slice(i, idx);
+                i = idx;
                 if (char === '"') {
                     inQuotes = true;
+                    i += 1;
                 } else if (char === ',') {
                     row.push(current);
                     current = '';
+                    i += 1;
                 } else if (char === '\n') {
                     row.push(current);
                     rows.push(row);
                     row = [];
                     current = '';
+                    i += 1;
                 } else if (char === '\r') {
-                    // ignore CR (handle CRLF)
-                } else {
-                    current += char;
+                    i += 1;
                 }
             }
         }
