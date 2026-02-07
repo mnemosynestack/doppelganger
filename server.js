@@ -121,10 +121,9 @@ const sendExecutionUpdate = (runId, payload) => {
 };
 
 // Helper to load tasks
-function loadTasks() {
-    if (!fs.existsSync(TASKS_FILE)) return [];
+async function loadTasks() {
     try {
-        return JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8'));
+        return JSON.parse(await fs.promises.readFile(TASKS_FILE, 'utf8'));
     } catch (e) {
         return [];
     }
@@ -661,12 +660,12 @@ app.post('/api/clear-cookies', requireAuth, (req, res) => {
 });
 
 // --- TASKS API ---
-app.get('/api/tasks', requireAuth, (req, res) => {
-    res.json(loadTasks());
+app.get('/api/tasks', requireAuth, async (req, res) => {
+    res.json(await loadTasks());
 });
 
-app.get('/api/tasks/list', requireApiKey, (req, res) => {
-    const tasks = loadTasks();
+app.get('/api/tasks/list', requireApiKey, async (req, res) => {
+    const tasks = await loadTasks();
     const summary = tasks.map((task) => ({
         id: task.id,
         name: task.name || task.id
@@ -674,8 +673,8 @@ app.get('/api/tasks/list', requireApiKey, (req, res) => {
     res.json({ tasks: summary });
 });
 
-app.post('/api/tasks', requireAuth, (req, res) => {
-    const tasks = loadTasks();
+app.post('/api/tasks', requireAuth, async (req, res) => {
+    const tasks = await loadTasks();
     const newTask = req.body;
     if (!newTask.id) newTask.id = 'task_' + Date.now();
 
@@ -693,8 +692,8 @@ app.post('/api/tasks', requireAuth, (req, res) => {
     res.json(newTask);
 });
 
-app.post('/api/tasks/:id/touch', requireAuth, (req, res) => {
-    const tasks = loadTasks();
+app.post('/api/tasks/:id/touch', requireAuth, async (req, res) => {
+    const tasks = await loadTasks();
     const index = tasks.findIndex(t => t.id === req.params.id);
     if (index === -1) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
     tasks[index].last_opened = Date.now();
@@ -702,8 +701,8 @@ app.post('/api/tasks/:id/touch', requireAuth, (req, res) => {
     res.json(tasks[index]);
 });
 
-app.delete('/api/tasks/:id', requireAuth, (req, res) => {
-    let tasks = loadTasks();
+app.delete('/api/tasks/:id', requireAuth, async (req, res) => {
+    let tasks = await loadTasks();
     tasks = tasks.filter(t => t.id !== req.params.id);
     saveTasks(tasks);
     res.json({ success: true });
@@ -775,8 +774,8 @@ app.delete('/api/executions/:id', requireAuth, (req, res) => {
 });
 
 
-app.get('/api/tasks/:id/versions', requireAuth, (req, res) => {
-    const tasks = loadTasks();
+app.get('/api/tasks/:id/versions', requireAuth, async (req, res) => {
+    const tasks = await loadTasks();
     const task = tasks.find(t => t.id === req.params.id);
     if (!task) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
     const versions = (task.versions || []).map(v => ({
@@ -787,8 +786,8 @@ app.get('/api/tasks/:id/versions', requireAuth, (req, res) => {
     }));
     res.json({ versions });
 });
-app.get('/api/tasks/:id/versions/:versionId', requireAuth, (req, res) => {
-    const tasks = loadTasks();
+app.get('/api/tasks/:id/versions/:versionId', requireAuth, async (req, res) => {
+    const tasks = await loadTasks();
     const task = tasks.find(t => t.id === req.params.id);
     if (!task) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
     const versions = task.versions || [];
@@ -797,8 +796,8 @@ app.get('/api/tasks/:id/versions/:versionId', requireAuth, (req, res) => {
     res.json({ snapshot: version.snapshot, metadata: { id: version.id, timestamp: version.timestamp } });
 });
 
-app.post('/api/tasks/:id/versions/clear', requireAuth, (req, res) => {
-    const tasks = loadTasks();
+app.post('/api/tasks/:id/versions/clear', requireAuth, async (req, res) => {
+    const tasks = await loadTasks();
     const index = tasks.findIndex(t => t.id === req.params.id);
     if (index === -1) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
     tasks[index].versions = [];
@@ -806,10 +805,10 @@ app.post('/api/tasks/:id/versions/clear', requireAuth, (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/api/tasks/:id/rollback', requireAuth, (req, res) => {
+app.post('/api/tasks/:id/rollback', requireAuth, async (req, res) => {
     const { versionId } = req.body || {};
     if (!versionId) return res.status(400).json({ error: 'MISSING_VERSION_ID' });
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     const index = tasks.findIndex(t => t.id === req.params.id);
     if (index === -1) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
     const task = tasks[index];
@@ -916,7 +915,7 @@ app.post('/api/data/cookies/delete', requireAuth, (req, res) => {
 
 // --- TASK API EXECUTION ---
 app.post('/tasks/:id/api', requireApiKey, async (req, res) => {
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     const task = tasks.find(t => String(t.id) === String(req.params.id));
     if (!task) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
 
