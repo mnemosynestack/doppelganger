@@ -60,8 +60,8 @@ const runExtractionScript = async (script, html, pageUrl, includeShadowDom) => {
             return { shadowQueryAll, shadowText };
         })();
 
-        // Using vm instead of new Function to sandbox the execution environment more strictly.
-        // This mitigates CodeQL alerts related to dynamic evaluation of user scripts.
+        // Using vm.Script + vm.runInContext for sandboxed execution.
+        // This is safer than `new Function` and allows specifying timeouts.
         const sandbox = {
             window,
             document: window.document,
@@ -80,8 +80,18 @@ const runExtractionScript = async (script, html, pageUrl, includeShadowDom) => {
         const context = vm.createContext(sandbox);
         const code = `(async () => { "use strict"; ${script} })()`;
 
-        const result = await vm.runInContext(code, context);
-        return { result, logs: logBuffer };
+        try {
+            const scriptOptions = {
+                filename: 'extraction_script.js',
+                timeout: 30000 // 30s timeout for safety
+            };
+            const vmScript = new vm.Script(code, scriptOptions);
+            const result = await vmScript.runInContext(context, scriptOptions);
+            return { result, logs: logBuffer };
+        } catch (execError) {
+             return { result: `Extraction script execution error: ${execError.message}`, logs: logBuffer };
+        }
+
     } catch (e) {
         return { result: `Extraction script error: ${e.message}`, logs: [] };
     }
