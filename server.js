@@ -209,20 +209,20 @@ function registerExecution(req, res, baseMeta = {}) {
 }
 
 // Helper to load API key
-function loadApiKey() {
+async function loadApiKey() {
     let apiKey = null;
-    if (fs.existsSync(API_KEY_FILE)) {
-        try {
-            const data = JSON.parse(fs.readFileSync(API_KEY_FILE, 'utf8'));
-            apiKey = data && data.apiKey ? data.apiKey : null;
-        } catch (e) {
-            apiKey = null;
-        }
+    try {
+        const raw = await fs.promises.readFile(API_KEY_FILE, 'utf8');
+        const data = JSON.parse(raw);
+        apiKey = data && data.apiKey ? data.apiKey : null;
+    } catch (e) {
+        apiKey = null;
     }
 
-    if (!apiKey && fs.existsSync(USERS_FILE)) {
+    if (!apiKey) {
         try {
-            const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+            const usersRaw = await fs.promises.readFile(USERS_FILE, 'utf8');
+            const users = JSON.parse(usersRaw);
             if (Array.isArray(users) && users.length > 0 && users[0].apiKey) {
                 apiKey = users[0].apiKey;
                 saveApiKey(apiKey);
@@ -403,7 +403,7 @@ const isLoopback = (ip) => {
     return normalized === '127.0.0.1' || normalized === '::1';
 };
 
-const requireApiKey = (req, res, next) => {
+const requireApiKey = async (req, res, next) => {
     const internalRun = req.get('x-internal-run');
     if (internalRun === '1' && isLoopback(req.ip)) {
         return next();
@@ -419,7 +419,13 @@ const requireApiKey = (req, res, next) => {
         req.query.key ||
         (req.body && (req.body.apiKey || req.body.key)) ||
         bodyKey;
-    const storedKey = loadApiKey();
+
+    let storedKey = null;
+    try {
+        storedKey = await loadApiKey();
+    } catch (err) {
+        // fall through
+    }
 
     if (!storedKey) {
         return res.status(403).json({ error: 'API_KEY_NOT_SET' });
@@ -500,9 +506,9 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 // --- SETTINGS API ---
-app.get('/api/settings/api-key', requireAuthForSettings, (req, res) => {
+app.get('/api/settings/api-key', requireAuthForSettings, async (req, res) => {
     try {
-        const apiKey = loadApiKey();
+        const apiKey = await loadApiKey();
         res.json({ apiKey: apiKey || null });
     } catch (e) {
         console.error('[API_KEY] Load failed:', e);
