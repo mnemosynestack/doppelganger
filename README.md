@@ -39,6 +39,18 @@ Doppelganger is a self‑hosted, block-first automation control plane built for 
 
 ## Docker (Recommended)
 
+### Docker Compose (Multi-arch / ARM / Apple Silicon)
+
+The easiest way to run Doppelganger on any architecture (including M1/M2/M3 Macs) is via Docker Compose:
+
+```bash
+docker compose up --build -d
+```
+
+This starts the app on `http://localhost:11345` and the VNC viewer on `http://localhost:54311`.
+
+### Docker Run (Standard)
+
 ```bash
 docker pull mnemosyneai/doppelganger
 docker run -d \

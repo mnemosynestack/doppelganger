@@ -1,0 +1,14 @@
+services:
+  doppelganger:
+    build: .
+    # By default, Docker Compose uses the host's architecture.
+    # This ensures ARM devices (like Apple Silicon) use the linux/arm64 images
+    # provided by the base images in the Dockerfile.
+    ports:
+      - "11345:11345" # Main application
+      - "54311:54311" # VNC / noVNC
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

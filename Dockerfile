@@ -1,3 +1,5 @@
+# This Dockerfile supports multi-arch builds (linux/amd64, linux/arm64)
+# relying on multi-arch base images from Node and Playwright.
 FROM node:22-bullseye AS build
 
 WORKDIR /app
@@ -21,15 +23,15 @@ WORKDIR /app
 ARG INSTALL_VNC=1
 ENV DEBIAN_FRONTEND=noninteractive
 RUN if [ "$INSTALL_VNC" = "1" ]; then \
-        apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update \
-        && apt-get install -y --no-install-recommends \
-            novnc \
-            websockify \
-            x11vnc \
-            xvfb \
-            curl \
-            ca-certificates \
-        && rm -rf /var/lib/apt/lists/*; \
+    apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update \
+    && apt-get install -y --no-install-recommends \
+    novnc \
+    websockify \
+    x11vnc \
+    xvfb \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*; \
     fi
 
 # Install production deps only
