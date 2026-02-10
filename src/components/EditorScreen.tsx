@@ -153,7 +153,12 @@ const VariableRow: React.FC<{
                     />
                 )}
             </div>
-            <button onClick={() => removeVariable(name)} className="p-2 text-red-500 hover:text-red-400">×</button>
+            <button
+                onClick={() => removeVariable(name)}
+                className="p-2 text-red-500 hover:text-red-400 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                aria-label={`Remove variable ${name}`}
+                title="Remove variable"
+            >×</button>
         </div>
     );
 };
@@ -829,7 +834,8 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                             </div>
                                                             <button
                                                                 onClick={() => openActionPalette(action.id)}
-                                                                className="action-type-select text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 focus:outline-none cursor-pointer"
+                                                                className="action-type-select text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 focus:outline-none cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-blue-400/50"
+                                                                aria-label={`Change action type: ${action.type}`}
                                                             >
                                                                 {ACTION_CATALOG.find((item) => item.type === action.type)?.label || action.type}
                                                             </button>
@@ -837,7 +843,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                         <button
                                                             data-no-drag="true"
                                                             onClick={() => removeAction(action.id)}
-                                                            className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover/item:opacity-100"
+                                                            className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover/item:opacity-100 focus:opacity-100 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                                                            aria-label="Delete action"
+                                                            title="Delete action"
                                                         >
                                                             <X className="w-4 h-4" />
                                                         </button>
