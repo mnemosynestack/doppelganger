@@ -1,10 +1,10 @@
-# AGENTS
+# GEMINI.md
 
 ## Purpose
 This file summarizes the expectations for human or scripted coding agents working in the Doppelganger repository. Follow the conventions here plus the deeper references (AGENT_SPEC, CONTRIBUTING, CODE_OF_CONDUCT, LICENSE, README) whenever you touch the code.
 
 ## Repository context
-- **SUL 1.0 License** (LICENSE, 2026) governs usage, copying, and distribution. Respect the hosted-service, commercial-hosting, and Competing Product prohibitions when designing automation or service offerings.
+- **NAL v1.0 License** (LICENSE, 2026) governs usage, copying, and distribution.
 - **AGENT_SPEC.md** describes the JSON schema, action types, and templating rules that AI-driven agents must obey when generating tasks for Doppelganger. Refer to it before building or editing any automation payloads.
 - **package.json** lists the runtime/development scripts: `npm run dev` (Vite), `npm run server`/`start`, `npm run build`, and the `postinstall` helper in `scripts/postinstall.js`. Use these scripts to run and package the project.
 
