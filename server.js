@@ -88,7 +88,7 @@ const STORAGE_STATE_FILE = (() => {
                 return path.join(STORAGE_STATE_PATH, 'storage_state.json');
             }
         }
-    } catch {}
+    } catch { }
     return STORAGE_STATE_PATH;
 })();
 const MAX_TASK_VERSIONS = 30;
@@ -810,6 +810,11 @@ app.delete('/api/tasks/:id', requireAuth, async (req, res) => {
 });
 
 app.get('/api/executions', requireAuth, (req, res) => {
+    const executions = loadExecutions();
+    res.json({ executions });
+});
+
+app.get('/api/executions/list', requireApiKey, (req, res) => {
     const executions = loadExecutions();
     res.json({ executions });
 });

@@ -1,10 +1,10 @@
-![Doppelganger Banner](https://raw.githubusercontent.com/mnemosyne-artificial-intelligence/doppelganger/main/banner.png)
+![Doppelganger Banner](https://raw.githubusercontent.com/mnemosynestack/doppelganger/main/banner.png)
 
 # Doppelganger — Browser Automation for Everyone
 
 Doppelganger is a self‑hosted, block-first automation control plane built for teams that want predictable, auditable browser workflows without pushing sensitive data to third‑party SaaS. It bundles a React/Vite frontend, an Express/Playwright backend, helper scripts, and optional CLI tooling so you can sketch blocks, inject JavaScript, rotate proxies, and run everything locally.
 
-![Demo run](https://raw.githubusercontent.com/mnemosyne-artificial-intelligence/doppelganger/main/demo-run.gif)
+![Demo run](https://raw.githubusercontent.com/mnemosynestack/doppelganger/main/demo-run.gif)
 
 # What You Get
 
@@ -46,7 +46,7 @@ The easiest way to run Doppelganger on any architecture (including M1/M2/M3 Macs
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/mnemosyne-artificial-intelligence/doppelganger.git
+git clone https://github.com/mnemosynestack/doppelganger.git
 cd doppelganger
 ```
 
@@ -236,7 +236,7 @@ Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/a
 
 # Maintenance
 
-- The project is governed by the **[Notice & Attribution License v1.0](https://github.com/mnemosyne-artificial-intelligence/doppelganger/blob/main/LICENSE)**, which grants royalty-free internal/private rights while requiring notice, attribution, and source delivery when the software is deployed for external end users; hosting it as a competing service is prohibited.
+- The project is governed by the **[Notice & Attribution License v1.0](https://github.com/mnemosynestack/doppelganger/blob/main/LICENSE)**, which grants royalty-free internal/private rights while requiring notice, attribution, and source delivery when the software is deployed for external end users; hosting it as a competing service is prohibited.
 - Keep `data/` and `storage_state.json` backed up if you rely on historical cookies or proxies.
 - Release updates by pulling `mnemosyneai/doppelganger` (Docker) or `npm i @doppelgangerdev/doppelganger` (npm). The Settings view always displays the current package version.
 - Contributions: follow `.github/` templates, respect `CONTRIBUTING.md`, and run available lint/test scripts if you touch critical areas.
@@ -276,5 +276,11 @@ Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/a
 # Community & Support
 
 - Report issues or request features via the GitHub repo issue tracker.
-- Follow the authors on `https://github.com/mnemosyne-artificial-intelligence` for releases.
+- Follow the authors on `https://github.com/mnemosynestack` for releases.
 - Share automation recipes with other self-hosted users in your org, but respect the license for sharing infrastructure.
+
+# Sponsor
+
+If you find Doppelganger useful, please consider sponsoring. I spend my own money on servers and development to keep this project going.
+
+[Support me on Ko-fi](https://ko-fi.com/asernasr)
