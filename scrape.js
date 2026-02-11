@@ -84,9 +84,7 @@ async function handleScrape(req, res) {
         browser = await chromium.launch(launchOptions);
 
         const recordingsDir = path.join(__dirname, 'data', 'recordings');
-        if (!fs.existsSync(recordingsDir)) {
-            fs.mkdirSync(recordingsDir, { recursive: true });
-        }
+        await fs.promises.mkdir(recordingsDir, { recursive: true });
 
         const viewport = rotateViewport
             ? { width: 1280 + Math.floor(Math.random() * 640), height: 720 + Math.floor(Math.random() * 360) }
@@ -103,7 +101,7 @@ async function handleScrape(req, res) {
             permissions: ['geolocation']
         };
 
-        const shouldUseStorageState = !statelessExecution && fs.existsSync(STORAGE_STATE_FILE);
+        const shouldUseStorageState = !statelessExecution && await fs.promises.access(STORAGE_STATE_FILE).then(() => true).catch(() => false);
         if (shouldUseStorageState) {
             contextOptions.storageState = STORAGE_STATE_FILE;
         }
@@ -357,9 +355,7 @@ async function handleScrape(req, res) {
 
         // Ensure the public/screenshots directory exists
         const capturesDir = path.join(__dirname, 'public', 'captures');
-        if (!fs.existsSync(capturesDir)) {
-            fs.mkdirSync(capturesDir, { recursive: true });
-        }
+        await fs.promises.mkdir(capturesDir, { recursive: true });
 
         const screenshotName = `${captureRunId}_scrape_${Date.now()}.png`;
         const screenshotPath = path.join(capturesDir, screenshotName);
@@ -395,7 +391,8 @@ async function handleScrape(req, res) {
         if (video) {
             try {
                 const videoPath = await video.path();
-                if (videoPath && fs.existsSync(videoPath)) {
+                const videoExists = videoPath && await fs.promises.access(videoPath).then(() => true).catch(() => false);
+                if (videoExists) {
                     const recordingName = `${captureRunId}_scrape_${Date.now()}.webm`;
                     const recordingPath = path.join(capturesDir, recordingName);
                     try {
