@@ -1,5 +1,6 @@
 
 const assert = require('assert');
+const { parseCsv } = require('../common-utils');
 
 // Original implementation from agent.js
 const parseCsvOriginal = (input) => {
@@ -198,4 +199,5 @@ function benchmark() {
 
 verify(parseCsvOriginal, "Original");
 verify(parseCsvOptimized, "Optimized");
+verify(parseCsv, "CommonUtils");
 benchmark();
