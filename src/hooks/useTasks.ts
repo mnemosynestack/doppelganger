@@ -1,0 +1,169 @@
+import { useState } from 'react';
+import { Task } from '../types';
+import { normalizeImportedTask, buildNewTask, parseBooleanFlag, ensureActionIds } from '../utils/taskUtils';
+
+export function useTasks(
+    navigate: (path: string, options?: any) => void,
+    showAlert: (msg: string, tone?: 'success' | 'error') => void,
+    requestConfirm: (msg: string) => Promise<boolean>
+) {
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [currentTask, setCurrentTask] = useState<Task | null>(null);
+    const [saveMsg, setSaveMsg] = useState('');
+
+    const loadTasks = async () => {
+        try {
+            const res = await fetch('/api/tasks', { credentials: 'include' });
+            const data = await res.json();
+            const sorted = [...data].sort((a: Task, b: Task) => (b.last_opened || 0) - (a.last_opened || 0));
+            setTasks(sorted);
+            return sorted;
+        } catch (e) {
+            console.error("Failed to load tasks", e);
+            return [];
+        }
+    };
+
+    const touchTask = async (id: string) => {
+        try {
+            await fetch(`/api/tasks/${id}/touch`, { method: 'POST' });
+            loadTasks();
+        } catch (e) {
+            console.error("Failed to touch task", e);
+        }
+    };
+
+    const createNewTask = (setResults: (val: any) => void, setHasUnsavedChanges: (val: boolean) => void) => {
+        const newTask = buildNewTask();
+        setHasUnsavedChanges(true);
+        setCurrentTask(newTask);
+        setResults(null);
+        navigate('/tasks/new');
+    };
+
+    const editTask = (task: Task, markTaskAsSaved: (task: Task | null) => void, setResults: (val: any) => void) => {
+        const migratedTask = { ...task };
+        if (!migratedTask.variables || Array.isArray(migratedTask.variables)) migratedTask.variables = {};
+        if (!migratedTask.stealth) {
+            migratedTask.stealth = {
+                allowTypos: false,
+                idleMovements: false,
+                overscroll: false,
+                deadClicks: false,
+                fatigue: false,
+                naturalTyping: false
+            };
+        }
+        if (migratedTask.rotateProxies === undefined) migratedTask.rotateProxies = false;
+        if (migratedTask.rotateViewport === undefined) migratedTask.rotateViewport = false;
+        if (!migratedTask.extractionFormat) migratedTask.extractionFormat = 'json';
+        if (migratedTask.includeShadowDom === undefined) migratedTask.includeShadowDom = true;
+        if (migratedTask.disableRecording === undefined) migratedTask.disableRecording = false;
+        migratedTask.disableRecording = parseBooleanFlag(migratedTask.disableRecording);
+        if (migratedTask.statelessExecution === undefined) migratedTask.statelessExecution = false;
+        migratedTask.statelessExecution = parseBooleanFlag(migratedTask.statelessExecution);
+        const normalized = ensureActionIds(migratedTask);
+        setCurrentTask(normalized);
+        markTaskAsSaved(normalized);
+        setResults(null);
+        navigate(`/tasks/${task.id}`);
+        if (task.id) touchTask(task.id);
+    };
+
+    const deleteTask = async (id: string, currentPath: string) => {
+        if (!await requestConfirm('Are you sure you want to delete this task?')) return;
+        await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+        loadTasks();
+        if (currentPath.includes(id)) {
+            navigate('/dashboard');
+        }
+    };
+
+    const saveTask = async (markTaskAsSaved: (task: Task | null) => void, currentPath: string) => {
+        if (!currentTask) return;
+        const taskToSave = { ...currentTask, last_opened: Date.now() };
+        const res = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(taskToSave)
+        });
+        const saved = await res.json();
+        setCurrentTask(saved);
+        setSaveMsg("SAVED");
+        setTimeout(() => setSaveMsg(''), 2000);
+        markTaskAsSaved(saved);
+        loadTasks();
+        if (currentPath.includes('new')) {
+            navigate(`/tasks/${saved.id}`, { replace: true });
+        }
+    };
+
+    const exportTasks = () => {
+        const payload = {
+            exportedAt: new Date().toISOString(),
+            tasks
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const stamp = new Date().toISOString().slice(0, 10);
+        link.href = url;
+        link.download = `doppelganger-tasks-${stamp}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        showAlert('Tasks exported.', 'success');
+    };
+
+    const importTasks = async (file: File) => {
+        try {
+            const text = await file.text();
+            const parsed = JSON.parse(text);
+            const list = Array.isArray(parsed) ? parsed : parsed?.tasks;
+            if (!Array.isArray(list)) {
+                showAlert('Invalid import file.', 'error');
+                return;
+            }
+            const stamp = Date.now();
+            const prepared = list
+                .map((raw, index) => normalizeImportedTask(raw, index))
+                .filter((task): task is Task => !!task)
+                .map((task) => (task.id ? task : { ...task, id: `task_${stamp}` }));
+
+            if (prepared.length === 0) {
+                showAlert('No tasks to import.', 'error');
+                return;
+            }
+
+            await Promise.all(prepared.map((task) => (
+                fetch('/api/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(task)
+                })
+            )));
+            await loadTasks();
+            showAlert(`Imported ${prepared.length} task(s).`, 'success');
+        } catch (e: any) {
+            showAlert(`Import failed: ${e.message || 'Unknown error'}`, 'error');
+        }
+    };
+
+    return {
+        tasks,
+        setTasks,
+        currentTask,
+        setCurrentTask,
+        saveMsg,
+        setSaveMsg,
+        loadTasks,
+        touchTask,
+        createNewTask,
+        editTask,
+        deleteTask,
+        saveTask,
+        exportTasks,
+        importTasks
+    };
+}

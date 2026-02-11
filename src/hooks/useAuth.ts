@@ -1,0 +1,116 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { User } from '../types';
+
+export function useAuth() {
+    const navigate = useNavigate();
+    const [user, setUser] = useState<User | null>(null);
+    const [authStatus, setAuthStatus] = useState<'checking' | 'login' | 'setup' | 'authenticated'>('checking');
+    const [authError, setAuthError] = useState('');
+    const [authBusy, setAuthBusy] = useState(false);
+
+    const checkAuth = async () => {
+        try {
+            const res = await fetch('/api/auth/me', { credentials: 'include' });
+            const data = await res.json();
+            if (data.authenticated) {
+                setUser(data.user);
+                setAuthStatus('authenticated');
+                return true;
+            }
+            const sRes = await fetch('/api/auth/check-setup', { credentials: 'include' });
+            const sData = await sRes.json();
+            setAuthStatus(sData.setupRequired ? 'setup' : 'login');
+        } catch (e) {
+            setAuthStatus('login');
+        }
+        return false;
+    };
+
+    useEffect(() => {
+        checkAuth();
+    }, []);
+
+    const formatAuthError = (errorCode: unknown, fallback: string) => {
+        if (typeof errorCode !== 'string' || !errorCode) return fallback;
+        switch (errorCode) {
+            case 'ALREADY_SETUP':
+                return 'An account already exists';
+            case 'INVALID':
+                return 'Invalid credentials';
+            case 'SESSION_SAVE_FAILED':
+                return 'Unable to persist your session';
+            default: {
+                const normalized = errorCode.toLowerCase().replace(/_/g, ' ');
+                return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+            }
+        }
+    };
+
+    const handleAuthSubmit = async (email: string, pass: string, name?: string, passConfirm?: string) => {
+        if (!email || !pass) {
+            setAuthError('Email and password are required');
+            return;
+        }
+        if (authStatus === 'setup' && (!name || pass !== passConfirm)) {
+            setAuthError(name ? "Passwords do not match" : "Name required");
+            return;
+        }
+        if (authBusy) return;
+
+        const endpoint = authStatus === 'setup' ? '/api/auth/setup' : '/api/auth/login';
+        const payload = authStatus === 'setup'
+            ? { name, email, password: pass }
+            : { email, password: pass };
+
+        setAuthBusy(true);
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setAuthError('');
+                setAuthStatus('checking');
+                const authenticated = await checkAuth();
+                if (authenticated) {
+                    navigate('/');
+                } else {
+                    setAuthError('Authentication failed');
+                    setAuthStatus('login');
+                }
+            } else {
+                const fallback = authStatus === 'setup' ? 'Setup failed' : 'Invalid credentials';
+                setAuthError(formatAuthError((data as any)?.error, fallback));
+            }
+        } catch (e) {
+            setAuthError("Network error");
+        } finally {
+            setAuthBusy(false);
+        }
+    };
+
+    const logout = async (requestConfirm: (msg: string) => Promise<boolean>) => {
+        const confirmed = await requestConfirm('Are you sure you want to log out?');
+        if (!confirmed) return;
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        setUser(null);
+        setAuthStatus('login');
+        navigate('/');
+    };
+
+    return {
+        user,
+        setUser,
+        authStatus,
+        setAuthStatus,
+        authError,
+        authBusy,
+        checkAuth,
+        handleAuthSubmit,
+        logout
+    };
+}

@@ -1,13 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { User, Task, ViewMode, Results, ConfirmRequest } from './types';
+import { Task, ViewMode, Results } from './types';
 
-const serializeTaskSnapshot = (task?: Task | null) => {
-    if (!task) return '';
-    const clone = JSON.parse(JSON.stringify(task));
-    delete clone.last_opened;
-    return JSON.stringify(clone);
-};
 import Sidebar from './components/Sidebar';
 import AuthScreen from './components/AuthScreen';
 import DashboardScreen from './components/DashboardScreen';
@@ -22,143 +16,57 @@ import CenterAlert from './components/app/CenterAlert';
 import CenterConfirm from './components/app/CenterConfirm';
 import EditorLoader from './components/app/EditorLoader';
 
+import { useAuth } from './hooks/useAuth';
+import { useTasks } from './hooks/useTasks';
+import { useExecution } from './hooks/useExecution';
+import { useUI } from './hooks/useUI';
+import { serializeTaskSnapshot, formatLabel } from './utils/taskUtils';
+
 export default function App() {
     const navigate = useNavigate();
     const location = useLocation();
-    const [, setUser] = useState<User | null>(null);
-    const [authStatus, setAuthStatus] = useState<'checking' | 'login' | 'setup' | 'authenticated'>('checking');
+
+    // UI Hooks
+    const { centerAlert, setCenterAlert, centerConfirm, showAlert, requestConfirm, closeConfirm } = useUI();
+
+    // Auth Hook
+    const { authStatus, authError, authBusy, handleAuthSubmit, logout } = useAuth();
+
+    // Task Hook
+    const {
+        tasks,
+        currentTask,
+        setCurrentTask,
+        saveMsg,
+        loadTasks,
+        touchTask,
+        createNewTask,
+        editTask,
+        deleteTask,
+        saveTask,
+        exportTasks,
+        importTasks
+    } = useTasks(navigate, showAlert, requestConfirm);
+
+    // Execution Hook
+    const {
+        isExecuting,
+        results,
+        setResults,
+        activeRunId,
+        runTaskWithSnapshot,
+        stopTask
+    } = useExecution(showAlert);
+
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const lastSavedSnapshot = useRef('');
-
-    // Auth Screen State
-    const [authError, setAuthError] = useState('');
-    const [authBusy, setAuthBusy] = useState(false);
-
-    // Dashboard State
-    const [tasks, setTasks] = useState<Task[]>([]);
-
-    // Editor State
-    const [currentTask, setCurrentTask] = useState<Task | null>(null);
     const [editorView, setEditorView] = useState<ViewMode>('visual');
-    const [isExecuting, setIsExecuting] = useState(false);
-    const [results, setResults] = useState<Results | null>(null);
     const [pinnedResultsByTask, setPinnedResultsByTask] = useState<Record<string, Results>>({});
-    const [saveMsg, setSaveMsg] = useState('');
-    const [activeRunId, setActiveRunId] = useState<string | null>(null);
-
-    const [centerAlert, setCenterAlert] = useState<{ message: string; tone?: 'success' | 'error' } | null>(null);
-    const [centerConfirm, setCenterConfirm] = useState<ConfirmRequest | null>(null);
-    const confirmResolverRef = useRef<((value: boolean) => void) | null>(null);
-    const executeAbortRef = useRef<AbortController | null>(null);
-    const showAlert = (message: string, tone: 'success' | 'error' = 'success') => {
-        setCenterAlert({ message, tone });
-        if (tone === 'success') {
-            setTimeout(() => {
-                setCenterAlert((prev) => (prev && prev.message === message ? null : prev));
-            }, 2000);
-        }
-    };
-    const requestConfirm = (request: string | ConfirmRequest) => {
-        return new Promise<boolean>((resolve) => {
-            confirmResolverRef.current = resolve;
-            if (typeof request === 'string') {
-                setCenterConfirm({ message: request });
-            } else {
-                setCenterConfirm(request);
-            }
-        });
-    };
-    const closeConfirm = (result: boolean) => {
-        const resolver = confirmResolverRef.current;
-        confirmResolverRef.current = null;
-        setCenterConfirm(null);
-        if (resolver) resolver(result);
-    };
-    const formatLabel = (value: string) => value ? value[0].toUpperCase() + value.slice(1) : value;
-    const parseBooleanFlag = (value: any) => {
-        if (typeof value === 'boolean') return value;
-        if (value === undefined || value === null) return false;
-        const normalized = String(value).toLowerCase();
-        return normalized === 'true' || normalized === '1';
-    };
-    const ensureActionIds = (task: Task) => {
-        if (!task.actions || !Array.isArray(task.actions)) return task;
-        let changed = false;
-        const nextActions = task.actions.map((action, index) => {
-            if (action.id) return action;
-            changed = true;
-            return { ...action, id: `act_${Date.now()}_${index}_${Math.floor(Math.random() * 1000)}` };
-        });
-        return changed ? { ...task, actions: nextActions } : task;
-    };
 
     const pinnedResultsKey = 'doppelganger.pinnedResults';
     const getTaskKey = (task?: Task | null) => task?.id ? String(task.id) : 'new';
     const currentTaskKey = getTaskKey(currentTask);
     const pinnedResults = currentTask ? pinnedResultsByTask[currentTaskKey] || null : null;
-
-    const formatExecutionError = (rawMessage: string, mode?: string) => {
-        const message = String(rawMessage || '').trim();
-        if (!message) return 'Execution failed.';
-
-        const lower = message.toLowerCase();
-        if (mode === 'headful') {
-            if (lower.includes('missing x server') || lower.includes('$display')) {
-                return 'Headful browser could not start because no display server is available.';
-            }
-            if (lower.includes('failed to connect to the bus')) {
-                return 'Headful browser could not start due to missing system services.';
-            }
-        }
-
-        let cleaned = message;
-        const flagsIndex = cleaned.indexOf('--disable-');
-        if (flagsIndex > 0) {
-            cleaned = cleaned.slice(0, flagsIndex).trim();
-        }
-        if (cleaned.length > 240) {
-            cleaned = `${cleaned.slice(0, 240)}...`;
-        }
-        return cleaned || 'Execution failed.';
-    };
-
-    const isDisplayUnavailable = (message: string) => {
-        const lower = String(message || '').toLowerCase();
-        return lower.includes('missing x server')
-            || lower.includes('$display')
-            || lower.includes('platform failed to initialize')
-            || lower.includes('no display server');
-    };
-
-    const makeDefaultTask = () => ({
-        name: "Imported Task",
-        url: "",
-        mode: "scrape",
-        wait: 3,
-        selector: "",
-        rotateUserAgents: false,
-        rotateProxies: false,
-        rotateViewport: false,
-        humanTyping: false,
-        stealth: {
-            allowTypos: false,
-            idleMovements: false,
-            overscroll: false,
-            deadClicks: false,
-            fatigue: false,
-            naturalTyping: false
-        },
-        actions: [],
-        variables: {},
-        includeShadowDom: true,
-        disableRecording: false,
-        statelessExecution: false
-    } as Task);
-
-
-    useEffect(() => {
-        checkAuth();
-    }, []);
 
     useEffect(() => {
         try {
@@ -190,11 +98,9 @@ export default function App() {
 
     useEffect(() => {
         if (location.pathname === '/tasks/new' && !currentTask) {
-            const newTask = buildNewTask();
-            setCurrentTask(newTask);
-            setResults(null);
+            createNewTask(setResults, setHasUnsavedChanges);
         }
-    }, [location.pathname, currentTask]);
+    }, [location.pathname]);
 
     useEffect(() => {
         if (!currentTask) {
@@ -216,145 +122,9 @@ export default function App() {
         return () => window.removeEventListener('beforeunload', handler);
     }, [hasUnsavedChanges]);
 
-    const checkAuth = async () => {
-        try {
-            const res = await fetch('/api/auth/me', { credentials: 'include' });
-            const data = await res.json();
-            if (data.authenticated) {
-                setUser(data.user);
-                setAuthStatus('authenticated');
-                loadTasks();
-                return true;
-            }
-            const sRes = await fetch('/api/auth/check-setup', { credentials: 'include' });
-            const sData = await sRes.json();
-            setAuthStatus(sData.setupRequired ? 'setup' : 'login');
-        } catch (e) {
-            setAuthStatus('login');
-        }
-        return false;
-    };
-
-    const formatAuthError = (errorCode: unknown, fallback: string) => {
-        if (typeof errorCode !== 'string' || !errorCode) return fallback;
-        switch (errorCode) {
-            case 'ALREADY_SETUP':
-                return 'An account already exists';
-            case 'INVALID':
-                return 'Invalid credentials';
-            case 'SESSION_SAVE_FAILED':
-                return 'Unable to persist your session';
-            default: {
-                const normalized = errorCode.toLowerCase().replace(/_/g, ' ');
-                return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-            }
-        }
-    };
-
-    const handleAuthSubmit = async (email: string, pass: string, name?: string, passConfirm?: string) => {
-        if (!email || !pass) {
-            setAuthError('Email and password are required');
-            return;
-        }
-        if (authStatus === 'setup' && (!name || pass !== passConfirm)) {
-            setAuthError(name ? "Passwords do not match" : "Name required");
-            return;
-        }
-        if (authBusy) return;
-
-        const endpoint = authStatus === 'setup' ? '/api/auth/setup' : '/api/auth/login';
-        const payload = authStatus === 'setup'
-            ? { name, email, password: pass }
-            : { email, password: pass };
-
-        setAuthBusy(true);
-        try {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) {
-                setAuthError('');
-                setAuthStatus('checking');
-                const authenticated = await checkAuth();
-                if (authenticated) {
-                    navigate('/');
-                } else {
-                    setAuthError('Authentication failed');
-                    setAuthStatus('login');
-                }
-            } else {
-                const fallback = authStatus === 'setup' ? 'Setup failed' : 'Invalid credentials';
-                setAuthError(formatAuthError((data as any)?.error, fallback));
-            }
-        } catch (e) {
-            setAuthError("Network error");
-        } finally {
-            setAuthBusy(false);
-        }
-    };
-
-    const loadTasks = async () => {
-        try {
-        const res = await fetch('/api/tasks', { credentials: 'include' });
-            const data = await res.json();
-            const sorted = [...data].sort((a: Task, b: Task) => (b.last_opened || 0) - (a.last_opened || 0));
-            setTasks(sorted);
-            return sorted;
-        } catch (e) {
-            console.error("Failed to load tasks", e);
-            return [];
-        }
-    };
-
-    const logout = async () => {
-        const confirmed = await requestConfirm('Are you sure you want to log out?');
-        if (!confirmed) return;
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-        setUser(null);
-        setAuthStatus('login');
-        navigate('/');
-        showAlert('Logged out.', 'success');
-    };
-
-    function buildNewTask(): Task {
-        return {
-            name: "Task " + Math.floor(Math.random() * 100),
-            url: "",
-            mode: "agent",
-            wait: 3,
-            selector: "",
-            rotateUserAgents: false,
-            rotateProxies: false,
-            rotateViewport: false,
-            humanTyping: false,
-            stealth: {
-                allowTypos: false,
-                idleMovements: false,
-                overscroll: false,
-                deadClicks: false,
-                fatigue: false,
-                naturalTyping: false
-            },
-            actions: [],
-            variables: {},
-            extractionFormat: 'json',
-            includeShadowDom: true,
-            disableRecording: false,
-            statelessExecution: false
-        };
-    }
-
-    const createNewTask = () => {
-        const newTask = buildNewTask();
-        lastSavedSnapshot.current = '';
-        setHasUnsavedChanges(true);
-        setCurrentTask(newTask);
-        setResults(null);
-        navigate('/tasks/new');
+    const markTaskAsSaved = (task: Task | null) => {
+        lastSavedSnapshot.current = serializeTaskSnapshot(task);
+        setHasUnsavedChanges(false);
     };
 
     const pinResults = (data: Results) => {
@@ -371,360 +141,11 @@ export default function App() {
         });
     };
 
-    const touchTask = async (id: string) => {
-        try {
-            await fetch(`/api/tasks/${id}/touch`, { method: 'POST' });
-            loadTasks();
-        } catch (e) {
-            console.error("Failed to touch task", e);
-        }
-    };
-
-    const markTaskAsSaved = (task: Task | null) => {
-        lastSavedSnapshot.current = serializeTaskSnapshot(task);
-        setHasUnsavedChanges(false);
-    };
-
-    const editTask = (task: Task) => {
-        const migratedTask = { ...task };
-        if (!migratedTask.variables || Array.isArray(migratedTask.variables)) migratedTask.variables = {};
-        if (!migratedTask.stealth) {
-            migratedTask.stealth = {
-                allowTypos: false,
-                idleMovements: false,
-                overscroll: false,
-                deadClicks: false,
-                fatigue: false,
-                naturalTyping: false
-            };
-        }
-        if (migratedTask.rotateProxies === undefined) migratedTask.rotateProxies = false;
-        if (migratedTask.rotateViewport === undefined) migratedTask.rotateViewport = false;
-        if (!migratedTask.extractionFormat) migratedTask.extractionFormat = 'json';
-        if (migratedTask.includeShadowDom === undefined) migratedTask.includeShadowDom = true;
-        if (migratedTask.disableRecording === undefined) migratedTask.disableRecording = false;
-        migratedTask.disableRecording = parseBooleanFlag(migratedTask.disableRecording);
-        if (migratedTask.statelessExecution === undefined) migratedTask.statelessExecution = false;
-        migratedTask.statelessExecution = parseBooleanFlag(migratedTask.statelessExecution);
-        const normalized = ensureActionIds(migratedTask);
-        setCurrentTask(normalized);
-        markTaskAsSaved(normalized);
-        setResults(null);
-        navigate(`/tasks/${task.id}`);
-        if (task.id) touchTask(task.id);
-    };
-
-    const deleteTask = async (id: string) => {
-        if (!await requestConfirm('Are you sure you want to delete this task?')) return;
-        await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-        loadTasks();
-        if (location.pathname.includes(id)) {
-            navigate('/dashboard');
-        }
-    };
-
-    const saveTask = async () => {
-        if (!currentTask) return;
-        const taskToSave = { ...currentTask, last_opened: Date.now() };
-        const res = await fetch('/api/tasks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(taskToSave)
-        });
-        const saved = await res.json();
-        setCurrentTask(saved);
-        setSaveMsg("SAVED");
-        setTimeout(() => setSaveMsg(''), 2000);
-        markTaskAsSaved(saved);
-        loadTasks();
-        if (location.pathname.includes('new')) {
-            navigate(`/tasks/${saved.id}`, { replace: true });
-        }
-    };
-
-    const stopHeadful = async () => {
-        try {
-            await fetch('/headful/stop', { method: 'POST' });
-        } catch (e) {
-            console.error('Failed to stop headful session', e);
-        } finally {
-            setIsExecuting(false);
-        }
-    };
-
-    const stopTask = async () => {
-        if (currentTask?.mode === 'headful') {
-            await stopHeadful();
-            return;
-        }
-        if (activeRunId) {
-            try {
-                await fetch('/api/executions/stop', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ runId: activeRunId })
-                });
-            } catch (e) {
-                console.error('Failed to request stop', e);
-            }
-        }
-        if (executeAbortRef.current) {
-            executeAbortRef.current.abort();
-        }
-        setIsExecuting(false);
-    };
-
-    const runTaskWithSnapshot = async (taskOverride?: Task) => {
-        const taskToRunRaw = taskOverride || currentTask;
-        if (!taskToRunRaw || !taskToRunRaw.url) return;
-        const taskToRun = ensureActionIds(taskToRunRaw);
-        if (currentTask && taskToRun !== currentTask) {
-            setCurrentTask(taskToRun);
-        }
-
-        const runId = `run_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        setActiveRunId(runId);
-
-        if (isExecuting && taskToRun.mode === 'headful') {
-            await stopHeadful();
-            return;
-        }
-
-        setIsExecuting(true);
-        setResults({
-            url: taskToRun.url,
-            logs: [],
-            timestamp: 'Running...',
-        });
-
-        let payload: any = null;
-
-        try {
-            const cleanedVars: Record<string, any> = {};
-            Object.entries(taskToRun.variables).forEach(([name, def]) => {
-                cleanedVars[name] = def.value;
-            });
-
-            const resolveTemplate = (input: string) => {
-                return input.replace(/\{\$(\w+)\}/g, (_match, name) => {
-                    if (name === 'now') return new Date().toISOString();
-                    const value = cleanedVars[name];
-                    if (value === undefined || value === null || value === '') return '';
-                    return String(value);
-                });
-            };
-
-            const resolveMaybe = (value?: string) => {
-                if (typeof value !== 'string') return value;
-                return resolveTemplate(value);
-            };
-
-            const shouldResolve = taskToRun.mode !== 'agent';
-            const resolvedTask = {
-                ...taskToRun,
-                url: shouldResolve ? resolveTemplate(taskToRun.url || '') : (taskToRun.url || ''),
-                selector: shouldResolve ? resolveMaybe(taskToRun.selector) : taskToRun.selector,
-                actions: shouldResolve
-                    ? taskToRun.actions.map((action) => ({
-                        ...action,
-                        selector: resolveMaybe(action.selector),
-                        value: resolveMaybe(action.value),
-                        key: resolveMaybe(action.key)
-                    }))
-                    : taskToRun.actions
-            };
-
-            payload = {
-                ...resolvedTask,
-                taskVariables: cleanedVars,
-                variables: cleanedVars,
-                runSource: 'editor',
-                taskId: taskToRun.id,
-                taskName: taskToRun.name,
-                taskSnapshot: taskToRun,
-                runId
-            };
-
-            const executeTask = async (mode: 'scrape' | 'agent' | 'headful') => {
-                const controller = new AbortController();
-                executeAbortRef.current = controller;
-                const res = await fetch(`/${mode}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                    signal: controller.signal
-                });
-
-                if (!res.ok) {
-                    let errorData: any = null;
-                    try {
-                        errorData = await res.json();
-                    } catch {
-                        errorData = null;
-                    }
-                    const error = new Error(errorData?.details || errorData?.error || "Request failed");
-                    (error as any).code = errorData?.error;
-                    throw error;
-                }
-
-                return res.json();
-            };
-
-            const data = await executeTask(taskToRun.mode);
-
-            setResults({
-                url: taskToRun.url,
-                finalUrl: data.final_url,
-                html: data.html,
-                data: data.data ?? data.html ?? "No data captured.",
-                screenshotUrl: data.screenshot_url,
-                logs: data.logs || [],
-                timestamp: new Date().toLocaleTimeString(),
-            });
-        } catch (e: any) {
-            if (e?.name === 'AbortError') {
-                showAlert('Execution stopped.', 'success');
-                setIsExecuting(false);
-                return;
-            }
-            if (
-                taskToRun?.mode === 'headful'
-                && payload
-                && (e?.code === 'HEADFUL_DISPLAY_UNAVAILABLE' || isDisplayUnavailable(e?.message || String(e)))
-            ) {
-                try {
-                    const data = await (async () => {
-                        const controller = new AbortController();
-                        executeAbortRef.current = controller;
-                        const res = await fetch(`/scrape`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload),
-                            signal: controller.signal
-                        });
-                        if (!res.ok) {
-                            const errorData = await res.json();
-                            throw new Error(errorData.details || errorData.error || "Request failed");
-                        }
-                        return res.json();
-                    })();
-                    data.logs = [`Headful display unavailable; ran headless instead.`, ...(data.logs || [])];
-                    setResults({
-                        url: taskToRun.url,
-                        finalUrl: data.final_url,
-                        html: data.html,
-                        data: data.data ?? data.html ?? "No data captured.",
-                        screenshotUrl: data.screenshot_url,
-                        logs: data.logs || [],
-                        timestamp: new Date().toLocaleTimeString(),
-                    });
-                    setIsExecuting(false);
-                    return;
-                } catch (fallbackError: any) {
-                    const errorMessage = formatExecutionError(fallbackError?.message || String(fallbackError), taskToRun?.mode);
-                    showAlert(`Execution crash: ${errorMessage}`, 'error');
-                    setIsExecuting(false);
-                    return;
-                }
-            }
-            const errorMessage = formatExecutionError(e?.message || String(e), taskToRun?.mode);
-            showAlert(`Execution crash: ${errorMessage}`, 'error');
-            if (taskToRun?.mode === 'headful') {
-                setIsExecuting(false);
-            }
-        } finally {
-            executeAbortRef.current = null;
-            if (taskToRun.mode !== 'headful') {
-                setIsExecuting(false);
-            }
-        }
-    };
-
-    const runTask = async () => {
-        await runTaskWithSnapshot();
-    };
-
     const clearStorage = async (type: 'screenshots' | 'cookies') => {
         if (!await requestConfirm(`Delete all ${type}?`)) return;
         const endpoint = type === 'screenshots' ? '/api/clear-screenshots' : '/api/clear-cookies';
         await fetch(endpoint, { method: 'POST' });
         showAlert(`${formatLabel(type)} cleared.`, 'success');
-    };
-
-    const exportTasks = () => {
-        const payload = {
-            exportedAt: new Date().toISOString(),
-            tasks
-        };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const stamp = new Date().toISOString().slice(0, 10);
-        link.href = url;
-        link.download = `doppelganger-tasks-${stamp}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-        showAlert('Tasks exported.', 'success');
-    };
-
-    const normalizeImportedTask = (raw: any, index: number): Task | null => {
-        if (!raw || typeof raw !== 'object') return null;
-        const base = makeDefaultTask();
-        const merged: Task = { ...base, ...raw };
-        if (!merged.name || typeof merged.name !== 'string') {
-            merged.name = `Imported Task ${index + 1}`;
-        }
-        if (!merged.mode || !['scrape', 'agent', 'headful'].includes(merged.mode)) {
-            merged.mode = 'scrape';
-        }
-        if (typeof merged.wait !== 'number') merged.wait = 3;
-        if (!merged.stealth) merged.stealth = base.stealth;
-        if (!merged.variables || Array.isArray(merged.variables)) merged.variables = {};
-        if (!Array.isArray(merged.actions)) merged.actions = [];
-        if (merged.rotateProxies === undefined) merged.rotateProxies = false;
-        if (merged.disableRecording === undefined) merged.disableRecording = false;
-        merged.disableRecording = parseBooleanFlag(merged.disableRecording);
-        if (merged.statelessExecution === undefined) merged.statelessExecution = false;
-        merged.statelessExecution = parseBooleanFlag(merged.statelessExecution);
-        delete merged.versions;
-        delete merged.last_opened;
-        return merged;
-    };
-
-    const importTasks = async (file: File) => {
-        try {
-            const text = await file.text();
-            const parsed = JSON.parse(text);
-            const list = Array.isArray(parsed) ? parsed : parsed?.tasks;
-            if (!Array.isArray(list)) {
-                showAlert('Invalid import file.', 'error');
-                return;
-            }
-            const stamp = Date.now();
-            const prepared = list
-                .map((raw, index) => normalizeImportedTask(raw, index))
-                .filter((task): task is Task => !!task)
-                .map((task) => (task.id ? task : { ...task, id: `task_${stamp}` }));
-
-            if (prepared.length === 0) {
-                showAlert('No tasks to import.', 'error');
-                return;
-            }
-
-            await Promise.all(prepared.map((task) => (
-                fetch('/api/tasks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(task)
-                })
-            )));
-            await loadTasks();
-            showAlert(`Imported ${prepared.length} task(s).`, 'success');
-        } catch (e: any) {
-            showAlert(`Import failed: ${e.message || 'Unknown error'}`, 'error');
-        }
     };
 
     const getCurrentScreen = () => {
@@ -754,14 +175,14 @@ export default function App() {
                             navigate('/captures');
                         }
                     }}
-                    onNewTask={createNewTask}
-                    onLogout={logout}
+                    onNewTask={() => createNewTask(setResults, setHasUnsavedChanges)}
+                    onLogout={() => logout(requestConfirm)}
                     currentScreen={getCurrentScreen()}
                 />
 
                 <Routes>
-                    <Route path="/" element={<DashboardScreen tasks={tasks} onNewTask={createNewTask} onEditTask={editTask} onDeleteTask={deleteTask} onExportTasks={exportTasks} onImportTasks={importTasks} />} />
-                    <Route path="/dashboard" element={<DashboardScreen tasks={tasks} onNewTask={createNewTask} onEditTask={editTask} onDeleteTask={deleteTask} onExportTasks={exportTasks} onImportTasks={importTasks} />} />
+                    <Route path="/" element={<DashboardScreen tasks={tasks} onNewTask={() => createNewTask(setResults, setHasUnsavedChanges)} onEditTask={(t) => editTask(t, markTaskAsSaved, setResults)} onDeleteTask={(id) => deleteTask(id, location.pathname)} onExportTasks={exportTasks} onImportTasks={importTasks} />} />
+                    <Route path="/dashboard" element={<DashboardScreen tasks={tasks} onNewTask={() => createNewTask(setResults, setHasUnsavedChanges)} onEditTask={(t) => editTask(t, markTaskAsSaved, setResults)} onDeleteTask={(id) => deleteTask(id, location.pathname)} onExportTasks={exportTasks} onImportTasks={importTasks} />} />
                     <Route path="/tasks/new" element={
                         currentTask ? (
                         <EditorScreen
@@ -771,9 +192,9 @@ export default function App() {
                             editorView={editorView}
                             setEditorView={setEditorView}
                             isExecuting={isExecuting}
-                            onSave={saveTask}
-                            onRun={runTask}
-                            onRunSnapshot={runTaskWithSnapshot}
+                            onSave={() => saveTask(markTaskAsSaved, location.pathname)}
+                            onRun={() => runTaskWithSnapshot(currentTask, currentTask, setCurrentTask)}
+                            onRunSnapshot={(t) => runTaskWithSnapshot(t || currentTask, currentTask, setCurrentTask)}
                             results={results}
                             pinnedResults={pinnedResults}
                             saveMsg={saveMsg}
@@ -782,7 +203,7 @@ export default function App() {
                             onPinResults={pinResults}
                             onUnpinResults={unpinResults}
                             runId={activeRunId}
-                            onStop={stopTask}
+                            onStop={() => stopTask(currentTask)}
                             hasUnsavedChanges={hasUnsavedChanges}
                         />
                         ) : <LoadingScreen title="Initializing" subtitle="Preparing task workspace" />
@@ -799,9 +220,9 @@ export default function App() {
                                 editorView={editorView}
                                 setEditorView={setEditorView}
                                 isExecuting={isExecuting}
-                                onSave={saveTask}
-                                onRun={runTask}
-                                onRunSnapshot={runTaskWithSnapshot}
+                                onSave={() => saveTask(markTaskAsSaved, location.pathname)}
+                                onRun={() => runTaskWithSnapshot(currentTask, currentTask, setCurrentTask)}
+                                onRunSnapshot={(t) => runTaskWithSnapshot(t || currentTask, currentTask, setCurrentTask)}
                                 results={results}
                                 pinnedResults={pinnedResults}
                                 saveMsg={saveMsg}
@@ -810,7 +231,7 @@ export default function App() {
                                 onPinResults={pinResults}
                                 onUnpinResults={unpinResults}
                                 runId={activeRunId}
-                                onStop={stopTask}
+                                onStop={() => stopTask(currentTask)}
                                 hasUnsavedChanges={hasUnsavedChanges}
                                 onTaskLoaded={markTaskAsSaved}
                             />
