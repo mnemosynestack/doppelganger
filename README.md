@@ -265,6 +265,7 @@ Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/a
 - [ ] **AI-assisted fixing** — add an “AI auto-fix” helper that suggests layout, selector, and proxy tweaks after failed runs, letting teams approve or discard the proposed changes without switching contexts.
 - [ ] **Companion app** — build a lightweight companion app that mirrors critical dashboard notifications (failures, capture completions, proxy issues) so operators can stay informed without opening the full UI.
 - [ ] **Community presets hub** — build a marketplace where users can publish task/workspace presets, browse and download others’ submissions, and choose to offer each preset either for free or as a paid template so creators can monetize standalone workflows while keeping the free option available.
+- [ ] **Database Tab / Local CRM** — add a built-in spreadsheet-like interface for viewing and managing extracted data (CRM-style) entirely within the app, without requiring external tools.
 
 # Security Considerations
 
@@ -279,8 +280,18 @@ Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/a
 - Follow the authors on `https://github.com/mnemosynestack` for releases.
 - Share automation recipes with other self-hosted users in your org, but respect the license for sharing infrastructure.
 
-# Sponsor
+## Support the Project
 
-If you find Doppelganger useful, please consider sponsoring. I spend my own money on servers and development to keep this project going.
+If you find this project helpful, please consider supporting its development. Your contributions help keep the project maintained and the lights on!
 
-[Support me on Ko-fi](https://ko-fi.com/asernasr)
+<div align="center">
+  <a href="https://ko-fi.com/asernasr" target="_blank">
+    <img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Support on Ko-fi" />
+  </a>
+</div>
+
+---
+**Other ways to help:**
+*   **Star** the repository to help others find it.
+*   **Share** the project with your network.
+*   **Contribute** to the code or documentation.
