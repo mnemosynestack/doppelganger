@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FixedSizeList, ListChildComponentProps } from 'react-window';
 import { useNavigate } from 'react-router-dom';
 import { ConfirmRequest, CaptureEntry } from '../types';
@@ -64,6 +64,12 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
         loadCaptures();
     }, []);
 
+    // Memoize itemData to prevent FixedSizeList from re-rendering all rows on every render
+    const itemData = useMemo(() => ({
+        captures,
+        onDelete: deleteCapture
+    }), [captures, deleteCapture]);
+
     return (
         <main className="flex-1 p-12 overflow-y-auto custom-scrollbar animate-in fade-in duration-500">
             <div className="max-w-6xl mx-auto space-y-8">
@@ -109,7 +115,7 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
                                 itemCount={captures.length}
                                 itemSize={CAPTURE_LIST_ITEM_SIZE}
                                 overscanCount={CAPTURE_OVERSCAN}
-                                itemData={{ captures, onDelete: deleteCapture }}
+                                itemData={itemData}
                             >
                                 {renderCaptureItem}
                             </FixedSizeList>

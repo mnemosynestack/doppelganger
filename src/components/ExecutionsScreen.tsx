@@ -120,6 +120,13 @@ const ExecutionsScreen: React.FC<ExecutionsScreenProps> = ({ onConfirm, onNotify
         });
     }, [executions, filter]);
 
+    // Memoize itemData to prevent FixedSizeList from re-rendering all rows on every render
+    const itemData = useMemo(() => ({
+        items: filtered,
+        deleteExecution,
+        navigate
+    }), [filtered, deleteExecution, navigate]);
+
     return (
         <main className="flex-1 p-12 overflow-y-auto custom-scrollbar animate-in fade-in duration-500">
             <div className="max-w-6xl mx-auto space-y-8">
@@ -174,7 +181,7 @@ const ExecutionsScreen: React.FC<ExecutionsScreenProps> = ({ onConfirm, onNotify
                         itemSize={EXECUTION_ITEM_SIZE}
                         width="100%"
                         overscanCount={EXECUTION_OVERSCAN}
-                        itemData={{ items: filtered, deleteExecution, navigate }}
+                        itemData={itemData}
                     >
                         {renderExecutionRow}
                     </FixedSizeList>
