@@ -5,6 +5,7 @@ const { spawn } = require('child_process');
 const { getProxySelection } = require('./proxy-rotation');
 const { selectUserAgent } = require('./user-agent-settings');
 const { formatHTML } = require('./html-utils');
+const { validateUrl } = require('./url-utils');
 
 const STORAGE_STATE_PATH = path.join(__dirname, 'storage_state.json');
 const STORAGE_STATE_FILE = (() => {
@@ -101,6 +102,12 @@ async function handleScrape(req, res) {
 
     if (!url) {
         return res.status(400).json({ error: 'URL is required.' });
+    }
+
+    try {
+        await validateUrl(url);
+    } catch (e) {
+        return res.status(400).json({ error: 'INVALID_URL', details: e.message });
     }
 
     console.log(`Scraping: ${url}`);

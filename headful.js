@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { getProxySelection } = require('./proxy-rotation');
 const { selectUserAgent } = require('./user-agent-settings');
+const { validateUrl } = require('./url-utils');
 
 const STORAGE_STATE_PATH = path.join(__dirname, 'storage_state.json');
 const STORAGE_STATE_FILE = (() => {
@@ -50,6 +51,13 @@ async function handleHeadful(req, res) {
     }
 
     const url = req.body.url || req.query.url || 'https://www.google.com';
+
+    try {
+        await validateUrl(url);
+    } catch (e) {
+        return res.status(400).json({ error: 'INVALID_URL', details: e.message });
+    }
+
     const rotateProxiesRaw = req.body.rotateProxies ?? req.query.rotateProxies;
     const rotateProxies = String(rotateProxiesRaw).toLowerCase() === 'true' || rotateProxiesRaw === true;
     const statelessExecutionRaw = req.body.statelessExecution ?? req.query.statelessExecution;
