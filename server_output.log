@@ -1,0 +1,11 @@
+
+> @doppelgangerdev/doppelganger@0.5.8 server
+> node server.js
+
+Failed to load session secret from disk, falling back to process env only.
+Server running at http://localhost:11345
+DEBUG: Hit check-setup
+DEBUG: check-setup users length: 0
+DEBUG: Hit check-setup
+DEBUG: check-setup users length: 0
+[AUTH] Path: /api/tasks, Session: YES

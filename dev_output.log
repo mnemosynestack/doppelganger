@@ -1,0 +1,25 @@
+
+> @doppelgangerdev/doppelganger@0.5.8 dev
+> vite
+
+
+  VITE v7.3.0  ready in 286 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+(node:3920) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/postcss.config.js?t=1770836785069 is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+7:08:02 PM [vite] http proxy error: /api/auth/me
+AggregateError [ECONNREFUSED]:
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+7:08:02 PM [vite] http proxy error: /api/auth/me
+AggregateError [ECONNREFUSED]:
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+7:08:02 PM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]:
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)

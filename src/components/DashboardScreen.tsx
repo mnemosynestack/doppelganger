@@ -112,6 +112,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                                         <button
                                             onClick={() => onDeleteTask(task.id!)}
                                             className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-all"
+                                            aria-label="Delete task"
+                                            title="Delete task"
                                         >
                                             <X className="w-4 h-4" />
                                         </button>
@@ -123,11 +125,22 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                 </div>
 
                 {tasks.length === 0 && (
-                    <div className="flex-1 flex flex-col items-center justify-center space-y-6 opacity-20">
-                        <div className="w-20 h-20 border-2 border-dashed border-white rounded-[40px] flex items-center justify-center text-3xl">
-                            <Rocket className="w-8 h-8 text-white/70" />
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+                        <div className="w-24 h-24 border-2 border-dashed border-white/20 rounded-[40px] flex items-center justify-center text-3xl bg-white/5">
+                            <Rocket className="w-10 h-10 text-white/50" />
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.3em]">No Tasks Found</p>
+                        <div className="text-center space-y-2">
+                            <p className="text-sm font-bold uppercase tracking-widest text-white/70">No Tasks Found</p>
+                            <p className="text-[10px] text-gray-500 max-w-[200px] mx-auto leading-relaxed">
+                                Get started by creating your first automation task.
+                            </p>
+                        </div>
+                        <button
+                            onClick={onNewTask}
+                            className="px-6 py-3 bg-white text-black rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase hover:scale-105 transition-transform shadow-lg shadow-white/10"
+                        >
+                            Create First Task
+                        </button>
                     </div>
                 )}
             </div>
