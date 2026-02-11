@@ -19,9 +19,30 @@ function isPrivateIP(ip) {
     }
     if (net.isIPv6(ip)) {
         const lower = ip.toLowerCase();
-        // ::1 loopback, fe80:: link-local, fc00::/fd00:: unique local
+
+        // Handle IPv4-mapped IPv6 addresses (::ffff:1.2.3.4 or ::ffff:7f00:1)
+        if (lower.startsWith('::ffff:')) {
+            const parts = lower.split(':');
+            const last = parts[parts.length - 1];
+            if (net.isIPv4(last)) {
+                return isPrivateIP(last);
+            }
+            if (parts.length >= 5) {
+                const p1 = parseInt(parts[parts.length - 2], 16);
+                const p2 = parseInt(parts[parts.length - 1], 16);
+                if (!isNaN(p1) && !isNaN(p2)) {
+                    return isPrivateIP(`${(p1 >> 8) & 0xff}.${p1 & 0xff}.${(p2 >> 8) & 0xff}.${p2 & 0xff}`);
+                }
+            }
+        }
+
+        // ::1 loopback, :: unspecified
+        if (lower === '::1' || lower === '::' || lower === '0:0:0:0:0:0:0:0' || lower === '0:0:0:0:0:0:0:1') {
+            return true;
+        }
+
+        // fe80:: link-local, fc00::/fd00:: unique local
         return (
-            lower === '::1' ||
             lower.startsWith('fe80:') ||
             lower.startsWith('fc') ||
             lower.startsWith('fd')
@@ -49,7 +70,11 @@ async function validateUrl(urlStr) {
         throw new Error('Only HTTP and HTTPS protocols are allowed');
     }
 
-    const hostname = url.hostname;
+    let hostname = url.hostname;
+    // Strip brackets from IPv6 hostnames
+    if (hostname.startsWith('[') && hostname.endsWith(']')) {
+        hostname = hostname.substring(1, hostname.length - 1);
+    }
 
     // Direct check for common private hostnames
     const lowerHost = hostname.toLowerCase();
