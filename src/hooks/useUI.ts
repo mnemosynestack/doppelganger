@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { ConfirmRequest } from '../types';
 
 export function useUI() {
@@ -6,16 +6,18 @@ export function useUI() {
     const [centerConfirm, setCenterConfirm] = useState<ConfirmRequest | null>(null);
     const confirmResolverRef = useRef<((value: boolean) => void) | null>(null);
 
-    const showAlert = (message: string, tone: 'success' | 'error' = 'success') => {
+    // Memoize showAlert to ensure stable function reference for consumers
+    const showAlert = useCallback((message: string, tone: 'success' | 'error' = 'success') => {
         setCenterAlert({ message, tone });
         if (tone === 'success') {
             setTimeout(() => {
                 setCenterAlert((prev) => (prev && prev.message === message ? null : prev));
             }, 2000);
         }
-    };
+    }, []);
 
-    const requestConfirm = (request: string | ConfirmRequest) => {
+    // Memoize requestConfirm to ensure stable function reference for consumers
+    const requestConfirm = useCallback((request: string | ConfirmRequest) => {
         return new Promise<boolean>((resolve) => {
             confirmResolverRef.current = resolve;
             if (typeof request === 'string') {
@@ -24,14 +26,15 @@ export function useUI() {
                 setCenterConfirm(request);
             }
         });
-    };
+    }, []);
 
-    const closeConfirm = (result: boolean) => {
+    // Memoize closeConfirm to ensure stable function reference for consumers
+    const closeConfirm = useCallback((result: boolean) => {
         const resolver = confirmResolverRef.current;
         confirmResolverRef.current = null;
         setCenterConfirm(null);
         if (resolver) resolver(result);
-    };
+    }, []);
 
     return {
         centerAlert,
