@@ -58,6 +58,13 @@ export default function App() {
         stopTask
     } = useExecution(showAlert);
 
+    // Reload tasks when auth is confirmed (fixes race condition on restart)
+    useEffect(() => {
+        if (authStatus === 'authenticated') {
+            loadTasks();
+        }
+    }, [authStatus]);
+
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const lastSavedSnapshot = useRef('');
     const [editorView, setEditorView] = useState<ViewMode>('visual');
@@ -185,27 +192,27 @@ export default function App() {
                     <Route path="/dashboard" element={<DashboardScreen tasks={tasks} onNewTask={() => createNewTask(setResults, setHasUnsavedChanges)} onEditTask={(t) => editTask(t, markTaskAsSaved, setResults)} onDeleteTask={(id) => deleteTask(id, location.pathname)} onExportTasks={exportTasks} onImportTasks={importTasks} />} />
                     <Route path="/tasks/new" element={
                         currentTask ? (
-                        <EditorScreen
-                            currentTask={currentTask}
-                            setCurrentTask={setCurrentTask}
-                            tasks={tasks}
-                            editorView={editorView}
-                            setEditorView={setEditorView}
-                            isExecuting={isExecuting}
-                            onSave={() => saveTask(markTaskAsSaved, location.pathname)}
-                            onRun={() => runTaskWithSnapshot(currentTask, currentTask, setCurrentTask)}
-                            onRunSnapshot={(t) => runTaskWithSnapshot(t || currentTask, currentTask, setCurrentTask)}
-                            results={results}
-                            pinnedResults={pinnedResults}
-                            saveMsg={saveMsg}
-                            onConfirm={requestConfirm}
-                            onNotify={showAlert}
-                            onPinResults={pinResults}
-                            onUnpinResults={unpinResults}
-                            runId={activeRunId}
-                            onStop={() => stopTask(currentTask)}
-                            hasUnsavedChanges={hasUnsavedChanges}
-                        />
+                            <EditorScreen
+                                currentTask={currentTask}
+                                setCurrentTask={setCurrentTask}
+                                tasks={tasks}
+                                editorView={editorView}
+                                setEditorView={setEditorView}
+                                isExecuting={isExecuting}
+                                onSave={() => saveTask(markTaskAsSaved, location.pathname)}
+                                onRun={() => runTaskWithSnapshot(currentTask, currentTask, setCurrentTask)}
+                                onRunSnapshot={(t) => runTaskWithSnapshot(t || currentTask, currentTask, setCurrentTask)}
+                                results={results}
+                                pinnedResults={pinnedResults}
+                                saveMsg={saveMsg}
+                                onConfirm={requestConfirm}
+                                onNotify={showAlert}
+                                onPinResults={pinResults}
+                                onUnpinResults={unpinResults}
+                                runId={activeRunId}
+                                onStop={() => stopTask(currentTask)}
+                                hasUnsavedChanges={hasUnsavedChanges}
+                            />
                         ) : <LoadingScreen title="Initializing" subtitle="Preparing task workspace" />
                     } />
                     <Route

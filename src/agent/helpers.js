@@ -1,0 +1,103 @@
+const { parseValue, resolveTemplate } = require('../../common-utils');
+
+const buildBlockMap = (list) => {
+    const blockStarts = new Set(['if', 'while', 'repeat', 'foreach', 'on_error']);
+    const startToEnd = {};
+    const startToElse = {};
+    const elseToEnd = {};
+    const endToStart = {};
+    const stack = [];
+
+    list.forEach((action, idx) => {
+        if (blockStarts.has(action.type)) {
+            stack.push({ type: action.type, idx });
+            return;
+        }
+        if (action.type === 'else') {
+            for (let i = stack.length - 1; i >= 0; i -= 1) {
+                const entry = stack[i];
+                if (entry.type === 'if' && startToElse[entry.idx] === undefined) {
+                    startToElse[entry.idx] = idx;
+                    break;
+                }
+            }
+            return;
+        }
+        if (action.type === 'end') {
+            const entry = stack.pop();
+            if (!entry) return;
+            startToEnd[entry.idx] = idx;
+            endToStart[idx] = entry.idx;
+            if (startToElse[entry.idx] !== undefined) {
+                elseToEnd[startToElse[entry.idx]] = idx;
+            }
+        }
+    });
+
+    return { startToEnd, startToElse, elseToEnd, endToStart };
+};
+
+const randomBetween = (min, max) => min + Math.random() * (max - min);
+
+const resolveMaybe = (value, runtimeVars) => {
+    if (typeof value !== 'string') return value;
+    return resolveTemplate(value, runtimeVars);
+};
+
+const getForeachItems = async (act, page, runtimeVars) => {
+    // Note: resolveTemplate in common-utils usually takes just the string. 
+    // But in agent/index.js there was a local resolveTemplate that used runtimeVars.
+    // We should pass runtimeVars to resolveTemplate or use a local version.
+    // The common-utils resolveTemplate might not support runtimeVars injection if it wasn't designed for it.
+    // Looking at src/agent/index.js: 
+    // const resolveTemplate = (input) => { ... uses runtimeVars ... }
+
+    // I need to implement a resolveTemplate that accepts vars here or reuse one.
+    // I'll implement a local helper here that takes vars.
+
+    const resolve = (input) => {
+        if (typeof input !== 'string') return input;
+        return input.replace(/\{\$([\w.]+)\}/g, (_match, name) => {
+            if (name === 'now') return new Date().toISOString();
+            const value = runtimeVars[name];
+            if (value === undefined || value === null) return '';
+            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                return String(value);
+            }
+            try {
+                return JSON.stringify(value);
+            } catch {
+                return String(value);
+            }
+        });
+    };
+
+    const selector = resolve(act.selector);
+    const varName = resolve(act.varName);
+
+    if (selector) {
+        return page.$$eval(String(selector), (elements) => elements.map((el) => ({
+            text: (el.textContent || '').trim(),
+            html: el.innerHTML || ''
+        })));
+    }
+    if (varName && runtimeVars[String(varName)]) {
+        const source = runtimeVars[String(varName)];
+        if (Array.isArray(source)) return source;
+        if (typeof source === 'string') {
+            try {
+                const parsed = JSON.parse(source);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+    }
+    return [];
+};
+
+module.exports = {
+    buildBlockMap,
+    randomBetween,
+    getForeachItems
+};
