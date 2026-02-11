@@ -6,6 +6,7 @@ const vm = require('vm');
 const { getProxySelection } = require('./proxy-rotation');
 const { selectUserAgent } = require('./user-agent-settings');
 const { formatHTML, safeFormatHTML } = require('./html-utils');
+const { validateUrl } = require('./url-utils');
 
 const STORAGE_STATE_PATH = path.join(__dirname, 'storage_state.json');
 const STORAGE_STATE_FILE = (() => {
@@ -259,6 +260,15 @@ function createSafeProxy(target) {
 async function handleAgent(req, res) {
     const data = (req.method === 'POST') ? req.body : req.query;
     let { url, actions, wait: globalWait, rotateUserAgents, rotateProxies, humanTyping, stealth = {} } = data;
+
+    if (url) {
+        try {
+            await validateUrl(url);
+        } catch (e) {
+            return res.status(400).json({ error: 'INVALID_URL', details: e.message });
+        }
+    }
+
     const runId = data.runId ? String(data.runId) : null;
     const captureRunId = runId || `run_${Date.now()}_unknown`;
     const includeShadowDomRaw = data.includeShadowDom ?? req.query.includeShadowDom;
@@ -871,11 +881,18 @@ async function handleAgent(req, res) {
 
             switch (type) {
                 case 'navigate':
-                case 'goto':
-                    logs.push(`Navigating to: ${resolveMaybe(act.value)}`);
-                    await page.goto(resolveMaybe(act.value), { waitUntil: 'domcontentloaded' });
+                case 'goto': {
+                    const targetUrl = resolveMaybe(act.value);
+                    try {
+                        await validateUrl(targetUrl);
+                    } catch (e) {
+                        throw new Error(`Access to private network is restricted`);
+                    }
+                    logs.push(`Navigating to: ${targetUrl}`);
+                    await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
                     result = page.url();
                     break;
+                }
                 case 'click': {
                     const selectorValue = resolveMaybe(act.selector);
                     const coords = parseCoords(String(selectorValue || ''));
