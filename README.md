@@ -274,13 +274,13 @@ Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/a
 - Rotate API keys periodically via Settings, and log all automation runs through the Executions tab for audit purposes.
 - Playwright runs inside the same Node process; keep dependencies up to date and rebuild `node_modules` after significant OS patches.
 
-# Community & Support
+# Community
 
 - Report issues or request features via the GitHub repo issue tracker.
 - Follow the authors on `https://github.com/mnemosynestack` for releases.
 - Share automation recipes with other self-hosted users in your org, but respect the license for sharing infrastructure.
 
-## Support the Project
+# Support the Project
 
 If you find this project helpful, please consider supporting its development. Your contributions help keep the project maintained and the lights on!
 

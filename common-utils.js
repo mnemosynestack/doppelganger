@@ -146,8 +146,19 @@ const toCsvString = (raw) => {
     return [headerLine, ...lines].join('\n');
 };
 
+const parseCoords = (value) => {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    if (/^\d+(\.\d+)?,\s*\d+(\.\d+)?$/.test(trimmed)) {
+        const [x, y] = trimmed.split(',').map((s) => parseFloat(s.trim()));
+        return { x, y };
+    }
+    return null;
+};
+
 module.exports = {
     parseBooleanFlag,
+    parseCoords,
     parseValue,
     parseCsv,
     csvEscape,
