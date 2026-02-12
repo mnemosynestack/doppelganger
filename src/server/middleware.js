@@ -50,6 +50,13 @@ const csrfProtection = (req, res, next) => {
         return res.status(403).json({ error: 'CSRF_REFERER_MISMATCH' });
     }
 
+    if (!origin && !referer) {
+        const isApi = req.get('x-api-key') || req.get('authorization') || req.get('x-internal-run') || req.get('key');
+        if (!isApi) {
+            return res.status(403).json({ error: 'CSRF_MISSING_ORIGIN' });
+        }
+    }
+
     next();
 };
 
