@@ -1,5 +1,6 @@
 const dns = require('dns').promises;
 const net = require('net');
+const { ALLOW_PRIVATE_NETWORKS } = require('./src/server/constants');
 
 /**
  * Checks if an IP address is private.
@@ -58,6 +59,7 @@ function isPrivateIP(ip) {
  */
 async function validateUrl(urlStr) {
     if (!urlStr) return;
+    if (ALLOW_PRIVATE_NETWORKS) return;
 
     let url;
     try {

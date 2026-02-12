@@ -21,6 +21,8 @@ const SESSION_TTL_SECONDS = 10 * 365 * 24 * 60 * 60; // 10 years
 const NOVNC_PORT = Number(process.env.NOVNC_PORT) || 54311;
 const WEBSOCKIFY_PATH = '/websockify';
 
+const ALLOW_PRIVATE_NETWORKS = !['0', 'false', 'no'].includes(String(process.env.ALLOW_PRIVATE_NETWORKS || '').toLowerCase());
+
 module.exports = {
     DEFAULT_PORT,
     DIST_DIR,
@@ -41,5 +43,6 @@ module.exports = {
     ALLOWED_IPS_TTL_MS,
     SESSION_TTL_SECONDS,
     NOVNC_PORT,
-    WEBSOCKIFY_PATH
+    WEBSOCKIFY_PATH,
+    ALLOW_PRIVATE_NETWORKS
 };
