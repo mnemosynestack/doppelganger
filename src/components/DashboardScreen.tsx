@@ -76,7 +76,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
 
                 <div className="relative flex-1 min-h-0">
                     <div className="pointer-events-none absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-[#050505] via-[#050505]/50 to-transparent z-10" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 overflow-y-auto custom-scrollbar pb-12 pr-4 h-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 content-start gap-6 overflow-y-auto custom-scrollbar pb-12 pr-4 h-full">
                         {tasks.map(task => {
                             const favicon = getFavicon(task.url);
                             return (
