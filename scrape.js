@@ -6,7 +6,7 @@ const { getProxySelection } = require('./proxy-rotation');
 const { selectUserAgent } = require('./user-agent-settings');
 const { formatHTML } = require('./html-utils');
 const { validateUrl } = require('./url-utils');
-const { parseBooleanFlag, csvEscape, toCsvString } = require('./common-utils');
+const { parseBooleanFlag, toCsvString } = require('./common-utils');
 
 const STORAGE_STATE_PATH = path.join(__dirname, 'storage_state.json');
 const STORAGE_STATE_FILE = (() => {
