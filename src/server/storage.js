@@ -40,26 +40,25 @@ async function saveTasks(tasks) {
 }
 
 // Execution Storage
-function loadExecutions() {
-    if (!fs.existsSync(EXECUTIONS_FILE)) return [];
+async function loadExecutions() {
     try {
-        return JSON.parse(fs.readFileSync(EXECUTIONS_FILE, 'utf8'));
+        return JSON.parse(await fs.promises.readFile(EXECUTIONS_FILE, 'utf8'));
     } catch (e) {
         return [];
     }
 }
 
-function saveExecutions(executions) {
-    fs.writeFileSync(EXECUTIONS_FILE, JSON.stringify(executions, null, 2));
+async function saveExecutions(executions) {
+    await fs.promises.writeFile(EXECUTIONS_FILE, JSON.stringify(executions, null, 2));
 }
 
-function appendExecution(entry) {
-    const executions = loadExecutions();
+async function appendExecution(entry) {
+    const executions = await loadExecutions();
     executions.unshift(entry);
     if (executions.length > MAX_EXECUTIONS) {
         executions.length = MAX_EXECUTIONS;
     }
-    saveExecutions(executions);
+    await saveExecutions(executions);
 }
 
 // API Key Storage

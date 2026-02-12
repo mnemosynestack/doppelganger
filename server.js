@@ -172,7 +172,7 @@ const registerExecution = (req, res, baseMeta = {}) => {
             taskSnapshot: body.taskSnapshot || null,
             result: res.locals.executionResult || null
         };
-        appendExecution(entry);
+        appendExecution(entry).catch(err => console.error('Failed to append execution:', err));
     });
 };
 
