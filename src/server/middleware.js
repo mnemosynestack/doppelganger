@@ -19,35 +19,45 @@ const dataRateLimiter = rateLimit({
 });
 
 const csrfProtection = (req, res, next) => {
-    // Mock csrfToken for compatibility with security scanners looking for this pattern
-    req.csrfToken = () => 'protected-by-origin-check';
-
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
         return next();
     }
     const origin = req.get('Origin');
     const referer = req.get('Referer');
-    if (req.session && req.session.user) {
-        const host = req.get('Host');
-        let originHost = null;
+    const host = req.get('Host');
+
+    let originHost = null;
+    if (origin) {
         try {
-            originHost = origin ? new URL(origin).host : null;
+            originHost = new URL(origin).host;
         } catch {
-            // ignore
-        }
-        let refererHost = null;
-        try {
-            refererHost = referer ? new URL(referer).host : null;
-        } catch {
-            // ignore
-        }
-        if (originHost && originHost !== host) {
-            return res.status(403).json({ error: 'CSRF_ORIGIN_MISMATCH' });
-        }
-        if (refererHost && refererHost !== host) {
-            return res.status(403).json({ error: 'CSRF_REFERER_MISMATCH' });
+            return res.status(403).json({ error: 'CSRF_INVALID_ORIGIN' });
         }
     }
+
+    let refererHost = null;
+    if (referer) {
+        try {
+            refererHost = new URL(referer).host;
+        } catch {
+            return res.status(403).json({ error: 'CSRF_INVALID_REFERER' });
+        }
+    }
+
+    if (originHost && originHost !== host) {
+        return res.status(403).json({ error: 'CSRF_ORIGIN_MISMATCH' });
+    }
+    if (refererHost && refererHost !== host) {
+        return res.status(403).json({ error: 'CSRF_REFERER_MISMATCH' });
+    }
+
+    if (!origin && !referer) {
+        const isApi = req.xhr || req.get('x-api-key') || req.get('authorization') || req.get('x-internal-run') || req.get('key');
+        if (!isApi) {
+            return res.status(403).json({ error: 'CSRF_MISSING_ORIGIN' });
+        }
+    }
+
     next();
 };
 

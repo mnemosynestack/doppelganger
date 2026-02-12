@@ -5,13 +5,13 @@ const { executionStreams, stopRequests, sendExecutionUpdate } = require('../stat
 
 const router = express.Router();
 
-router.get('/', requireAuth, (req, res) => {
-    const executions = loadExecutions();
+router.get('/', requireAuth, async (req, res) => {
+    const executions = await loadExecutions();
     res.json({ executions });
 });
 
-router.get('/list', requireApiKey, (req, res) => {
-    const executions = loadExecutions();
+router.get('/list', requireApiKey, async (req, res) => {
+    const executions = await loadExecutions();
     res.json({ executions });
 });
 
@@ -46,15 +46,15 @@ router.get('/stream', requireAuth, (req, res) => {
     });
 });
 
-router.get('/:id', requireAuth, (req, res) => {
-    const executions = loadExecutions();
+router.get('/:id', requireAuth, async (req, res) => {
+    const executions = await loadExecutions();
     const exec = executions.find(e => e.id === req.params.id);
     if (!exec) return res.status(404).json({ error: 'EXECUTION_NOT_FOUND' });
     res.json({ execution: exec });
 });
 
-router.post('/clear', requireAuth, (req, res) => {
-    saveExecutions([]);
+router.post('/clear', requireAuth, async (req, res) => {
+    await saveExecutions([]);
     res.json({ success: true });
 });
 
@@ -71,10 +71,10 @@ router.post('/stop', requireAuth, (req, res) => {
     res.json({ success: true });
 });
 
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
     const id = req.params.id;
-    const executions = loadExecutions().filter(e => e.id !== id);
-    saveExecutions(executions);
+    const executions = (await loadExecutions()).filter(e => e.id !== id);
+    await saveExecutions(executions);
     res.json({ success: true });
 });
 
