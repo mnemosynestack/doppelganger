@@ -36,7 +36,7 @@ router.post('/', requireAuth, async (req, res) => {
             tasks.push(newTask);
         }
 
-        saveTasks(tasks);
+        await saveTasks(tasks);
         res.json(newTask);
     } finally {
         taskMutex.unlock();
@@ -50,7 +50,7 @@ router.post('/:id/touch', requireAuth, async (req, res) => {
         const index = tasks.findIndex(t => t.id === req.params.id);
         if (index === -1) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
         tasks[index].last_opened = Date.now();
-        saveTasks(tasks);
+        await saveTasks(tasks);
         res.json(tasks[index]);
     } finally {
         taskMutex.unlock();
@@ -62,7 +62,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     try {
         let tasks = await loadTasks();
         tasks = tasks.filter(t => t.id !== req.params.id);
-        saveTasks(tasks);
+        await saveTasks(tasks);
         res.json({ success: true });
     } finally {
         taskMutex.unlock();
@@ -99,7 +99,7 @@ router.post('/:id/versions/clear', requireAuth, async (req, res) => {
         const index = tasks.findIndex(t => t.id === req.params.id);
         if (index === -1) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
         tasks[index].versions = [];
-        saveTasks(tasks);
+        await saveTasks(tasks);
         res.json({ success: true });
     } finally {
         taskMutex.unlock();
@@ -123,7 +123,7 @@ router.post('/:id/rollback', requireAuth, async (req, res) => {
         const restored = { ...cloneTaskForVersion(version.snapshot), id: task.id, versions: task.versions };
         restored.last_opened = Date.now();
         tasks[index] = restored;
-        saveTasks(tasks);
+        await saveTasks(tasks);
         res.json(restored);
     } finally {
         taskMutex.unlock();

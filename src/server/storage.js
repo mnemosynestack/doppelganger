@@ -35,8 +35,8 @@ async function loadTasks() {
     }
 }
 
-function saveTasks(tasks) {
-    fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2));
+async function saveTasks(tasks) {
+    await fs.promises.writeFile(TASKS_FILE, JSON.stringify(tasks, null, 2));
 }
 
 // Execution Storage
