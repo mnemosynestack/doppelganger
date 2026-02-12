@@ -6,17 +6,11 @@ const { authRateLimiter } = require('../middleware');
 const router = express.Router();
 
 router.get('/check-setup', (req, res) => {
-    if (process.env.NODE_ENV !== 'production') {
-        console.log("DEBUG: Hit check-setup");
-    }
     try {
         const users = loadUsers();
-        if (process.env.NODE_ENV !== 'production') {
-            console.log("DEBUG: check-setup users length:", users.length);
-        }
         res.json({ setupRequired: users.length === 0 });
     } catch (e) {
-        console.error("DEBUG: check-setup error", e);
+        console.error('[AUTH] check-setup error:', e);
         res.status(500).json({ error: e.message });
     }
 });

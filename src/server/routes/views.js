@@ -46,7 +46,6 @@ router.get('/tasks/new', requireAuth, (req, res) => {
 
 // Task editor - existing task
 router.get('/tasks/:id', requireAuth, (req, res) => {
-    console.log(`[ROUTE] /tasks/:id matched with id: ${req.params.id}`);
     res.sendFile(path.join(DIST_DIR, 'index.html'));
 });
 

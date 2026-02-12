@@ -67,9 +67,6 @@ const requireIpAllowlist = async (req, res, next) => {
 };
 
 const requireAuth = (req, res, next) => {
-    if (process.env.NODE_ENV !== 'production') {
-        console.log(`[AUTH] Path: ${req.path}, Session: ${req.session.user ? 'YES' : 'NO'}`);
-    }
     if (req.session.user) {
         next();
     } else {
