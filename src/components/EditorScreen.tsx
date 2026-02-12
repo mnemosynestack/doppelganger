@@ -669,6 +669,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                 onClick={() => setEditorView('history')}
                                 className="w-8 h-8 rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center"
                                 title="Task History"
+                                aria-label="Task History"
                             >
                                 <HistoryIcon className="w-3.5 h-3.5" />
                             </button>
@@ -688,6 +689,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                 key={m}
                                 onClick={() => setCurrentTask({ ...currentTask, mode: m })}
                                 className={`flex-1 py-2 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${currentTask.mode === m ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
+                                aria-pressed={currentTask.mode === m}
                             >
                                 {m === 'scrape' ? 'Scraper' : m === 'agent' ? 'Agent' : 'Headful'}
                             </button>
@@ -702,6 +704,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                 key={v}
                                 onClick={() => setEditorView(v)}
                                 className={`px-3 py-1 rounded text-[8px] font-bold uppercase tracking-widest transition-all ${editorView === v ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
+                                aria-pressed={editorView === v}
                             >
                                 {v}
                             </button>

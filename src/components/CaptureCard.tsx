@@ -36,7 +36,7 @@ const CaptureCard: React.FC<CaptureCardProps> = ({ capture, onDelete }) => {
                 {capture.type === 'recording' ? (
                     <video src={capture.url} controls className="w-full h-64 object-contain bg-black" />
                 ) : (
-                    <img src={capture.url} className="w-full h-64 object-contain bg-black" />
+                    <img src={capture.url} className="w-full h-64 object-contain bg-black" alt={`Screenshot of ${capture.name}`} />
                 )}
             </div>
             <div className="p-3 text-[9px] text-gray-500 uppercase tracking-widest">

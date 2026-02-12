@@ -53,6 +53,7 @@ const renderExecutionRow = ({ index, style, data }: ListChildComponentProps<Exec
                     data.deleteExecution(exec.id);
                 }}
                 className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-red-500/5 border border-red-500/10 text-red-400 hover:bg-red-500/10 transition-all"
+                aria-label={`Delete execution ${exec.id}`}
             >
                 Delete
             </button>
@@ -142,6 +143,7 @@ const ExecutionsScreen: React.FC<ExecutionsScreenProps> = ({ onConfirm, onNotify
                                     key={mode}
                                     onClick={() => setFilter(mode)}
                                     className={`px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${filter === mode ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
+                                    aria-pressed={filter === mode}
                                 >
                                     {mode}
                                 </button>
@@ -151,6 +153,7 @@ const ExecutionsScreen: React.FC<ExecutionsScreenProps> = ({ onConfirm, onNotify
                             onClick={loadExecutions}
                             className="w-10 h-10 rounded-2xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center"
                             title="Refresh"
+                            aria-label="Refresh executions"
                         >
                             <RefreshCw className="w-4 h-4" />
                         </button>
@@ -158,6 +161,7 @@ const ExecutionsScreen: React.FC<ExecutionsScreenProps> = ({ onConfirm, onNotify
                             onClick={clearExecutions}
                             className="w-10 h-10 rounded-2xl border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center"
                             title="Clear all"
+                            aria-label="Clear all executions"
                         >
                             <Trash2 className="w-4 h-4" />
                         </button>
