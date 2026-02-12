@@ -1,5 +1,3 @@
-const { parseValue, resolveTemplate } = require('../../common-utils');
-
 const buildBlockMap = (list) => {
     const blockStarts = new Set(['if', 'while', 'repeat', 'foreach', 'on_error']);
     const startToEnd = {};
@@ -38,11 +36,6 @@ const buildBlockMap = (list) => {
 };
 
 const randomBetween = (min, max) => min + Math.random() * (max - min);
-
-const resolveMaybe = (value, runtimeVars) => {
-    if (typeof value !== 'string') return value;
-    return resolveTemplate(value, runtimeVars);
-};
 
 const getForeachItems = async (act, page, runtimeVars) => {
     // Note: resolveTemplate in common-utils usually takes just the string. 
