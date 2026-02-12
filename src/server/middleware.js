@@ -27,27 +27,29 @@ const csrfProtection = (req, res, next) => {
     }
     const origin = req.get('Origin');
     const referer = req.get('Referer');
-    if (req.session && req.session.user) {
-        const host = req.get('Host');
-        let originHost = null;
-        try {
-            originHost = origin ? new URL(origin).host : null;
-        } catch {
-            // ignore
-        }
-        let refererHost = null;
-        try {
-            refererHost = referer ? new URL(referer).host : null;
-        } catch {
-            // ignore
-        }
-        if (originHost && originHost !== host) {
-            return res.status(403).json({ error: 'CSRF_ORIGIN_MISMATCH' });
-        }
-        if (refererHost && refererHost !== host) {
-            return res.status(403).json({ error: 'CSRF_REFERER_MISMATCH' });
-        }
+    const host = req.get('Host');
+
+    let originHost = null;
+    try {
+        originHost = origin ? new URL(origin).host : null;
+    } catch {
+        // ignore
     }
+
+    let refererHost = null;
+    try {
+        refererHost = referer ? new URL(referer).host : null;
+    } catch {
+        // ignore
+    }
+
+    if (originHost && originHost !== host) {
+        return res.status(403).json({ error: 'CSRF_ORIGIN_MISMATCH' });
+    }
+    if (refererHost && refererHost !== host) {
+        return res.status(403).json({ error: 'CSRF_REFERER_MISMATCH' });
+    }
+
     next();
 };
 
