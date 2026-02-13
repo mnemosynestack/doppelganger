@@ -1,3 +1,4 @@
+import React from 'react';
 import { Plus, Home, Settings as SettingsIcon, LogOut, History, Camera } from 'lucide-react';
 
 interface SidebarProps {
@@ -75,4 +76,4 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onNewTask, onLogout, curr
     );
 };
 
-export default Sidebar;
+export default React.memo(Sidebar);

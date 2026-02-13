@@ -1,6 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
+
+const formatAuthError = (errorCode: unknown, fallback: string) => {
+    if (typeof errorCode !== 'string' || !errorCode) return fallback;
+    switch (errorCode) {
+        case 'ALREADY_SETUP':
+            return 'An account already exists';
+        case 'INVALID':
+            return 'Invalid credentials';
+        case 'SESSION_SAVE_FAILED':
+            return 'Unable to persist your session';
+        default: {
+            const normalized = errorCode.toLowerCase().replace(/_/g, ' ');
+            return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+        }
+    }
+};
 
 export function useAuth() {
     const navigate = useNavigate();
@@ -9,7 +25,7 @@ export function useAuth() {
     const [authError, setAuthError] = useState('');
     const [authBusy, setAuthBusy] = useState(false);
 
-    const checkAuth = async () => {
+    const checkAuth = useCallback(async () => {
         try {
             const res = await fetch('/api/auth/me', { credentials: 'include' });
             const data = await res.json();
@@ -25,29 +41,13 @@ export function useAuth() {
             setAuthStatus('login');
         }
         return false;
-    };
+    }, []);
 
     useEffect(() => {
         checkAuth();
-    }, []);
+    }, [checkAuth]);
 
-    const formatAuthError = (errorCode: unknown, fallback: string) => {
-        if (typeof errorCode !== 'string' || !errorCode) return fallback;
-        switch (errorCode) {
-            case 'ALREADY_SETUP':
-                return 'An account already exists';
-            case 'INVALID':
-                return 'Invalid credentials';
-            case 'SESSION_SAVE_FAILED':
-                return 'Unable to persist your session';
-            default: {
-                const normalized = errorCode.toLowerCase().replace(/_/g, ' ');
-                return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-            }
-        }
-    };
-
-    const handleAuthSubmit = async (email: string, pass: string, name?: string, passConfirm?: string) => {
+    const handleAuthSubmit = useCallback(async (email: string, pass: string, name?: string, passConfirm?: string) => {
         if (!email || !pass) {
             setAuthError('Email and password are required');
             return;
@@ -91,16 +91,16 @@ export function useAuth() {
         } finally {
             setAuthBusy(false);
         }
-    };
+    }, [authStatus, authBusy, navigate, checkAuth]);
 
-    const logout = async (requestConfirm: (msg: string) => Promise<boolean>) => {
+    const logout = useCallback(async (requestConfirm: (msg: string) => Promise<boolean>) => {
         const confirmed = await requestConfirm('Are you sure you want to log out?');
         if (!confirmed) return;
         await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         setUser(null);
         setAuthStatus('login');
         navigate('/');
-    };
+    }, [navigate]);
 
     return {
         user,

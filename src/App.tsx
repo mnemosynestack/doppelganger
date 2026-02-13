@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Task, ViewMode, Results } from './types';
 
@@ -163,6 +163,25 @@ export default function App() {
         return 'dashboard';
     };
 
+    const handleNavigate = useCallback((s: 'dashboard' | 'editor' | 'settings' | 'executions' | 'captures') => {
+        if (s === 'dashboard') navigate('/dashboard');
+        else if (s === 'settings') {
+            navigate('/settings');
+        } else if (s === 'executions') {
+            navigate('/executions');
+        } else if (s === 'captures') {
+            navigate('/captures');
+        }
+    }, [navigate]);
+
+    const handleNewTask = useCallback(() => {
+        createNewTask(setResults, setHasUnsavedChanges);
+    }, [createNewTask, setResults, setHasUnsavedChanges]);
+
+    const handleLogout = useCallback(() => {
+        logout(requestConfirm);
+    }, [logout, requestConfirm]);
+
     let content: React.ReactNode;
     if (authStatus === 'login' || authStatus === 'setup') {
         content = <AuthScreen status={authStatus} onSubmit={handleAuthSubmit} error={authError} busy={authBusy} />;
@@ -172,18 +191,9 @@ export default function App() {
         content = (
             <div className="h-full flex flex-row overflow-hidden bg-[#020202]">
                 <Sidebar
-                    onNavigate={(s) => {
-                        if (s === 'dashboard') navigate('/dashboard');
-                        else if (s === 'settings') {
-                            navigate('/settings');
-                        } else if (s === 'executions') {
-                            navigate('/executions');
-                        } else if (s === 'captures') {
-                            navigate('/captures');
-                        }
-                    }}
-                    onNewTask={() => createNewTask(setResults, setHasUnsavedChanges)}
-                    onLogout={() => logout(requestConfirm)}
+                    onNavigate={handleNavigate}
+                    onNewTask={handleNewTask}
+                    onLogout={handleLogout}
                     currentScreen={getCurrentScreen()}
                 />
 

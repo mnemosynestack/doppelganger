@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Task } from '../types';
 import { normalizeImportedTask, buildNewTask, parseBooleanFlag, ensureActionIds } from '../utils/taskUtils';
 
@@ -11,7 +11,7 @@ export function useTasks(
     const [currentTask, setCurrentTask] = useState<Task | null>(null);
     const [saveMsg, setSaveMsg] = useState('');
 
-    const loadTasks = async () => {
+    const loadTasks = useCallback(async () => {
         try {
             const res = await fetch('/api/tasks', { credentials: 'include' });
             const data = await res.json();
@@ -22,26 +22,26 @@ export function useTasks(
             console.error("Failed to load tasks", e);
             return [];
         }
-    };
+    }, []);
 
-    const touchTask = async (id: string) => {
+    const touchTask = useCallback(async (id: string) => {
         try {
             await fetch(`/api/tasks/${id}/touch`, { method: 'POST' });
             loadTasks();
         } catch (e) {
             console.error("Failed to touch task", e);
         }
-    };
+    }, [loadTasks]);
 
-    const createNewTask = (setResults: (val: any) => void, setHasUnsavedChanges: (val: boolean) => void) => {
+    const createNewTask = useCallback((setResults: (val: any) => void, setHasUnsavedChanges: (val: boolean) => void) => {
         const newTask = buildNewTask();
         setHasUnsavedChanges(true);
         setCurrentTask(newTask);
         setResults(null);
         navigate('/tasks/new');
-    };
+    }, [navigate]);
 
-    const editTask = (task: Task, markTaskAsSaved: (task: Task | null) => void, setResults: (val: any) => void) => {
+    const editTask = useCallback((task: Task, markTaskAsSaved: (task: Task | null) => void, setResults: (val: any) => void) => {
         const migratedTask = { ...task };
         if (!migratedTask.variables || Array.isArray(migratedTask.variables)) migratedTask.variables = {};
         if (!migratedTask.stealth) {
@@ -68,18 +68,18 @@ export function useTasks(
         setResults(null);
         navigate(`/tasks/${task.id}`);
         if (task.id) touchTask(task.id);
-    };
+    }, [navigate, touchTask]);
 
-    const deleteTask = async (id: string, currentPath: string) => {
+    const deleteTask = useCallback(async (id: string, currentPath: string) => {
         if (!await requestConfirm('Are you sure you want to delete this task?')) return;
         await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
         loadTasks();
         if (currentPath.includes(id)) {
             navigate('/dashboard');
         }
-    };
+    }, [requestConfirm, loadTasks, navigate]);
 
-    const saveTask = async (markTaskAsSaved: (task: Task | null) => void, currentPath: string) => {
+    const saveTask = useCallback(async (markTaskAsSaved: (task: Task | null) => void, currentPath: string) => {
         if (!currentTask) return;
         const taskToSave = { ...currentTask, last_opened: Date.now() };
         const res = await fetch('/api/tasks', {
@@ -96,9 +96,9 @@ export function useTasks(
         if (currentPath.includes('new')) {
             navigate(`/tasks/${saved.id}`, { replace: true });
         }
-    };
+    }, [currentTask, navigate, loadTasks]);
 
-    const exportTasks = () => {
+    const exportTasks = useCallback(() => {
         const payload = {
             exportedAt: new Date().toISOString(),
             tasks
@@ -114,9 +114,9 @@ export function useTasks(
         link.remove();
         URL.revokeObjectURL(url);
         showAlert('Tasks exported.', 'success');
-    };
+    }, [tasks, showAlert]);
 
-    const importTasks = async (file: File) => {
+    const importTasks = useCallback(async (file: File) => {
         try {
             const text = await file.text();
             const parsed = JSON.parse(text);
@@ -148,11 +148,11 @@ export function useTasks(
         } catch (e: any) {
             showAlert(`Import failed: ${e.message || 'Unknown error'}`, 'error');
         }
-    };
+    }, [showAlert, loadTasks]);
 
     useEffect(() => {
         loadTasks();
-    }, []);
+    }, [loadTasks]);
 
     return {
         tasks,

@@ -170,6 +170,7 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                     value={server}
                     onChange={(e) => setServer(e.target.value)}
                     className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-[10px] text-white"
+                    aria-label="Proxy server address"
                 />
                 <input
                     type="text"
@@ -177,6 +178,7 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-[10px] text-white"
+                    aria-label="Proxy label"
                 />
                 <input
                     type="text"
@@ -184,6 +186,7 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-[10px] text-white"
+                    aria-label="Proxy username"
                 />
                 <input
                     type="password"
@@ -191,6 +194,7 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-[10px] text-white"
+                    aria-label="Proxy password"
                 />
             </div>
             <div className="flex items-center gap-3">
@@ -229,6 +233,7 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                     value={rotationMode}
                     onChange={(e) => onRotationModeChange(e.target.value === 'random' ? 'random' : 'round-robin')}
                     className="bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white uppercase tracking-widest"
+                    aria-label="Rotation mode"
                 >
                     <option value="round-robin">Round robin</option>
                     <option value="random">Random</option>
@@ -264,18 +269,24 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                                             value={editServer}
                                             onChange={(e) => setEditServer(e.target.value)}
                                             className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-2 text-[10px] text-white"
+                                            placeholder="Proxy server"
+                                            aria-label="Proxy server"
                                         />
                                         <input
                                             type="text"
                                             value={editLabel}
                                             onChange={(e) => setEditLabel(e.target.value)}
                                             className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-2 text-[10px] text-white"
+                                            placeholder="Label"
+                                            aria-label="Label"
                                         />
                                         <input
                                             type="text"
                                             value={editUsername}
                                             onChange={(e) => setEditUsername(e.target.value)}
                                             className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-2 text-[10px] text-white"
+                                            placeholder="Username"
+                                            aria-label="Username"
                                         />
                                         <input
                                             type="password"
@@ -283,6 +294,7 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                                             onChange={(e) => setEditPassword(e.target.value)}
                                             placeholder="Password (leave blank to keep)"
                                             className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-2 text-[10px] text-white"
+                                            aria-label="Password"
                                         />
                                     </div>
                                     <div className="flex items-center gap-2">
