@@ -1,4 +1,4 @@
-![Doppelganger Banner](https://raw.githubusercontent.com/mnemosynestack/doppelganger/main/banner.png)
+![Doppelganger Banner](logo.png)
 
 # Doppelganger — Browser Automation for Everyone
 
