@@ -13,7 +13,7 @@ export default {
                 accent: '#ffffff',
             },
             fontFamily: {
-                sans: ['Inter', 'sans-serif'],
+                sans: ['Geologica', 'sans-serif'],
                 mono: ['JetBrains Mono', 'monospace'],
             },
         },
