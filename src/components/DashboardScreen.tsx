@@ -1,5 +1,5 @@
+import React, { useRef, memo } from 'react';
 import { X, Globe, Download, Upload, Rocket } from 'lucide-react';
-import { useRef } from 'react';
 import { Task } from '../types';
 
 interface DashboardScreenProps {
@@ -148,4 +148,4 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
     );
 };
 
-export default DashboardScreen;
+export default memo(DashboardScreen);
