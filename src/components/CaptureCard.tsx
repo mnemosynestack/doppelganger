@@ -18,14 +18,14 @@ const CaptureCard: React.FC<CaptureCardProps> = ({ capture, onDelete }) => {
                         href={capture.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[9px] font-bold uppercase tracking-widest text-blue-300 hover:text-blue-200"
+                        className="text-[9px] font-bold uppercase tracking-widest text-blue-300 hover:text-blue-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                     >
                         Open
                     </a>
                     {onDelete && (
                         <button
                             onClick={() => onDelete(capture.name)}
-                            className="text-[9px] font-bold uppercase tracking-widest text-red-300 hover:text-red-200"
+                            className="text-[9px] font-bold uppercase tracking-widest text-red-300 hover:text-red-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                         >
                             Delete
                         </button>

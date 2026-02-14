@@ -46,21 +46,21 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                     <div className="flex items-center gap-3">
                         <button
                             onClick={onExportTasks}
-                            className="px-4 py-3 rounded-2xl border border-white/10 text-white text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-white/5 transition-all"
+                            className="px-4 py-3 rounded-2xl border border-white/10 text-white text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                         >
                             <Download className="w-4 h-4 inline-block mr-2" />
                             Export
                         </button>
                         <button
                             onClick={handleImportClick}
-                            className="px-4 py-3 rounded-2xl border border-white/10 text-white text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-white/5 transition-all"
+                            className="px-4 py-3 rounded-2xl border border-white/10 text-white text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                         >
                             <Upload className="w-4 h-4 inline-block mr-2" />
                             Import
                         </button>
                         <button
                             onClick={onNewTask}
-                            className="shine-effect bg-white text-black px-8 py-3 rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase transition-all hover:scale-105 active:scale-95"
+                            className="shine-effect bg-white text-black px-8 py-3 rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase transition-all hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                         >
                             + New Task
                         </button>
@@ -105,13 +105,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                                     <div className="flex gap-3 pt-4 border-t border-white/5">
                                         <button
                                             onClick={() => onEditTask(task)}
-                                            className="flex-1 py-2 rounded-xl bg-white text-black text-[9px] font-bold uppercase tracking-widest hover:scale-105 transition-all"
+                                            className="flex-1 py-2 rounded-xl bg-white text-black text-[9px] font-bold uppercase tracking-widest hover:scale-105 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                         >
                                             Edit Task
                                         </button>
                                         <button
                                             onClick={() => onDeleteTask(task.id!)}
-                                            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-all"
+                                            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                             aria-label="Delete task"
                                             title="Delete task"
                                         >
@@ -137,7 +137,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                         </div>
                         <button
                             onClick={onNewTask}
-                            className="px-6 py-3 bg-white text-black rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase hover:scale-105 transition-transform shadow-lg shadow-white/10"
+                            className="px-6 py-3 bg-white text-black rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase hover:scale-105 transition-transform shadow-lg shadow-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                         >
                             Create First Task
                         </button>
