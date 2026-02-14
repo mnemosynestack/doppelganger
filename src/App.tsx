@@ -129,10 +129,10 @@ export default function App() {
         return () => window.removeEventListener('beforeunload', handler);
     }, [hasUnsavedChanges]);
 
-    const markTaskAsSaved = (task: Task | null) => {
+    const markTaskAsSaved = useCallback((task: Task | null) => {
         lastSavedSnapshot.current = serializeTaskSnapshot(task);
         setHasUnsavedChanges(false);
-    };
+    }, []);
 
     const pinResults = (data: Results) => {
         if (!currentTask) return;
@@ -178,6 +178,14 @@ export default function App() {
         createNewTask(setResults, setHasUnsavedChanges);
     }, [createNewTask, setResults, setHasUnsavedChanges]);
 
+    const handleEditTask = useCallback((task: Task) => {
+        editTask(task, markTaskAsSaved, setResults);
+    }, [editTask, markTaskAsSaved, setResults]);
+
+    const handleDeleteTask = useCallback((id: string) => {
+        deleteTask(id, location.pathname);
+    }, [deleteTask, location.pathname]);
+
     const handleLogout = useCallback(() => {
         logout(requestConfirm);
     }, [logout, requestConfirm]);
@@ -198,8 +206,8 @@ export default function App() {
                 />
 
                 <Routes>
-                    <Route path="/" element={<DashboardScreen tasks={tasks} onNewTask={() => createNewTask(setResults, setHasUnsavedChanges)} onEditTask={(t) => editTask(t, markTaskAsSaved, setResults)} onDeleteTask={(id) => deleteTask(id, location.pathname)} onExportTasks={exportTasks} onImportTasks={importTasks} />} />
-                    <Route path="/dashboard" element={<DashboardScreen tasks={tasks} onNewTask={() => createNewTask(setResults, setHasUnsavedChanges)} onEditTask={(t) => editTask(t, markTaskAsSaved, setResults)} onDeleteTask={(id) => deleteTask(id, location.pathname)} onExportTasks={exportTasks} onImportTasks={importTasks} />} />
+                    <Route path="/" element={<DashboardScreen tasks={tasks} onNewTask={handleNewTask} onEditTask={handleEditTask} onDeleteTask={handleDeleteTask} onExportTasks={exportTasks} onImportTasks={importTasks} />} />
+                    <Route path="/dashboard" element={<DashboardScreen tasks={tasks} onNewTask={handleNewTask} onEditTask={handleEditTask} onDeleteTask={handleDeleteTask} onExportTasks={exportTasks} onImportTasks={importTasks} />} />
                     <Route path="/tasks/new" element={
                         currentTask ? (
                             <EditorScreen
