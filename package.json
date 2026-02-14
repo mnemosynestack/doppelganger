@@ -31,7 +31,7 @@
   ],
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0-only",
   "description": "",
   "dependencies": {
     "bcryptjs": "^3.0.3",
