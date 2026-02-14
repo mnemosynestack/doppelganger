@@ -554,6 +554,7 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                                     itemSize={CAPTURE_MODAL_ITEM_SIZE}
                                     overscanCount={CAPTURE_MODAL_OVERSCAN}
                                     itemData={captures}
+                                    className="custom-scrollbar"
                                 >
                                     {renderCaptureModalItem}
                                 </FixedSizeList>

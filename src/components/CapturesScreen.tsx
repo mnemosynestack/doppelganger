@@ -116,6 +116,7 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
                                 itemSize={CAPTURE_LIST_ITEM_SIZE}
                                 overscanCount={CAPTURE_OVERSCAN}
                                 itemData={itemData}
+                                className="custom-scrollbar"
                             >
                                 {renderCaptureItem}
                             </FixedSizeList>
