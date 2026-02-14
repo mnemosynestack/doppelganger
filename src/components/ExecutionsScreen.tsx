@@ -186,6 +186,7 @@ const ExecutionsScreen: React.FC<ExecutionsScreenProps> = ({ onConfirm, onNotify
                         width="100%"
                         overscanCount={EXECUTION_OVERSCAN}
                         itemData={itemData}
+                        className="custom-scrollbar"
                     >
                         {renderExecutionRow}
                     </FixedSizeList>
