@@ -4,6 +4,7 @@ import { highlightCode, SyntaxLanguage } from '../utils/syntaxHighlight';
 interface CodeEditorProps {
     value: string;
     onChange?: (val: string) => void;
+    onBlur?: (val: string) => void;
     language: SyntaxLanguage;
     placeholder?: string;
     className?: string;
@@ -11,7 +12,7 @@ interface CodeEditorProps {
     variables?: Record<string, any>;
 }
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange, language, placeholder, className, readOnly, variables }) => {
+const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange, onBlur, language, placeholder, className, readOnly, variables }) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const preRef = useRef<HTMLPreElement>(null);
 
@@ -56,6 +57,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange, language, plac
                 ref={textareaRef}
                 value={value}
                 onChange={(e) => onChange?.(e.target.value)}
+                onBlur={(e) => onBlur?.(e.target.value)}
                 spellCheck={false}
                 wrap="off"
                 readOnly={readOnly}

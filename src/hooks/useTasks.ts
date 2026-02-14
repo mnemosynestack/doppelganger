@@ -79,9 +79,10 @@ export function useTasks(
         }
     }, [requestConfirm, loadTasks, navigate]);
 
-    const saveTask = useCallback(async (markTaskAsSaved: (task: Task | null) => void, currentPath: string) => {
-        if (!currentTask) return;
-        const taskToSave = { ...currentTask, last_opened: Date.now() };
+    const saveTask = useCallback(async (markTaskAsSaved: (task: Task | null) => void, currentPath: string, taskOverride?: Task) => {
+        const taskToUpdate = taskOverride || currentTask;
+        if (!taskToUpdate) return;
+        const taskToSave = { ...taskToUpdate, last_opened: Date.now() };
         const res = await fetch('/api/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

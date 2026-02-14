@@ -77,7 +77,7 @@ const parsePressKey = (key?: string) => {
 
 const buildPressKey = (modifiers: string[], baseKey: string) => {
     const filtered = modifiers.filter(Boolean);
-    return [ ...filtered, baseKey ].filter(Boolean).join('+');
+    return [...filtered, baseKey].filter(Boolean).join('+');
 };
 
 interface EditorScreenProps {
@@ -87,7 +87,7 @@ interface EditorScreenProps {
     editorView: ViewMode;
     setEditorView: (view: ViewMode) => void;
     isExecuting: boolean;
-    onSave: () => void;
+    onSave: (task?: Task) => void;
     onRun: () => void;
     results: Results | null;
     pinnedResults?: Results | null;
@@ -99,7 +99,6 @@ interface EditorScreenProps {
     onRunSnapshot?: (task: Task) => void;
     runId?: string | null;
     onStop?: () => void;
-    hasUnsavedChanges: boolean;
 }
 
 const VariableRow: React.FC<{
@@ -182,7 +181,6 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     onRunSnapshot,
     runId,
     onStop,
-    hasUnsavedChanges
 }) => {
     const [copied, setCopied] = useState<string | null>(null);
     const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -209,6 +207,10 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const [actionStatusById, setActionStatusById] = useState<Record<string, 'running' | 'success' | 'error' | 'skipped'>>({});
     const [proxyList, setProxyList] = useState<{ id: string }[]>([]);
     const [proxyListLoaded, setProxyListLoaded] = useState(false);
+
+    const handleAutoSave = (task?: Task) => {
+        onSave(task || currentTask);
+    };
     const getStoredSplitPercent = () => {
         try {
             const stored = localStorage.getItem('doppelganger.layout.leftWidthPct');
@@ -309,9 +311,11 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     useEffect(() => {
         if (rotateProxiesDisabled && currentTask.rotateProxies) {
-            setCurrentTask({ ...currentTask, rotateProxies: false });
+            const next = { ...currentTask, rotateProxies: false };
+            setCurrentTask(next);
+            handleAutoSave(next);
         }
-    }, [rotateProxiesDisabled, currentTask, setCurrentTask]);
+    }, [rotateProxiesDisabled, currentTask]);
 
     const blockStartTypes = new Set(['if', 'while', 'repeat', 'foreach', 'on_error']);
     const normalizeVarName = (raw: string) => {
@@ -379,7 +383,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             base.conditionOp = 'equals';
             base.conditionValue = '';
         }
-        setCurrentTask({ ...currentTask, actions: [...currentTask.actions, base] });
+        const next = { ...currentTask, actions: [...currentTask.actions, base] };
+        setCurrentTask(next);
+        handleAutoSave(next);
     };
 
     const openActionPalette = (targetId?: string) => {
@@ -389,7 +395,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     };
 
     const removeAction = (id: string) => {
-        setCurrentTask({ ...currentTask, actions: currentTask.actions.filter(a => a.id !== id) });
+        const next = { ...currentTask, actions: currentTask.actions.filter(a => a.id !== id) };
+        setCurrentTask(next);
+        handleAutoSave(next);
     };
 
     const updateAction = (id: string, updates: Partial<Action>) => {
@@ -404,7 +412,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         if (fromIndex === -1 || toIndex === -1) return;
         const [moved] = actions.splice(fromIndex, 1);
         actions.splice(toIndex, 0, moved);
-        setCurrentTask({ ...currentTask, actions });
+        const next = { ...currentTask, actions };
+        setCurrentTask(next);
+        handleAutoSave(next);
     };
 
     const isInteractiveTarget = (target: EventTarget | null) => {
@@ -478,7 +488,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const addVariable = () => {
         const name = "var_" + Date.now().toString().slice(-4);
-        setCurrentTask({ ...currentTask, variables: { ...currentTask.variables, [name]: { type: 'string', value: '' } } });
+        const next: Task = { ...currentTask, variables: { ...currentTask.variables, [name]: { type: 'string', value: '' } } };
+        setCurrentTask(next);
+        handleAutoSave(next);
     };
 
     const createActionClone = (action: Action) => ({
@@ -578,19 +590,23 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
 
     const removeVariable = (name: string) => {
-        const next = { ...currentTask.variables };
-        delete next[name];
-        setCurrentTask({ ...currentTask, variables: next });
+        const nextVars = { ...currentTask.variables };
+        delete nextVars[name];
+        const next = { ...currentTask, variables: nextVars };
+        setCurrentTask(next);
+        handleAutoSave(next);
     };
 
     const updateVariable = (oldName: string, name: string, type: VarType, value: any) => {
-        const next = { ...currentTask.variables };
-        delete next[oldName];
+        const nextVars = { ...currentTask.variables };
+        delete nextVars[oldName];
         let processedValue = value;
         if (type === 'number') processedValue = parseFloat(value) || 0;
         if (type === 'boolean') processedValue = value === 'true' || value === true;
-        next[name] = { type, value: processedValue };
-        setCurrentTask({ ...currentTask, variables: next });
+        nextVars[name] = { type, value: processedValue };
+        const next = { ...currentTask, variables: nextVars };
+        setCurrentTask(next);
+        handleAutoSave(next);
     };
 
     const loadVersions = async () => {
@@ -661,6 +677,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             type="text"
                             value={currentTask.name}
                             onChange={(e) => setCurrentTask({ ...currentTask, name: e.target.value })}
+                            onBlur={() => handleAutoSave()}
                             placeholder="Task Name..."
                             className="bg-transparent text-xl font-bold tracking-tight text-white focus:outline-none border-none p-0 w-full placeholder:text-white/10"
                         />
@@ -673,13 +690,11 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             >
                                 <HistoryIcon className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                                onClick={onSave}
-                                disabled={!hasUnsavedChanges}
-                                className={`px-4 py-2 text-[9px] font-bold rounded-full uppercase tracking-widest transition-all ${saveMsg === 'SAVED' ? 'text-green-400 border border-green-400/20' : 'bg-blue-500/10 border border-white/10 text-blue-400'} ${hasUnsavedChanges ? 'hover:bg-blue-500/20' : 'opacity-50 cursor-not-allowed'}`}
+                            <div
+                                className={`px-4 py-2 text-[9px] font-bold rounded-full uppercase tracking-widest transition-all ${saveMsg === 'SAVED' ? 'text-green-400 border border-green-400/20' : 'text-blue-400 opacity-0'}`}
                             >
-                                {saveMsg === 'SAVED' ? 'SAVED' : 'SAVE'}
-                            </button>
+                                SAVED
+                            </div>
                         </div>
                     </div>
 
@@ -687,7 +702,11 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                         {(['scrape', 'agent', 'headful'] as TaskMode[]).map(m => (
                             <button
                                 key={m}
-                                onClick={() => setCurrentTask({ ...currentTask, mode: m })}
+                                onClick={() => {
+                                    const next = { ...currentTask, mode: m };
+                                    setCurrentTask(next);
+                                    handleAutoSave(next);
+                                }}
                                 className={`flex-1 py-2 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${currentTask.mode === m ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
                                 aria-pressed={currentTask.mode === m}
                             >
@@ -699,18 +718,18 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                     <div className="flex items-center justify-between px-2">
                         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Interface Mode</span>
                         <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/5">
-                        {(['visual', 'json', 'api'] as ViewMode[]).map(v => (
-                            <button
-                                key={v}
-                                onClick={() => setEditorView(v)}
-                                className={`px-3 py-1 rounded text-[8px] font-bold uppercase tracking-widest transition-all ${editorView === v ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
-                                aria-pressed={editorView === v}
-                            >
-                                {v}
-                            </button>
-                        ))}
+                            {(['visual', 'json', 'api'] as ViewMode[]).map(v => (
+                                <button
+                                    key={v}
+                                    onClick={() => setEditorView(v)}
+                                    className={`px-3 py-1 rounded text-[8px] font-bold uppercase tracking-widest transition-all ${editorView === v ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
+                                    aria-pressed={editorView === v}
+                                >
+                                    {v}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
                 </div>
 
                 <div
@@ -724,6 +743,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                     <RichInput
                                         value={currentTask.url}
                                         onChange={(val) => setCurrentTask({ ...currentTask, url: val })}
+                                        onBlur={() => handleAutoSave()}
                                         variables={currentTask.variables}
                                         placeholder="https://..."
                                     />
@@ -737,13 +757,14 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                         type="number"
                                         value={currentTask.wait}
                                         onChange={(e) => setCurrentTask({ ...currentTask, wait: parseFloat(e.target.value) || 0 })}
+                                        onBlur={() => handleAutoSave()}
                                         className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/30 transition-all text-white"
                                     />
                                 </div>
                             </div>
 
                             {currentTask.mode === 'agent' && (
-                                    <div className="space-y-6 order-1">
+                                <div className="space-y-6 order-1">
                                     <div className="space-y-3" ref={actionsListRef}>
                                         {(() => {
                                             const blockDepths = getBlockDepths(currentTask.actions);
@@ -768,641 +789,653 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                             : status === 'skipped'
                                                                 ? 'border-gray-500/40'
                                                                 : '';
-                                                    const renderBlockMarker = (type: Action['type']) => {
-                                                        const iconClass = "w-3 h-3";
-                                                        if (type === 'if' || type === 'else') return <Split className={`${iconClass} text-blue-400`} />;
-                                                        if (type === 'end') return <CornerRightDown className={`${iconClass} text-gray-500`} />;
-                                                        if (type === 'while' || type === 'repeat') return <Repeat className={`${iconClass} text-amber-400`} />;
-                                                        if (type === 'foreach') return <List className={`${iconClass} text-amber-300`} />;
-                                                        if (type === 'on_error') return <AlertTriangle className={`${iconClass} text-red-400`} />;
-                                                        if (type === 'set') return <Variable className={`${iconClass} text-green-400`} />;
-                                                        if (type === 'stop') return <Square className={`${iconClass} text-red-400`} />;
-                                                        if (type === 'click') return <MousePointer2 className={`${iconClass} text-blue-300`} />;
-                                                        if (type === 'type') return <TypeIcon className={`${iconClass} text-green-300`} />;
-                                                        if (type === 'hover') return <Target className={`${iconClass} text-purple-300`} />;
-                                                        if (type === 'press') return <Keyboard className={`${iconClass} text-amber-300`} />;
-                                                        if (type === 'wait') return <Clock className={`${iconClass} text-slate-300`} />;
-                                                        if (type === 'scroll') return <ArrowDownUp className={`${iconClass} text-cyan-300`} />;
-                                                        if (type === 'javascript') return <Code className={`${iconClass} text-yellow-300`} />;
-                                                        if (type === 'csv') return <Table className={`${iconClass} text-emerald-300`} />;
-                                                        if (type === 'merge') return <Layers className={`${iconClass} text-emerald-200`} />;
-                                                        if (type === 'screenshot') return <Camera className={`${iconClass} text-emerald-300`} />;
-                                                        if (type === 'start') return <PlayCircle className={`${iconClass} text-emerald-300`} />;
-                                                        return <span className="text-[9px] text-white/20">|</span>;
-                                                    };
+                                                const renderBlockMarker = (type: Action['type']) => {
+                                                    const iconClass = "w-3 h-3";
+                                                    if (type === 'if' || type === 'else') return <Split className={`${iconClass} text-blue-400`} />;
+                                                    if (type === 'end') return <CornerRightDown className={`${iconClass} text-gray-500`} />;
+                                                    if (type === 'while' || type === 'repeat') return <Repeat className={`${iconClass} text-amber-400`} />;
+                                                    if (type === 'foreach') return <List className={`${iconClass} text-amber-300`} />;
+                                                    if (type === 'on_error') return <AlertTriangle className={`${iconClass} text-red-400`} />;
+                                                    if (type === 'set') return <Variable className={`${iconClass} text-green-400`} />;
+                                                    if (type === 'stop') return <Square className={`${iconClass} text-red-400`} />;
+                                                    if (type === 'click') return <MousePointer2 className={`${iconClass} text-blue-300`} />;
+                                                    if (type === 'type') return <TypeIcon className={`${iconClass} text-green-300`} />;
+                                                    if (type === 'hover') return <Target className={`${iconClass} text-purple-300`} />;
+                                                    if (type === 'press') return <Keyboard className={`${iconClass} text-amber-300`} />;
+                                                    if (type === 'wait') return <Clock className={`${iconClass} text-slate-300`} />;
+                                                    if (type === 'scroll') return <ArrowDownUp className={`${iconClass} text-cyan-300`} />;
+                                                    if (type === 'javascript') return <Code className={`${iconClass} text-yellow-300`} />;
+                                                    if (type === 'csv') return <Table className={`${iconClass} text-emerald-300`} />;
+                                                    if (type === 'merge') return <Layers className={`${iconClass} text-emerald-200`} />;
+                                                    if (type === 'screenshot') return <Camera className={`${iconClass} text-emerald-300`} />;
+                                                    if (type === 'start') return <PlayCircle className={`${iconClass} text-emerald-300`} />;
+                                                    return <span className="text-[9px] text-white/20">|</span>;
+                                                };
 
                                                 return (
-                                                <div
-                                                    key={action.id}
-                                                    id={`action-${action.id}`}
-                                                    onPointerDown={(e) => {
-                                                        if (isInteractiveTarget(e.target)) return;
-                                                        if (e.button !== 0) return;
-                                                        e.preventDefault();
-                                                        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                                                        const pointerOffset = e.clientY - rect.top;
-                                                        dragPointerIdRef.current = e.pointerId;
-                                                        (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-                                                        setDragState({
-                                                            id: action.id,
-                                                            startY: e.clientY,
-                                                            currentY: e.clientY,
-                                                            height: rect.height,
-                                                            index: idx,
-                                                            originTop: rect.top,
-                                                            pointerOffset
-                                                        });
-                                                        setDragOverIndex(idx);
-                                                    }}
-                                                    onPointerUp={(e) => {
-                                                        if (dragPointerIdRef.current !== null && e.pointerId !== dragPointerIdRef.current) return;
-                                                        finalizeDrag();
-                                                    }}
-                                                    onContextMenu={(e) => openContextMenu(e, action.id)}
-                                                    className={`glass-card p-5 rounded-2xl space-y-4 group/item relative transition-[transform,box-shadow,opacity,filter,background-color,border-color] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform select-none touch-none ${statusClass} ${isDragging ? 'ring-2 ring-white/40 scale-[1.02] -translate-y-0.5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] opacity-85 z-20' : ''} ${dragOverIndex === idx && !isDragging ? 'ring-2 ring-blue-400/60 bg-blue-500/5' : ''} ${action.disabled ? 'opacity-40 grayscale' : ''}`}
-                                                    style={{
-                                                        transform: isDragging
-                                                            ? `translateY(${(dragState?.currentY || 0) - (dragState?.pointerOffset || 0) - (dragState?.originTop || 0)}px)`
-                                                            : translateY
-                                                                ? `translateY(${translateY}px)`
-                                                                : undefined,
-                                                        marginLeft: depth ? depth * 12 : undefined
-                                                    }}
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="text-[8px] font-bold text-white/20 font-mono tracking-tighter">{(idx + 1).toString().padStart(2, '0')}</div>
-                                                            <div className="w-4 h-4 flex items-center justify-center">
-                                                                {renderBlockMarker(action.type)}
+                                                    <div
+                                                        key={action.id}
+                                                        id={`action-${action.id}`}
+                                                        onPointerDown={(e) => {
+                                                            if (isInteractiveTarget(e.target)) return;
+                                                            if (e.button !== 0) return;
+                                                            e.preventDefault();
+                                                            const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                                                            const pointerOffset = e.clientY - rect.top;
+                                                            dragPointerIdRef.current = e.pointerId;
+                                                            (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+                                                            setDragState({
+                                                                id: action.id,
+                                                                startY: e.clientY,
+                                                                currentY: e.clientY,
+                                                                height: rect.height,
+                                                                index: idx,
+                                                                originTop: rect.top,
+                                                                pointerOffset
+                                                            });
+                                                            setDragOverIndex(idx);
+                                                        }}
+                                                        onPointerUp={(e) => {
+                                                            if (dragPointerIdRef.current !== null && e.pointerId !== dragPointerIdRef.current) return;
+                                                            finalizeDrag();
+                                                        }}
+                                                        onContextMenu={(e) => openContextMenu(e, action.id)}
+                                                        className={`glass-card p-5 rounded-2xl space-y-4 group/item relative transition-[transform,box-shadow,opacity,filter,background-color,border-color] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform select-none touch-none ${statusClass} ${isDragging ? 'ring-2 ring-white/40 scale-[1.02] -translate-y-0.5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] opacity-85 z-20' : ''} ${dragOverIndex === idx && !isDragging ? 'ring-2 ring-blue-400/60 bg-blue-500/5' : ''} ${action.disabled ? 'opacity-40 grayscale' : ''}`}
+                                                        style={{
+                                                            transform: isDragging
+                                                                ? `translateY(${(dragState?.currentY || 0) - (dragState?.pointerOffset || 0) - (dragState?.originTop || 0)}px)`
+                                                                : translateY
+                                                                    ? `translateY(${translateY}px)`
+                                                                    : undefined,
+                                                            marginLeft: depth ? depth * 12 : undefined
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="text-[8px] font-bold text-white/20 font-mono tracking-tighter">{(idx + 1).toString().padStart(2, '0')}</div>
+                                                                <div className="w-4 h-4 flex items-center justify-center">
+                                                                    {renderBlockMarker(action.type)}
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => openActionPalette(action.id)}
+                                                                    className="action-type-select text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 focus:outline-none cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-blue-400/50"
+                                                                    aria-label={`Change action type: ${action.type}`}
+                                                                >
+                                                                    {ACTION_CATALOG.find((item) => item.type === action.type)?.label || action.type}
+                                                                </button>
                                                             </div>
                                                             <button
-                                                                onClick={() => openActionPalette(action.id)}
-                                                                className="action-type-select text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 focus:outline-none cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-blue-400/50"
-                                                                aria-label={`Change action type: ${action.type}`}
+                                                                data-no-drag="true"
+                                                                onClick={() => removeAction(action.id)}
+                                                                className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover/item:opacity-100 focus:opacity-100 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                                                                aria-label="Delete action"
+                                                                title="Delete action"
                                                             >
-                                                                {ACTION_CATALOG.find((item) => item.type === action.type)?.label || action.type}
+                                                                <X className="w-4 h-4" />
                                                             </button>
                                                         </div>
-                                                        <button
-                                                            data-no-drag="true"
-                                                            onClick={() => removeAction(action.id)}
-                                                            className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover/item:opacity-100 focus:opacity-100 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
-                                                            aria-label="Delete action"
-                                                            title="Delete action"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                    {(action.type === 'click' || action.type === 'type' || action.type === 'hover') && (
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Selector</label>
-                                                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                <RichInput
-                                                                    value={action.selector || ''}
-                                                                    onChange={(v) => updateAction(action.id, { selector: v })}
-                                                                    variables={currentTask.variables}
-                                                                    placeholder=".btn-primary"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {action.type === 'scroll' && (
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Selector (Optional)</label>
-                                                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                <RichInput
-                                                                    value={action.selector || ''}
-                                                                    onChange={(v) => updateAction(action.id, { selector: v })}
-                                                                    variables={currentTask.variables}
-                                                                    placeholder=".scroll-container or leave empty"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {action.type === 'scroll' && (
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Scroll Speed (ms)</label>
-                                                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                <RichInput
-                                                                    value={action.key || ''}
-                                                                    onChange={(v) => updateAction(action.id, { key: v })}
-                                                                    variables={currentTask.variables}
-                                                                    placeholder="500"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {(action.type === 'type' || action.type === 'wait' || action.type === 'scroll' || action.type === 'javascript' || action.type === 'csv') && (
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">
-                                                                {action.type === 'type'
-                                                                    ? 'Content'
-                                                                    : action.type === 'wait'
-                                                                        ? 'Seconds'
-                                                                        : action.type === 'scroll'
-                                                                            ? 'Pixels'
-                                                                            : action.type === 'csv'
-                                                                                ? 'CSV Input'
-                                                                                : 'Script'}
-                                                            </label>
-                                                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                {action.type === 'javascript' ? (
-                                                                    <CodeEditor
-                                                                        value={action.value || ''}
-                                                                        onChange={(v) => updateAction(action.id, { value: v })}
-                                                                        language="javascript"
-                                                                        variables={currentTask.variables}
-                                                                        className="min-h-[120px]"
-                                                                        placeholder="return document.title"
-                                                                    />
-                                                                ) : action.type === 'csv' ? (
-                                                                    <CodeEditor
-                                                                        value={action.value || ''}
-                                                                        onChange={(v) => updateAction(action.id, { value: v })}
-                                                                        language="plain"
-                                                                        variables={currentTask.variables}
-                                                                        className="min-h-[120px]"
-                                                                        placeholder="name,age\nAda,31"
-                                                                    />
-                                                                ) : (
-                                                                    <RichInput
-                                                                        value={action.value || ''}
-                                                                        onChange={(v) => updateAction(action.id, { value: v })}
-                                                                        variables={currentTask.variables}
-                                                                        placeholder={action.type === 'type' ? 'Search keywords' : action.type === 'wait' ? '3' : '400'}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                            {action.type === 'type' && (
-                                                                <div className="space-y-1.5">
-                                                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Mode</label>
-                                                                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                        <select
-                                                                            value={action.typeMode || 'replace'}
-                                                                            onChange={(e) =>
-                                                                                updateAction(action.id, { typeMode: e.target.value as 'append' | 'replace' })
-                                                                            }
-                                                                            className="custom-select w-full bg-transparent border-none px-0 py-0 text-[11px] text-white"
-                                                                        >
-                                                                            {TYPE_MODE_OPTIONS.map((option) => (
-                                                                                <option key={option.value} value={option.value}>
-                                                                                    {option.label}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {action.type === 'screenshot' && (
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Label (Optional)</label>
-                                                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                <RichInput
-                                                                    value={action.value || ''}
-                                                                    onChange={(v) => updateAction(action.id, { value: v })}
-                                                                    variables={currentTask.variables}
-                                                                    placeholder="checkout-step"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {action.type === 'press' && (() => {
-                                                        const { modifiers, baseKey } = parsePressKey(action.key);
-                                                        return (
-                                                            <div className="space-y-2">
-                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Key</label>
-                                                                <div className="grid grid-cols-2 gap-1 text-[10px] text-white">
-                                                                    {PRESS_MODIFIERS.map((modifier) => (
-                                                                        <label key={modifier.value} className="inline-flex items-center space-x-1">
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={modifiers.includes(modifier.value)}
-                                                                                onChange={(e) => {
-                                                                                    const nextModifiers = e.target.checked
-                                                                                        ? [...modifiers, modifier.value]
-                                                                                        : modifiers.filter((m) => m !== modifier.value);
-                                                                                    updateAction(action.id, {
-                                                                                        key: buildPressKey(nextModifiers, baseKey)
-                                                                                    });
-                                                                                }}
-                                                                                className="h-3 w-3 rounded border border-white/30 bg-black/80"
-                                                                            />
-                                                                            <span className="uppercase text-[9px] text-white/70">{modifier.label}</span>
-                                                                        </label>
-                                                                    ))}
-                                                                </div>
+                                                        {(action.type === 'click' || action.type === 'type' || action.type === 'hover') && (
+                                                            <div className="space-y-1.5">
+                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Selector</label>
                                                                 <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                    <select
-                                                                        value={baseKey}
-                                                                        onChange={(e) => updateAction(action.id, { key: buildPressKey(modifiers, e.target.value) })}
-                                                                        className="custom-select w-full bg-transparent border-none px-0 py-0 text-[11px] text-white"
-                                                                    >
-                                                                        <option value="">Select key</option>
-                                                                        {PRESS_BASE_KEYS.map((keyOption) => (
-                                                                            <option key={keyOption} value={keyOption}>
-                                                                                {keyOption}
-                                                                            </option>
-                                                                        ))}
-                                                                    </select>
+                                                                    <RichInput
+                                                                        value={action.selector || ''}
+                                                                        onChange={(v) => updateAction(action.id, { selector: v })}
+                                                                        onBlur={() => handleAutoSave()}
+                                                                        variables={currentTask.variables}
+                                                                        placeholder=".btn-primary"
+                                                                    />
                                                                 </div>
                                                             </div>
-                                                        );
-                                                    })()}
+                                                        )}
 
-                                                    {action.type === 'if' && (() => {
-                                                        const varKeys = Object.keys(currentTask.variables || {});
-                                                        const normalizedVar = normalizeVarName(action.conditionVar || '');
-                                                        const inferredType = normalizedVar && currentTask.variables?.[normalizedVar]?.type;
-                                                        const varType = action.conditionVarType || inferredType || 'string';
-                                                        const ops = conditionOps[varType as VarType] || conditionOps.string;
-                                                        const opValue = action.conditionOp || ops[0].value;
-                                                        return (
-                                                            <div className="space-y-2">
-                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Condition</label>
-                                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Variable</span>
-                                                                        <input
-                                                                            type="text"
-                                                                            list={`if-var-${action.id}`}
-                                                                            value={action.conditionVar || ''}
-                                                                            onChange={(e) => updateAction(action.id, { conditionVar: e.target.value })}
-                                                                            placeholder="variable name"
-                                                                            className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
-                                                                        />
-                                                                        {varKeys.length > 0 && (
-                                                                            <datalist id={`if-var-${action.id}`}>
-                                                                                {varKeys.map((key) => (
-                                                                                    <option key={key} value={key} />
-                                                                                ))}
-                                                                            </datalist>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Type</span>
-                                                                        <select
-                                                                            value={varType}
-                                                                            onChange={(e) => {
-                                                                                const nextType = e.target.value as VarType;
-                                                                                const nextOps = conditionOps[nextType] || conditionOps.string;
-                                                                                updateAction(action.id, {
-                                                                                    conditionVarType: nextType,
-                                                                                    conditionOp: nextOps[0].value,
-                                                                                    conditionValue: nextType === 'boolean' ? '' : action.conditionValue || ''
-                                                                                });
-                                                                            }}
-                                                                            className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
-                                                                        >
-                                                                            <option value="string">String</option>
-                                                                            <option value="number">Number</option>
-                                                                            <option value="boolean">Boolean</option>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Relation</span>
-                                                                        <select
-                                                                            value={opValue}
-                                                                            onChange={(e) => updateAction(action.id, { conditionOp: e.target.value })}
-                                                                            className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
-                                                                        >
-                                                                            {ops.map((opt) => (
-                                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                                            ))}
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                {varType !== 'boolean' && (
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Value</span>
-                                                                        <input
-                                                                            type={varType === 'number' ? 'number' : 'text'}
-                                                                            value={action.conditionValue || ''}
-                                                                            onChange={(e) => updateAction(action.id, { conditionValue: e.target.value })}
-                                                                            placeholder={varType === 'number' ? '0' : 'value'}
-                                                                            className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })()}
-
-                                                    {action.type === 'while' && (() => {
-                                                        const varKeys = Object.keys(currentTask.variables || {});
-                                                        const normalizedVar = normalizeVarName(action.conditionVar || '');
-                                                        const inferredType = normalizedVar && currentTask.variables?.[normalizedVar]?.type;
-                                                        const varType = action.conditionVarType || inferredType || 'string';
-                                                        const ops = conditionOps[varType as VarType] || conditionOps.string;
-                                                        const opValue = action.conditionOp || ops[0].value;
-                                                        return (
-                                                            <div className="space-y-2">
-                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Condition</label>
-                                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Variable</span>
-                                                                        <input
-                                                                            type="text"
-                                                                            list={`while-var-${action.id}`}
-                                                                            value={action.conditionVar || ''}
-                                                                            onChange={(e) => updateAction(action.id, { conditionVar: e.target.value })}
-                                                                            placeholder="variable name"
-                                                                            className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
-                                                                        />
-                                                                        {varKeys.length > 0 && (
-                                                                            <datalist id={`while-var-${action.id}`}>
-                                                                                {varKeys.map((key) => (
-                                                                                    <option key={key} value={key} />
-                                                                                ))}
-                                                                            </datalist>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Type</span>
-                                                                        <select
-                                                                            value={varType}
-                                                                            onChange={(e) => {
-                                                                                const nextType = e.target.value as VarType;
-                                                                                const nextOps = conditionOps[nextType] || conditionOps.string;
-                                                                                updateAction(action.id, {
-                                                                                    conditionVarType: nextType,
-                                                                                    conditionOp: nextOps[0].value,
-                                                                                    conditionValue: nextType === 'boolean' ? '' : action.conditionValue || ''
-                                                                                });
-                                                                            }}
-                                                                            className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
-                                                                        >
-                                                                            <option value="string">String</option>
-                                                                            <option value="number">Number</option>
-                                                                            <option value="boolean">Boolean</option>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Relation</span>
-                                                                        <select
-                                                                            value={opValue}
-                                                                            onChange={(e) => updateAction(action.id, { conditionOp: e.target.value })}
-                                                                            className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
-                                                                        >
-                                                                            {ops.map((opt) => (
-                                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                                            ))}
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                {varType !== 'boolean' && (
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Value</span>
-                                                                        <input
-                                                                            type={varType === 'number' ? 'number' : 'text'}
-                                                                            value={action.conditionValue || ''}
-                                                                            onChange={(e) => updateAction(action.id, { conditionValue: e.target.value })}
-                                                                            placeholder={varType === 'number' ? '0' : 'value'}
-                                                                            className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })()}
-
-                                                    {action.type === 'repeat' && (
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Times</label>
-                                                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                <RichInput
-                                                                    value={action.value || ''}
-                                                                    onChange={(v) => updateAction(action.id, { value: v })}
-                                                                    variables={currentTask.variables}
-                                                                    placeholder="3"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {action.type === 'foreach' && (
-                                                        <div className="space-y-3">
+                                                        {action.type === 'scroll' && (
                                                             <div className="space-y-1.5">
                                                                 <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Selector (Optional)</label>
                                                                 <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
                                                                     <RichInput
                                                                         value={action.selector || ''}
                                                                         onChange={(v) => updateAction(action.id, { selector: v })}
+                                                                        onBlur={() => handleAutoSave()}
                                                                         variables={currentTask.variables}
-                                                                        placeholder=".list-item"
+                                                                        placeholder=".scroll-container or leave empty"
                                                                     />
                                                                 </div>
                                                             </div>
+                                                        )}
+                                                        {action.type === 'scroll' && (
                                                             <div className="space-y-1.5">
-                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Variable (Array Name)</label>
+                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Scroll Speed (ms)</label>
                                                                 <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
                                                                     <RichInput
-                                                                        value={action.varName || ''}
-                                                                        onChange={(v) => updateAction(action.id, { varName: v })}
+                                                                        value={action.key || ''}
+                                                                        onChange={(v) => updateAction(action.id, { key: v })}
+                                                                        onBlur={() => handleAutoSave()}
                                                                         variables={currentTask.variables}
-                                                                        placeholder="items"
+                                                                        placeholder="500"
                                                                     />
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    )}
+                                                        )}
 
-                                                    {action.type === 'set' && (
-                                                        <div className="space-y-3">
+                                                        {(action.type === 'type' || action.type === 'wait' || action.type === 'scroll' || action.type === 'javascript' || action.type === 'csv') && (
                                                             <div className="space-y-1.5">
-                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Variable Name</label>
+                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">
+                                                                    {action.type === 'type'
+                                                                        ? 'Content'
+                                                                        : action.type === 'wait'
+                                                                            ? 'Seconds'
+                                                                            : action.type === 'scroll'
+                                                                                ? 'Pixels'
+                                                                                : action.type === 'csv'
+                                                                                    ? 'CSV Input'
+                                                                                    : 'Script'}
+                                                                </label>
                                                                 <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                    <RichInput
-                                                                        value={action.varName || ''}
-                                                                        onChange={(v) => updateAction(action.id, { varName: v })}
-                                                                        variables={currentTask.variables}
-                                                                        placeholder="status"
-                                                                    />
+                                                                    {action.type === 'javascript' ? (
+                                                                        <CodeEditor
+                                                                            value={action.value || ''}
+                                                                            onChange={(v) => updateAction(action.id, { value: v })}
+                                                                            onBlur={() => handleAutoSave()}
+                                                                            language="javascript"
+                                                                            variables={currentTask.variables}
+                                                                            className="min-h-[120px]"
+                                                                            placeholder="return document.title"
+                                                                        />
+                                                                    ) : action.type === 'csv' ? (
+                                                                        <CodeEditor
+                                                                            value={action.value || ''}
+                                                                            onChange={(v) => updateAction(action.id, { value: v })}
+                                                                            onBlur={() => handleAutoSave()}
+                                                                            language="plain"
+                                                                            variables={currentTask.variables}
+                                                                            className="min-h-[120px]"
+                                                                            placeholder="name,age\nAda,31"
+                                                                        />
+                                                                    ) : (
+                                                                        <RichInput
+                                                                            value={action.value || ''}
+                                                                            onChange={(v) => updateAction(action.id, { value: v })}
+                                                                            onBlur={() => handleAutoSave()}
+                                                                            variables={currentTask.variables}
+                                                                            placeholder={action.type === 'type' ? 'Search keywords' : action.type === 'wait' ? '3' : '400'}
+                                                                        />
+                                                                    )}
                                                                 </div>
-                                                            </div>
-                                                            <div className="space-y-1.5">
-                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Value</label>
-                                                                <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                    <RichInput
-                                                                        value={action.value || ''}
-                                                                        onChange={(v) => updateAction(action.id, { value: v })}
-                                                                        variables={currentTask.variables}
-                                                                        placeholder="ready"
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {action.type === 'merge' && (
-                                                        <div className="space-y-3">
-                                                            <div className="space-y-1.5">
-                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Sources</label>
-                                                                <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                    <RichInput
-                                                                        value={action.value || ''}
-                                                                        onChange={(v) => updateAction(action.id, { value: v })}
-                                                                        variables={currentTask.variables}
-                                                                        placeholder="items, extraItems, {$block.output}"
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                            <div className="space-y-1.5">
-                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Target Variable (Optional)</label>
-                                                                <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                                                                    <RichInput
-                                                                        value={action.varName || ''}
-                                                                        onChange={(v) => updateAction(action.id, { varName: v })}
-                                                                        variables={currentTask.variables}
-                                                                        placeholder="allItems"
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {action.type === 'stop' && (
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Outcome</label>
-                                                            <select
-                                                                value={action.value || 'success'}
-                                                                onChange={(e) => updateAction(action.id, { value: e.target.value })}
-                                                                className="custom-select w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/70 focus:outline-none"
-                                                            >
-                                                                <option value="success">Success</option>
-                                                                <option value="error">Error</option>
-                                                            </select>
-                                                        </div>
-                                                    )}
-
-                                                    {action.type === 'on_error' && (
-                                                        <div className="text-[8px] text-gray-600 uppercase tracking-widest">
-                                                            Runs if any action fails.
-                                                        </div>
-                                                    )}
-
-                                                    {action.type === 'start' && (
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Task</label>
-                                                            <select
-                                                                value={action.value || ''}
-                                                                onChange={(e) => updateAction(action.id, { value: e.target.value })}
-                                                                className="custom-select w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/70 focus:outline-none"
-                                                            >
-                                                                <option value="" disabled>Select task</option>
-                                                                {availableTasks.length === 0 && (
-                                                                    <option value="" disabled>No other tasks</option>
+                                                                {action.type === 'type' && (
+                                                                    <div className="space-y-1.5">
+                                                                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Mode</label>
+                                                                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                                                            <select
+                                                                                value={action.typeMode || 'replace'}
+                                                                                onChange={(e) => {
+                                                                                    updateAction(action.id, { typeMode: e.target.value as 'append' | 'replace' });
+                                                                                    handleAutoSave();
+                                                                                }}
+                                                                                className="custom-select w-full bg-transparent border-none px-0 py-0 text-[11px] text-white"
+                                                                            >
+                                                                                {TYPE_MODE_OPTIONS.map((option) => (
+                                                                                    <option key={option.value} value={option.value}>
+                                                                                        {option.label}
+                                                                                    </option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
                                                                 )}
-                                                                {availableTasks.map((task) => (
-                                                                    <option key={task.id} value={task.id}>
-                                                                        {task.name || task.id}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {action.type === 'screenshot' && (
+                                                            <div className="space-y-1.5">
+                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Label (Optional)</label>
+                                                                <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                                                    <RichInput
+                                                                        value={action.value || ''}
+                                                                        onChange={(v) => updateAction(action.id, { value: v })}
+                                                                        onBlur={() => handleAutoSave()}
+                                                                        variables={currentTask.variables}
+                                                                        placeholder="checkout-step"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {action.type === 'press' && (() => {
+                                                            const { modifiers, baseKey } = parsePressKey(action.key);
+                                                            return (
+                                                                <div className="space-y-2">
+                                                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Key</label>
+                                                                    <div className="grid grid-cols-2 gap-1 text-[10px] text-white">
+                                                                        {PRESS_MODIFIERS.map((modifier) => (
+                                                                            <label key={modifier.value} className="inline-flex items-center space-x-1">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={modifiers.includes(modifier.value)}
+                                                                                    onChange={(e) => {
+                                                                                        const nextModifiers = e.target.checked
+                                                                                            ? [...modifiers, modifier.value]
+                                                                                            : modifiers.filter((m) => m !== modifier.value);
+                                                                                        updateAction(action.id, {
+                                                                                            key: buildPressKey(nextModifiers, baseKey)
+                                                                                        });
+                                                                                    }}
+                                                                                    className="h-3 w-3 rounded border border-white/30 bg-black/80"
+                                                                                />
+                                                                                <span className="uppercase text-[9px] text-white/70">{modifier.label}</span>
+                                                                            </label>
+                                                                        ))}
+                                                                    </div>
+                                                                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                                                        <select
+                                                                            value={baseKey}
+                                                                            onChange={(e) => updateAction(action.id, { key: buildPressKey(modifiers, e.target.value) })}
+                                                                            className="custom-select w-full bg-transparent border-none px-0 py-0 text-[11px] text-white"
+                                                                        >
+                                                                            <option value="">Select key</option>
+                                                                            {PRESS_BASE_KEYS.map((keyOption) => (
+                                                                                <option key={keyOption} value={keyOption}>
+                                                                                    {keyOption}
+                                                                                </option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()}
+
+                                                        {action.type === 'if' && (() => {
+                                                            const varKeys = Object.keys(currentTask.variables || {});
+                                                            const normalizedVar = normalizeVarName(action.conditionVar || '');
+                                                            const inferredType = normalizedVar && currentTask.variables?.[normalizedVar]?.type;
+                                                            const varType = action.conditionVarType || inferredType || 'string';
+                                                            const ops = conditionOps[varType as VarType] || conditionOps.string;
+                                                            const opValue = action.conditionOp || ops[0].value;
+                                                            return (
+                                                                <div className="space-y-2">
+                                                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Condition</label>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Variable</span>
+                                                                            <input
+                                                                                type="text"
+                                                                                list={`if-var-${action.id}`}
+                                                                                value={action.conditionVar || ''}
+                                                                                onChange={(e) => updateAction(action.id, { conditionVar: e.target.value })}
+                                                                                placeholder="variable name"
+                                                                                className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
+                                                                            />
+                                                                            {varKeys.length > 0 && (
+                                                                                <datalist id={`if-var-${action.id}`}>
+                                                                                    {varKeys.map((key) => (
+                                                                                        <option key={key} value={key} />
+                                                                                    ))}
+                                                                                </datalist>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Type</span>
+                                                                            <select
+                                                                                value={varType}
+                                                                                onChange={(e) => {
+                                                                                    const nextType = e.target.value as VarType;
+                                                                                    const nextOps = conditionOps[nextType] || conditionOps.string;
+                                                                                    updateAction(action.id, {
+                                                                                        conditionVarType: nextType,
+                                                                                        conditionOp: nextOps[0].value,
+                                                                                        conditionValue: nextType === 'boolean' ? '' : action.conditionValue || ''
+                                                                                    });
+                                                                                }}
+                                                                                className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
+                                                                            >
+                                                                                <option value="string">String</option>
+                                                                                <option value="number">Number</option>
+                                                                                <option value="boolean">Boolean</option>
+                                                                            </select>
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Relation</span>
+                                                                            <select
+                                                                                value={opValue}
+                                                                                onChange={(e) => updateAction(action.id, { conditionOp: e.target.value })}
+                                                                                className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
+                                                                            >
+                                                                                {ops.map((opt) => (
+                                                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
+                                                                    {varType !== 'boolean' && (
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Value</span>
+                                                                            <input
+                                                                                type={varType === 'number' ? 'number' : 'text'}
+                                                                                value={action.conditionValue || ''}
+                                                                                onChange={(e) => updateAction(action.id, { conditionValue: e.target.value })}
+                                                                                placeholder={varType === 'number' ? '0' : 'value'}
+                                                                                className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
+                                                                            />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })()}
+
+                                                        {action.type === 'while' && (() => {
+                                                            const varKeys = Object.keys(currentTask.variables || {});
+                                                            const normalizedVar = normalizeVarName(action.conditionVar || '');
+                                                            const inferredType = normalizedVar && currentTask.variables?.[normalizedVar]?.type;
+                                                            const varType = action.conditionVarType || inferredType || 'string';
+                                                            const ops = conditionOps[varType as VarType] || conditionOps.string;
+                                                            const opValue = action.conditionOp || ops[0].value;
+                                                            return (
+                                                                <div className="space-y-2">
+                                                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Condition</label>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Variable</span>
+                                                                            <input
+                                                                                type="text"
+                                                                                list={`while-var-${action.id}`}
+                                                                                value={action.conditionVar || ''}
+                                                                                onChange={(e) => updateAction(action.id, { conditionVar: e.target.value })}
+                                                                                placeholder="variable name"
+                                                                                className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
+                                                                            />
+                                                                            {varKeys.length > 0 && (
+                                                                                <datalist id={`while-var-${action.id}`}>
+                                                                                    {varKeys.map((key) => (
+                                                                                        <option key={key} value={key} />
+                                                                                    ))}
+                                                                                </datalist>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Type</span>
+                                                                            <select
+                                                                                value={varType}
+                                                                                onChange={(e) => {
+                                                                                    const nextType = e.target.value as VarType;
+                                                                                    const nextOps = conditionOps[nextType] || conditionOps.string;
+                                                                                    updateAction(action.id, {
+                                                                                        conditionVarType: nextType,
+                                                                                        conditionOp: nextOps[0].value,
+                                                                                        conditionValue: nextType === 'boolean' ? '' : action.conditionValue || ''
+                                                                                    });
+                                                                                }}
+                                                                                className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
+                                                                            >
+                                                                                <option value="string">String</option>
+                                                                                <option value="number">Number</option>
+                                                                                <option value="boolean">Boolean</option>
+                                                                            </select>
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Relation</span>
+                                                                            <select
+                                                                                value={opValue}
+                                                                                onChange={(e) => updateAction(action.id, { conditionOp: e.target.value })}
+                                                                                className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
+                                                                            >
+                                                                                {ops.map((opt) => (
+                                                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
+                                                                    {varType !== 'boolean' && (
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Value</span>
+                                                                            <input
+                                                                                type={varType === 'number' ? 'number' : 'text'}
+                                                                                value={action.conditionValue || ''}
+                                                                                onChange={(e) => updateAction(action.id, { conditionValue: e.target.value })}
+                                                                                placeholder={varType === 'number' ? '0' : 'value'}
+                                                                                className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
+                                                                            />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })()}
+
+                                                        {action.type === 'repeat' && (
+                                                            <div className="space-y-1.5">
+                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Times</label>
+                                                                <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                                                    <RichInput
+                                                                        value={action.value || ''}
+                                                                        onChange={(v) => updateAction(action.id, { value: v })}
+                                                                        variables={currentTask.variables}
+                                                                        placeholder="3"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {action.type === 'foreach' && (
+                                                            <div className="space-y-3">
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Selector (Optional)</label>
+                                                                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                                                        <RichInput
+                                                                            value={action.selector || ''}
+                                                                            onChange={(v) => updateAction(action.id, { selector: v })}
+                                                                            variables={currentTask.variables}
+                                                                            placeholder=".list-item"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Variable (Array Name)</label>
+                                                                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                                                        <RichInput
+                                                                            value={action.varName || ''}
+                                                                            onChange={(v) => updateAction(action.id, { varName: v })}
+                                                                            variables={currentTask.variables}
+                                                                            placeholder="items"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {action.type === 'set' && (
+                                                            <div className="space-y-3">
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Variable Name</label>
+                                                                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                                                        <RichInput
+                                                                            value={action.varName || ''}
+                                                                            onChange={(v) => updateAction(action.id, { varName: v })}
+                                                                            variables={currentTask.variables}
+                                                                            placeholder="status"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Value</label>
+                                                                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                                                        <RichInput
+                                                                            value={action.value || ''}
+                                                                            onChange={(v) => updateAction(action.id, { value: v })}
+                                                                            variables={currentTask.variables}
+                                                                            placeholder="ready"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {action.type === 'merge' && (
+                                                            <div className="space-y-3">
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Sources</label>
+                                                                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                                                        <RichInput
+                                                                            value={action.value || ''}
+                                                                            onChange={(v) => updateAction(action.id, { value: v })}
+                                                                            variables={currentTask.variables}
+                                                                            placeholder="items, extraItems, {$block.output}"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Target Variable (Optional)</label>
+                                                                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                                                        <RichInput
+                                                                            value={action.varName || ''}
+                                                                            onChange={(v) => updateAction(action.id, { varName: v })}
+                                                                            variables={currentTask.variables}
+                                                                            placeholder="allItems"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {action.type === 'stop' && (
+                                                            <div className="space-y-1.5">
+                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Outcome</label>
+                                                                <select
+                                                                    value={action.value || 'success'}
+                                                                    onChange={(e) => updateAction(action.id, { value: e.target.value })}
+                                                                    className="custom-select w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/70 focus:outline-none"
+                                                                >
+                                                                    <option value="success">Success</option>
+                                                                    <option value="error">Error</option>
+                                                                </select>
+                                                            </div>
+                                                        )}
+
+                                                        {action.type === 'on_error' && (
+                                                            <div className="text-[8px] text-gray-600 uppercase tracking-widest">
+                                                                Runs if any action fails.
+                                                            </div>
+                                                        )}
+
+                                                        {action.type === 'start' && (
+                                                            <div className="space-y-1.5">
+                                                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Task</label>
+                                                                <select
+                                                                    value={action.value || ''}
+                                                                    onChange={(e) => updateAction(action.id, { value: e.target.value })}
+                                                                    className="custom-select w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/70 focus:outline-none"
+                                                                >
+                                                                    <option value="" disabled>Select task</option>
+                                                                    {availableTasks.length === 0 && (
+                                                                        <option value="" disabled>No other tasks</option>
+                                                                    )}
+                                                                    {availableTasks.map((task) => (
+                                                                        <option key={task.id} value={task.id}>
+                                                                            {task.name || task.id}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 );
                                             });
                                         })()}
-                                            {contextMenu && (() => {
-                                                const targetIndex = currentTask.actions.findIndex(a => a.id === contextMenu.id);
-                                                const target = currentTask.actions[targetIndex];
-                                                if (!target) return null;
-                                                return (
-                                                    <div
-                                                        className="action-context-menu fixed z-50 w-[200px] bg-[#0b0b0b] border border-white/10 rounded-xl shadow-2xl p-2 text-[10px] font-bold uppercase tracking-widest text-white/80"
-                                                        style={{ left: contextMenu.x, top: contextMenu.y }}
+                                        {contextMenu && (() => {
+                                            const targetIndex = currentTask.actions.findIndex(a => a.id === contextMenu.id);
+                                            const target = currentTask.actions[targetIndex];
+                                            if (!target) return null;
+                                            return (
+                                                <div
+                                                    className="action-context-menu fixed z-50 w-[200px] bg-[#0b0b0b] border border-white/10 rounded-xl shadow-2xl p-2 text-[10px] font-bold uppercase tracking-widest text-white/80"
+                                                    style={{ left: contextMenu.x, top: contextMenu.y }}
+                                                >
+                                                    <button
+                                                        onClick={() => {
+                                                            updateAction(target.id, { disabled: !target.disabled });
+                                                            closeContextMenu();
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
                                                     >
-                                                        <button
-                                    onClick={() => {
-                                        updateAction(target.id, { disabled: !target.disabled });
-                                        closeContextMenu();
-                                    }}
-                                                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                        >
-                                                            {target.disabled ? 'Enable' : 'Disable'}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                removeAction(target.id);
-                                                                closeContextMenu();
-                                                            }}
-                                                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-red-400"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setActionClipboard(createActionClone(target));
-                                                                removeAction(target.id);
-                                                                closeContextMenu();
-                                                            }}
-                                                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                        >
-                                                            Cut
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setActionClipboard(createActionClone(target));
-                                                                closeContextMenu();
-                                                            }}
-                                                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                        >
-                                                            Copy
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                const clone = createActionClone(target);
-                                                                const next = [...currentTask.actions];
-                                                                next.splice(targetIndex + 1, 0, clone);
-                                                                setCurrentTask({ ...currentTask, actions: next });
-                                                                closeContextMenu();
-                                                            }}
-                                                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                        >
-                                                            Duplicate
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })()}
-                                            <button
-                                                onClick={() => openActionPalette()}
-                                                className="w-full py-3 border border-dashed border-white/20 rounded-xl text-[9px] font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-all bg-white/[0.02]"
-                                            >
-                                                + Append Action Seq
-                                            </button>
-                                        </div>
+                                                        {target.disabled ? 'Enable' : 'Disable'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            removeAction(target.id);
+                                                            closeContextMenu();
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-red-400"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setActionClipboard(createActionClone(target));
+                                                            removeAction(target.id);
+                                                            closeContextMenu();
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                                                    >
+                                                        Cut
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setActionClipboard(createActionClone(target));
+                                                            closeContextMenu();
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                                                    >
+                                                        Copy
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const clone = createActionClone(target);
+                                                            const next = [...currentTask.actions];
+                                                            next.splice(targetIndex + 1, 0, clone);
+                                                            setCurrentTask({ ...currentTask, actions: next });
+                                                            closeContextMenu();
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                                                    >
+                                                        Duplicate
+                                                    </button>
+                                                </div>
+                                            );
+                                        })()}
+                                        <button
+                                            onClick={() => openActionPalette()}
+                                            className="w-full py-3 border border-dashed border-white/20 rounded-xl text-[9px] font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-all bg-white/[0.02]"
+                                        >
+                                            + Append Action Seq
+                                        </button>
+                                    </div>
 
-                                        <div className="bg-white/5 rounded-xl p-4 border border-white/5 space-y-4">
-                                            <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-2">Behavior Config</h4>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {Object.entries(currentTask.stealth).map(([key, val]) => (
-                                                    <label key={key} className="flex items-center gap-3 cursor-pointer group">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={val}
-                                                            onChange={(e) => setCurrentTask({
+                                    <div className="bg-white/5 rounded-xl p-4 border border-white/5 space-y-4">
+                                        <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-2">Behavior Config</h4>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {Object.entries(currentTask.stealth).map(([key, val]) => (
+                                                <label key={key} className="flex items-center gap-3 cursor-pointer group">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={val}
+                                                        onChange={(e) => {
+                                                            const next = {
                                                                 ...currentTask,
                                                                 stealth: { ...currentTask.stealth, [key]: e.target.checked },
                                                                 humanTyping: key === 'naturalTyping' ? e.target.checked : currentTask.humanTyping
-                                                            })}
-                                                            className="w-3 h-3 rounded bg-transparent border-white/20"
-                                                        />
-                                                        <span className="text-[9px] font-bold text-gray-500 group-hover:text-white transition-all">
-                                                            {key.replace(/([A-Z])/g, ' $1').toUpperCase()}
-                                                        </span>
-                                                    </label>
-                                                ))}
-                                            </div>
+                                                            };
+                                                            setCurrentTask(next);
+                                                            handleAutoSave(next);
+                                                        }}
+                                                        className="w-3 h-3 rounded bg-transparent border-white/20"
+                                                    />
+                                                    <span className="text-[9px] font-bold text-gray-500 group-hover:text-white transition-all">
+                                                        {key.replace(/([A-Z])/g, ' $1').toUpperCase()}
+                                                    </span>
+                                                </label>
+                                            ))}
                                         </div>
                                     </div>
-                                )}
+                                </div>
+                            )}
 
                             <details className="border-t border-white/10 pt-6 font-sans">
                                 <summary className="cursor-pointer text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] hover:text-gray-400 transition-all">
@@ -1436,7 +1469,11 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                         <span className="text-[8px] text-gray-600 uppercase tracking-widest">Output format</span>
                                         <select
                                             value={currentTask.extractionFormat || 'json'}
-                                            onChange={(e) => setCurrentTask({ ...currentTask, extractionFormat: e.target.value as 'json' | 'csv' })}
+                                            onChange={(e) => {
+                                                const next = { ...currentTask, extractionFormat: e.target.value as 'json' | 'csv' };
+                                                setCurrentTask(next);
+                                                handleAutoSave(next);
+                                            }}
                                             className="custom-select bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
                                         >
                                             <option value="json">JSON</option>
@@ -1448,6 +1485,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                         <RichInput
                                             value={currentTask.extractionScript || ''}
                                             onChange={(val) => setCurrentTask({ ...currentTask, extractionScript: val })}
+                                            onBlur={() => handleAutoSave()}
                                             variables={currentTask.variables}
                                             syntax="javascript"
                                             placeholder={`// Example: Extract all links
@@ -1468,6 +1506,7 @@ return JSON.stringify(links, null, 2);`}
                                         <RichInput
                                             value={currentTask.selector || ''}
                                             onChange={(val) => setCurrentTask({ ...currentTask, selector: val })}
+                                            onBlur={() => handleAutoSave()}
                                             variables={currentTask.variables}
                                             placeholder=".main-content"
                                         />
@@ -1481,7 +1520,11 @@ return JSON.stringify(links, null, 2);`}
                                     <input
                                         type="checkbox"
                                         checked={currentTask.rotateUserAgents}
-                                        onChange={(e) => setCurrentTask({ ...currentTask, rotateUserAgents: e.target.checked })}
+                                        onChange={(e) => {
+                                            const next = { ...currentTask, rotateUserAgents: e.target.checked };
+                                            setCurrentTask(next);
+                                            handleAutoSave(next);
+                                        }}
                                         className="w-4 h-4 rounded border-white/20 bg-transparent"
                                     />
                                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Rotate UA</span>
@@ -1493,7 +1536,11 @@ return JSON.stringify(links, null, 2);`}
                                     <input
                                         type="checkbox"
                                         checked={currentTask.rotateProxies}
-                                        onChange={(e) => setCurrentTask({ ...currentTask, rotateProxies: e.target.checked })}
+                                        onChange={(e) => {
+                                            const next = { ...currentTask, rotateProxies: e.target.checked };
+                                            setCurrentTask(next);
+                                            handleAutoSave(next);
+                                        }}
                                         disabled={rotateProxiesDisabled}
                                         className="w-4 h-4 rounded border-white/20 bg-transparent"
                                     />
@@ -1503,7 +1550,11 @@ return JSON.stringify(links, null, 2);`}
                                     <input
                                         type="checkbox"
                                         checked={currentTask.rotateViewport}
-                                        onChange={(e) => setCurrentTask({ ...currentTask, rotateViewport: e.target.checked })}
+                                        onChange={(e) => {
+                                            const next = { ...currentTask, rotateViewport: e.target.checked };
+                                            setCurrentTask(next);
+                                            handleAutoSave(next);
+                                        }}
                                         className="w-4 h-4 rounded border-white/20 bg-transparent"
                                     />
                                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Rotate Viewport</span>
@@ -1512,7 +1563,11 @@ return JSON.stringify(links, null, 2);`}
                                     <input
                                         type="checkbox"
                                         checked={currentTask.includeShadowDom !== false}
-                                        onChange={(e) => setCurrentTask({ ...currentTask, includeShadowDom: e.target.checked })}
+                                        onChange={(e) => {
+                                            const next = { ...currentTask, includeShadowDom: e.target.checked };
+                                            setCurrentTask(next);
+                                            handleAutoSave(next);
+                                        }}
                                         className="w-4 h-4 rounded border-white/20 bg-transparent"
                                     />
                                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Include Shadow DOM in HTML</span>
@@ -1521,7 +1576,11 @@ return JSON.stringify(links, null, 2);`}
                                     <input
                                         type="checkbox"
                                         checked={!!currentTask.disableRecording}
-                                        onChange={(e) => setCurrentTask({ ...currentTask, disableRecording: e.target.checked })}
+                                        onChange={(e) => {
+                                            const next = { ...currentTask, disableRecording: e.target.checked };
+                                            setCurrentTask(next);
+                                            handleAutoSave(next);
+                                        }}
                                         className="w-4 h-4 rounded border-white/20 bg-transparent"
                                     />
                                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Disable automated recording</span>
@@ -1530,7 +1589,11 @@ return JSON.stringify(links, null, 2);`}
                                     <input
                                         type="checkbox"
                                         checked={!!currentTask.statelessExecution}
-                                        onChange={(e) => setCurrentTask({ ...currentTask, statelessExecution: e.target.checked })}
+                                        onChange={(e) => {
+                                            const next = { ...currentTask, statelessExecution: e.target.checked };
+                                            setCurrentTask(next);
+                                            handleAutoSave(next);
+                                        }}
                                         className="w-4 h-4 rounded border-white/20 bg-transparent"
                                     />
                                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Stateless execution (no shared cookies)</span>

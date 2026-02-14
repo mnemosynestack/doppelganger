@@ -5,13 +5,14 @@ import { highlightCode, SyntaxLanguage } from '../utils/syntaxHighlight';
 interface RichInputProps {
     value: string;
     onChange: (val: string) => void;
+    onBlur?: (val: string) => void;
     placeholder?: string;
     variables: Record<string, Variable>;
     className?: string;
     syntax?: SyntaxLanguage;
 }
 
-const RichInput: React.FC<RichInputProps> = ({ value, onChange, placeholder, variables, className, syntax = 'plain' }) => {
+const RichInput: React.FC<RichInputProps> = ({ value, onChange, onBlur, placeholder, variables, className, syntax = 'plain' }) => {
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -60,7 +61,11 @@ const RichInput: React.FC<RichInputProps> = ({ value, onChange, placeholder, var
             className={`rich-input-content w-full bg-transparent focus:outline-none text-white min-h-[1.5rem] ${className}`}
             data-placeholder={placeholder}
             onInput={(e) => onChange(e.currentTarget.textContent || '')}
-            onBlur={(e) => onChange(e.currentTarget.textContent || '')}
+            onBlur={(e) => {
+                const val = e.currentTarget.textContent || '';
+                onChange(val);
+                onBlur?.(val);
+            }}
         />
     );
 };

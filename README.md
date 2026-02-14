@@ -268,6 +268,7 @@ Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/a
 - [ ] **Companion app** — build a lightweight companion app that mirrors critical dashboard notifications (failures, capture completions, proxy issues) so operators can stay informed without opening the full UI.
 - [ ] **Community presets hub** — build a marketplace where users can publish task/workspace presets, browse and download others’ submissions, and choose to offer each preset either for free or as a paid template so creators can monetize standalone workflows while keeping the free option available.
 - [ ] **Database Tab / Local CRM** — add a built-in spreadsheet-like interface for viewing and managing extracted data (CRM-style) entirely within the app, without requiring external tools.
+- [ ] **Autosave** — automatically persist task changes and editor state at regular intervals so operators don't lose work on long-running or complex workflow designs.
 
 # Security Considerations
 

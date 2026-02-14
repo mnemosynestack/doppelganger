@@ -217,7 +217,7 @@ export default function App() {
                                 editorView={editorView}
                                 setEditorView={setEditorView}
                                 isExecuting={isExecuting}
-                                onSave={() => saveTask(markTaskAsSaved, location.pathname)}
+                                onSave={(t: Task | undefined) => { void saveTask(markTaskAsSaved, location.pathname, t); }}
                                 onRun={() => runTaskWithSnapshot(currentTask, currentTask, setCurrentTask)}
                                 onRunSnapshot={(t) => runTaskWithSnapshot(t || currentTask, currentTask, setCurrentTask)}
                                 results={results}
@@ -229,7 +229,6 @@ export default function App() {
                                 onUnpinResults={unpinResults}
                                 runId={activeRunId}
                                 onStop={() => stopTask(currentTask)}
-                                hasUnsavedChanges={hasUnsavedChanges}
                             />
                         ) : <LoadingScreen title="Initializing" subtitle="Preparing task workspace" />
                     } />
@@ -245,7 +244,7 @@ export default function App() {
                                 editorView={editorView}
                                 setEditorView={setEditorView}
                                 isExecuting={isExecuting}
-                                onSave={() => saveTask(markTaskAsSaved, location.pathname)}
+                                onSave={(t: Task | undefined) => { void saveTask(markTaskAsSaved, location.pathname, t); }}
                                 onRun={() => runTaskWithSnapshot(currentTask, currentTask, setCurrentTask)}
                                 onRunSnapshot={(t) => runTaskWithSnapshot(t || currentTask, currentTask, setCurrentTask)}
                                 results={results}
@@ -257,7 +256,6 @@ export default function App() {
                                 onUnpinResults={unpinResults}
                                 runId={activeRunId}
                                 onStop={() => stopTask(currentTask)}
-                                hasUnsavedChanges={hasUnsavedChanges}
                                 onTaskLoaded={markTaskAsSaved}
                             />
                         }

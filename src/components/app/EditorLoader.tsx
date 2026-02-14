@@ -14,7 +14,7 @@ interface EditorLoaderProps {
     editorView: any;
     setEditorView: any;
     isExecuting: boolean;
-    onSave: () => void;
+    onSave: (task?: Task) => void;
     onRun: () => void;
     onRunSnapshot?: (task: Task) => void;
     results: any;
@@ -26,7 +26,6 @@ interface EditorLoaderProps {
     onNotify: any;
     runId?: string | null;
     onStop?: () => void;
-    hasUnsavedChanges: boolean;
     onTaskLoaded?: (task: Task) => void;
 }
 
@@ -36,7 +35,6 @@ const EditorLoader: React.FC<EditorLoaderProps> = ({
     touchTask,
     currentTask,
     setCurrentTask,
-    hasUnsavedChanges,
     onTaskLoaded,
     ...props
 }) => {
@@ -95,7 +93,7 @@ const EditorLoader: React.FC<EditorLoaderProps> = ({
         return <LoadingScreen title="Loading Mission Data" subtitle="Syncing task payload" />;
     }
 
-    return <EditorScreen currentTask={currentTask} setCurrentTask={setCurrentTask} tasks={tasks} hasUnsavedChanges={hasUnsavedChanges} {...props} />;
+    return <EditorScreen currentTask={currentTask} setCurrentTask={setCurrentTask} tasks={tasks} {...props} />;
 };
 
 export default EditorLoader;
