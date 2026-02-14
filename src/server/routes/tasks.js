@@ -28,7 +28,13 @@ router.post('/', requireAuth, async (req, res) => {
 
         const index = tasks.findIndex(t => t.id === newTask.id);
         if (index > -1) {
-            appendTaskVersion(tasks[index]);
+            if (req.query.version === 'true') {
+                appendTaskVersion(tasks[index]);
+            }
+            // Preserve versions if not creating a new one, as the client might not send them back full
+            // Actually client typically sends full task. But if not, we should be careful.
+            // existing implementation: newTask.versions = tasks[index].versions || [];
+            // We should ensure versions are preserved.
             newTask.versions = tasks[index].versions || [];
             tasks[index] = newTask;
         } else {

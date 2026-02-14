@@ -79,18 +79,23 @@ export function useTasks(
         }
     }, [requestConfirm, loadTasks, navigate]);
 
-    const saveTask = useCallback(async (markTaskAsSaved: (task: Task | null) => void, currentPath: string, taskOverride?: Task) => {
+    const saveTask = useCallback(async (markTaskAsSaved: (task: Task | null) => void, currentPath: string, taskOverride?: Task, createVersion: boolean = false) => {
         const taskToUpdate = taskOverride || currentTask;
         if (!taskToUpdate) return;
         const taskToSave = { ...taskToUpdate, last_opened: Date.now() };
-        const res = await fetch('/api/tasks', {
+        const query = createVersion ? '?version=true' : '';
+        const res = await fetch(`/api/tasks${query}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(taskToSave)
         });
         const saved = await res.json();
         setCurrentTask(saved);
-        setSaveMsg("SAVED");
+        if (createVersion) {
+            setSaveMsg("VERSION SAVED");
+        } else {
+            setSaveMsg("SAVED");
+        }
         setTimeout(() => setSaveMsg(''), 2000);
         markTaskAsSaved(saved);
         loadTasks();

@@ -22,7 +22,8 @@ import {
     AlertTriangle,
     PlayCircle,
     Table,
-    Camera
+    Camera,
+    Save
 } from 'lucide-react';
 import { Task, TaskMode, ViewMode, VarType, Action, Results, ConfirmRequest } from '../types';
 import RichInput from './RichInput';
@@ -87,7 +88,7 @@ interface EditorScreenProps {
     editorView: ViewMode;
     setEditorView: (view: ViewMode) => void;
     isExecuting: boolean;
-    onSave: (task?: Task) => void;
+    onSave: (task?: Task, createVersion?: boolean) => void;
     onRun: () => void;
     results: Results | null;
     pinnedResults?: Results | null;
@@ -209,7 +210,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const [proxyListLoaded, setProxyListLoaded] = useState(false);
 
     const handleAutoSave = (task?: Task) => {
-        onSave(task || currentTask);
+        onSave(task || currentTask, false);
     };
     const getStoredSplitPercent = () => {
         try {
@@ -681,7 +682,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             placeholder="Task Name..."
                             className="bg-transparent text-xl font-bold tracking-tight text-white focus:outline-none border-none p-0 w-full placeholder:text-white/10"
                         />
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-4">
                             <button
                                 onClick={() => setEditorView('history')}
                                 className="w-8 h-8 rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center"
@@ -689,6 +690,13 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                 aria-label="Task History"
                             >
                                 <HistoryIcon className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => onSave(currentTask, true)}
+                                className="h-8 px-4 bg-white text-black text-[10px] font-bold uppercase tracking-widest rounded-lg hover:bg-white/90 transition-all flex items-center gap-2"
+                            >
+                                <Save size={12} className="text-black" />
+                                <span>Save Version</span>
                             </button>
                             <div
                                 className={`px-4 py-2 text-[9px] font-bold rounded-full uppercase tracking-widest transition-all ${saveMsg === 'SAVED' ? 'text-green-400 border border-green-400/20' : 'text-blue-400 opacity-0'}`}
