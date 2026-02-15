@@ -25,14 +25,20 @@ router.post('/setup', authRateLimiter, async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = { id: Date.now(), name, email: normalizedEmail, password: hashedPassword };
     saveUsers([newUser]);
-    req.session.user = { id: newUser.id, name: newUser.name, email: newUser.email };
-    try {
-        await saveSession(req);
-    } catch (err) {
-        console.error('[AUTH] Setup session save failed:', err);
-        return res.status(500).json({ error: 'SESSION_SAVE_FAILED' });
-    }
-    res.json({ success: true });
+    req.session.regenerate(async (err) => {
+        if (err) {
+            console.error('[AUTH] Setup session regenerate failed:', err);
+            return res.status(500).json({ error: 'SESSION_REGENERATE_FAILED' });
+        }
+        req.session.user = { id: newUser.id, name: newUser.name, email: newUser.email };
+        try {
+            await saveSession(req);
+            res.json({ success: true });
+        } catch (saveErr) {
+            console.error('[AUTH] Setup session save failed:', saveErr);
+            return res.status(500).json({ error: 'SESSION_SAVE_FAILED' });
+        }
+    });
 });
 
 router.post('/login', authRateLimiter, async (req, res) => {
@@ -41,14 +47,20 @@ router.post('/login', authRateLimiter, async (req, res) => {
     const users = loadUsers();
     const user = users.find(u => String(u.email || '').toLowerCase() === normalizedEmail);
     if (user && await bcrypt.compare(password, user.password)) {
-        req.session.user = { id: user.id, name: user.name, email: user.email };
-        try {
-            await saveSession(req);
-        } catch (err) {
-            console.error('[AUTH] Login session save failed:', err);
-            return res.status(500).json({ error: 'SESSION_SAVE_FAILED' });
-        }
-        res.json({ success: true });
+        req.session.regenerate(async (err) => {
+            if (err) {
+                console.error('[AUTH] Login session regenerate failed:', err);
+                return res.status(500).json({ error: 'SESSION_REGENERATE_FAILED' });
+            }
+            req.session.user = { id: user.id, name: user.name, email: user.email };
+            try {
+                await saveSession(req);
+                res.json({ success: true });
+            } catch (saveErr) {
+                console.error('[AUTH] Login session save failed:', saveErr);
+                return res.status(500).json({ error: 'SESSION_SAVE_FAILED' });
+            }
+        });
     } else {
         res.status(401).json({ error: 'INVALID' });
     }
