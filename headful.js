@@ -72,8 +72,8 @@ async function handleHeadful(req, res) {
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--window-size=1280,720',
-                '--window-position=80,80'
+                '--window-size=1920,1080',
+                '--window-position=0,0'
             ]
         };
         const selection = getProxySelection(rotateProxies);

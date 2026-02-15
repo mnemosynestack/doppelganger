@@ -7,7 +7,7 @@ mkdir -p /app/data
 rm -f /tmp/.X${DISPLAY#*:}-lock 2>/dev/null || true
 
 echo "[vnc] Starting Xvfb on $DISPLAY"
-Xvfb "$DISPLAY" -screen 0 1280x720x24 -nolisten tcp -ac &
+Xvfb "$DISPLAY" -screen 0 1920x1080x24 -nolisten tcp -ac &
 
 echo "[vnc] Starting x11vnc on :5900"
 X11VNC_OPTS="-display $DISPLAY -forever -shared -nopw -rfbport 5900 -wait 5"
