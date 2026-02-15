@@ -5,14 +5,28 @@ const { executionStreams, stopRequests, sendExecutionUpdate } = require('../stat
 
 const router = express.Router();
 
+const summarizeExecution = (exec) => ({
+    id: exec.id,
+    timestamp: exec.timestamp,
+    method: exec.method,
+    path: exec.path,
+    status: exec.status,
+    durationMs: exec.durationMs,
+    source: exec.source,
+    mode: exec.mode,
+    taskId: exec.taskId,
+    taskName: exec.taskName,
+    url: exec.url
+});
+
 router.get('/', requireAuth, async (req, res) => {
     const executions = await loadExecutions();
-    res.json({ executions });
+    res.json({ executions: executions.map(summarizeExecution) });
 });
 
 router.get('/list', requireApiKey, async (req, res) => {
     const executions = await loadExecutions();
-    res.json({ executions });
+    res.json({ executions: executions.map(summarizeExecution) });
 });
 
 router.get('/stream', requireAuth, (req, res) => {
