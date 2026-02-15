@@ -6,6 +6,9 @@ const { selectUserAgent } = require('./user-agent-settings');
 const { validateUrl } = require('./url-utils');
 const { parseBooleanFlag } = require('./common-utils');
 const { installMouseHelper } = require('./src/agent/dom-utils');
+const { Mutex } = require('./src/server/utils');
+
+const headfulMutex = new Mutex();
 
 const STORAGE_STATE_PATH = path.join(__dirname, 'storage_state.json');
 const STORAGE_STATE_FILE = (() => {
@@ -41,19 +44,21 @@ const teardownActiveSession = async () => {
 };
 
 async function handleHeadful(req, res) {
-    if (activeSession) {
-        await teardownActiveSession();
-    }
-
-    const url = req.body.url || req.query.url || 'https://www.google.com';
-
+    await headfulMutex.lock();
     try {
-        await validateUrl(url);
-    } catch (e) {
-        return res.status(400).json({ error: 'INVALID_URL', details: e.message });
-    }
+        if (activeSession) {
+            await teardownActiveSession();
+        }
 
-    const rotateProxiesRaw = req.body.rotateProxies ?? req.query.rotateProxies;
+        const url = req.body.url || req.query.url || 'https://www.google.com';
+
+        try {
+            await validateUrl(url);
+        } catch (e) {
+            return res.status(400).json({ error: 'INVALID_URL', details: e.message });
+        }
+
+        const rotateProxiesRaw = req.body.rotateProxies ?? req.query.rotateProxies;
     const rotateProxies = String(rotateProxiesRaw).toLowerCase() === 'true' || rotateProxiesRaw === true;
     const statelessExecutionRaw = req.body.statelessExecution ?? req.query.statelessExecution;
     const statelessExecution = parseBooleanFlag(statelessExecutionRaw);
@@ -97,14 +102,22 @@ async function handleHeadful(req, res) {
 
         const context = await browser.newContext(contextOptions);
         await context.addInitScript(() => {
-            window.open = () => null;
-            document.addEventListener('click', (event) => {
-                const target = event.target;
-                const anchor = target && target.closest ? target.closest('a[target="_blank"]') : null;
-                if (anchor) {
+            Object.defineProperty(window, 'open', { writable: true, configurable: true, value: () => null });
+
+            const handleLinkClick = (event) => {
+                const path = event.composedPath ? event.composedPath() : [];
+                const anchor = path.find(el => el.tagName === 'A');
+                if (anchor && anchor.target === '_blank') {
+                    event.preventDefault();
+                    return;
+                }
+                if (event.type === 'auxclick' && event.button === 1 && anchor) {
                     event.preventDefault();
                 }
-            }, true);
+            };
+
+            document.addEventListener('click', handleLinkClick, true);
+            document.addEventListener('auxclick', handleLinkClick, true);
         });
         await context.addInitScript(installMouseHelper);
 
@@ -118,7 +131,12 @@ async function handleHeadful(req, res) {
         };
 
         context.on('page', closeIfExtra);
-        page.on('popup', closeIfExtra);
+        page.on('popup', async (popup) => {
+            try {
+                popup.close().catch(() => {});
+            } catch { }
+            await closeIfExtra(popup);
+        });
 
         await page.goto(url);
 
@@ -162,18 +180,21 @@ async function handleHeadful(req, res) {
         // Final attempt to save if context is alive
         await saveState();
         activeSession = null;
-    } catch (error) {
-        console.error('Headful Error:', error);
-        if (browser) await browser.close();
-        activeSession = null;
-        const message = String(error && error.message ? error.message : error);
-        const displayUnavailable = /missing x server|\$display|platform failed to initialize/i.test(message);
-        if (!res.headersSent && displayUnavailable) {
-            return res.status(409).json({ error: 'HEADFUL_DISPLAY_UNAVAILABLE', details: message });
+        } catch (error) {
+            console.error('Headful Error:', error);
+            if (browser) await browser.close();
+            activeSession = null;
+            const message = String(error && error.message ? error.message : error);
+            const displayUnavailable = /missing x server|\$display|platform failed to initialize/i.test(message);
+            if (!res.headersSent && displayUnavailable) {
+                return res.status(409).json({ error: 'HEADFUL_DISPLAY_UNAVAILABLE', details: message });
+            }
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Failed to start headful session', details: message });
+            }
         }
-        if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to start headful session', details: message });
-        }
+    } finally {
+        headfulMutex.unlock();
     }
 }
 
