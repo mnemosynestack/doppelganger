@@ -282,6 +282,7 @@ Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/a
 - Report issues or request features via the GitHub repo issue tracker.
 - Follow the authors on `https://github.com/mnemosynestack` for releases.
 - Share automation recipes with other self-hosted users in your org, but respect the license for sharing infrastructure.
+- Join the community on [Discord](https://discord.gg/rYJU882J).
 
 # Support the Project
 
