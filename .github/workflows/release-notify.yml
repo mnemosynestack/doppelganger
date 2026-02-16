@@ -1,0 +1,19 @@
+name: ᴅɪꜱᴄᴏʀᴅ ʀᴇʟᴇᴀꜱᴇ ɴᴏᴛɪꜰɪᴇʀ
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Notification
+        uses: tsickert/discord-webhook@v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          embed-title: "🚀 ɴᴇᴡ ʀᴇʟᴇᴀꜱᴇ: ${{ github.event.release.tag_name }}"
+          embed-url: "${{ github.event.release.html_url }}"
+          embed-description: "${{ github.event.release.body }}"
+          embed-color: 16777215 # Pure White
+          username: "Doppelganger Bot"
