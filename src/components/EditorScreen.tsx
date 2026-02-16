@@ -122,11 +122,14 @@ const VariableRow: React.FC<{
                 onBlur={() => {
                     if (localName !== name) updateVariable(name, localName, def.type, def.value);
                 }}
+                placeholder="Variable name"
+                aria-label="Variable name"
                 className="var-name flex-1 bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
             />
             <select
                 value={def.type}
                 onChange={(e) => updateVariable(name, name, e.target.value as VarType, def.value)}
+                aria-label="Variable type"
                 className="custom-select var-type bg-white/[0.05] border border-white/10 rounded-xl px-2 py-2 text-[8px] font-bold uppercase text-white/40"
             >
                 <option value="string">STR</option>
@@ -138,6 +141,7 @@ const VariableRow: React.FC<{
                     <select
                         value={String(def.value)}
                         onChange={(e) => updateVariable(name, name, def.type, e.target.value)}
+                        aria-label="Variable value"
                         className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white"
                     >
                         <option value="true">True</option>
@@ -148,6 +152,7 @@ const VariableRow: React.FC<{
                         type={def.type === 'number' ? 'number' : 'text'}
                         value={def.value}
                         onChange={(e) => updateVariable(name, name, def.type, e.target.value)}
+                        aria-label="Variable value"
                         className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
                     />
                 )}
@@ -678,6 +683,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             onChange={(e) => setCurrentTask({ ...currentTask, name: e.target.value })}
                             onBlur={() => handleAutoSave()}
                             placeholder="Task Name..."
+                            aria-label="Task Name"
                             className="bg-transparent text-xl font-bold tracking-tight text-white focus:outline-none border-none p-0 w-full placeholder:text-white/10"
                         />
                         <div className="flex items-center gap-4">
