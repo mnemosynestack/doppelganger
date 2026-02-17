@@ -71,7 +71,6 @@ export const normalizeImportedTask = (raw: any, index: number): Task | null => {
     merged.disableRecording = parseBooleanFlag(merged.disableRecording);
     if (merged.statelessExecution === undefined) merged.statelessExecution = false;
     merged.statelessExecution = parseBooleanFlag(merged.statelessExecution);
-    delete merged.versions;
     delete merged.last_opened;
     return merged;
 };

@@ -119,7 +119,17 @@ export function useTasks(
         try {
             const text = await file.text();
             const parsed = JSON.parse(text);
-            const list = Array.isArray(parsed) ? parsed : parsed?.tasks;
+            let list;
+            if (Array.isArray(parsed)) {
+                list = parsed;
+            } else if (parsed && typeof parsed === 'object') {
+                if (Array.isArray(parsed.tasks)) {
+                    list = parsed.tasks;
+                } else if (parsed.id || parsed.url || parsed.mode) {
+                    list = [parsed];
+                }
+            }
+
             if (!Array.isArray(list)) {
                 showAlert('Invalid import file.', 'error');
                 return;
