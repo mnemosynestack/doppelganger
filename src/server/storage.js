@@ -27,15 +27,37 @@ function saveUsers(users) {
 }
 
 // Task Storage
+let tasksCache = null;
+let tasksLoadPromise = null;
+
 async function loadTasks() {
-    try {
-        return JSON.parse(await fs.promises.readFile(TASKS_FILE, 'utf8'));
-    } catch (e) {
-        return [];
+    // Return a shallow copy if cache exists to prevent mutation by callers
+    if (tasksCache) return [...tasksCache];
+
+    // Handle concurrent initial loads
+    if (tasksLoadPromise) {
+        const result = await tasksLoadPromise;
+        return [...result];
     }
+
+    tasksLoadPromise = (async () => {
+        try {
+            const data = await fs.promises.readFile(TASKS_FILE, 'utf8');
+            tasksCache = JSON.parse(data);
+        } catch (e) {
+            tasksCache = [];
+        }
+        tasksLoadPromise = null;
+        return tasksCache;
+    })();
+
+    const result = await tasksLoadPromise;
+    return [...result];
 }
 
 async function saveTasks(tasks) {
+    // Update cache immediately for read consistency
+    tasksCache = tasks;
     await fs.promises.writeFile(TASKS_FILE, JSON.stringify(tasks, null, 2));
 }
 
