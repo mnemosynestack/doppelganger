@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface AuthScreenProps {
     status: 'login' | 'setup';
@@ -11,7 +12,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ status, onSubmit, error, busy =
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [pass, setPass] = useState('');
+    const [showPass, setShowPass] = useState(false);
     const [passConfirm, setPassConfirm] = useState('');
+    const [showPassConfirm, setShowPassConfirm] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -67,30 +70,50 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ status, onSubmit, error, busy =
                         </div>
                         <div className="space-y-2">
                             <label htmlFor="auth-pass" className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Password</label>
-                            <input
-                                id="auth-pass"
-                                type="password"
-                                value={pass}
-                                onChange={(e) => setPass(e.target.value)}
-                                placeholder="••••••••"
-                                className="w-full bg-white/[0.05] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-white/30 transition-all placeholder:text-gray-600"
-                                required
-                                autoComplete={status === 'setup' ? "new-password" : "current-password"}
-                            />
+                            <div className="relative">
+                                <input
+                                    id="auth-pass"
+                                    type={showPass ? "text" : "password"}
+                                    value={pass}
+                                    onChange={(e) => setPass(e.target.value)}
+                                    placeholder="••••••••"
+                                    className="w-full bg-white/[0.05] border border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm focus:outline-none focus:border-white/30 transition-all placeholder:text-gray-600"
+                                    required
+                                    autoComplete={status === 'setup' ? "new-password" : "current-password"}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPass(!showPass)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg p-1"
+                                    aria-label={showPass ? "Hide password" : "Show password"}
+                                >
+                                    {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
                         </div>
                         {status === 'setup' && (
                             <div className="space-y-2">
                                 <label htmlFor="auth-pass-confirm" className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Confirm Password</label>
-                                <input
-                                    id="auth-pass-confirm"
-                                    type="password"
-                                    value={passConfirm}
-                                    onChange={(e) => setPassConfirm(e.target.value)}
-                                    placeholder="••••••••"
-                                    className="w-full bg-white/[0.05] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-white/30 transition-all placeholder:text-gray-600"
-                                    required
-                                    autoComplete="new-password"
-                                />
+                                <div className="relative">
+                                    <input
+                                        id="auth-pass-confirm"
+                                        type={showPassConfirm ? "text" : "password"}
+                                        value={passConfirm}
+                                        onChange={(e) => setPassConfirm(e.target.value)}
+                                        placeholder="••••••••"
+                                        className="w-full bg-white/[0.05] border border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm focus:outline-none focus:border-white/30 transition-all placeholder:text-gray-600"
+                                        required
+                                        autoComplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassConfirm(!showPassConfirm)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg p-1"
+                                        aria-label={showPassConfirm ? "Hide confirm password" : "Show confirm password"}
+                                    >
+                                        {showPassConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
