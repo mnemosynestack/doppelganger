@@ -20,7 +20,6 @@ const {
 // Context & Utils
 const {
     taskMutex,
-    executionStreams,
     stopRequests,
     sendExecutionUpdate
 } = require('./src/server/state');
