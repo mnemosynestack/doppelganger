@@ -111,33 +111,51 @@ async function appendExecution(entry) {
 }
 
 // API Key Storage
+let apiKeyCache = undefined;
+let apiKeyLoadPromise = null;
+
 async function loadApiKey() {
-    let apiKey = null;
-    try {
-        const raw = await fs.promises.readFile(API_KEY_FILE, 'utf8');
-        const data = JSON.parse(raw);
-        apiKey = data && data.apiKey ? data.apiKey : null;
-    } catch (e) {
-        apiKey = null;
-    }
+    if (apiKeyCache !== undefined) return apiKeyCache;
+    if (apiKeyLoadPromise) return apiKeyLoadPromise;
 
-    if (!apiKey) {
+    apiKeyLoadPromise = (async () => {
+        let apiKey = null;
         try {
-            const usersRaw = await fs.promises.readFile(USERS_FILE, 'utf8');
-            const users = JSON.parse(usersRaw);
-            if (Array.isArray(users) && users.length > 0 && users[0].apiKey) {
-                apiKey = users[0].apiKey;
-                saveApiKey(apiKey);
-            }
+            const raw = await fs.promises.readFile(API_KEY_FILE, 'utf8');
+            const data = JSON.parse(raw);
+            apiKey = data && data.apiKey ? data.apiKey : null;
         } catch (e) {
-            // ignore
+            apiKey = null;
         }
-    }
 
-    return apiKey;
+        if (!apiKey) {
+            try {
+                const usersRaw = await fs.promises.readFile(USERS_FILE, 'utf8');
+                const users = JSON.parse(usersRaw);
+                if (Array.isArray(users) && users.length > 0 && users[0].apiKey) {
+                    apiKey = users[0].apiKey;
+                    // We call saveApiKey here to persist the migrated key, which also updates the cache
+                    saveApiKey(apiKey);
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        if (apiKeyCache === undefined) {
+            apiKeyCache = apiKey;
+        } else {
+            apiKey = apiKeyCache;
+        }
+        apiKeyLoadPromise = null;
+        return apiKey;
+    })();
+
+    return apiKeyLoadPromise;
 }
 
 function saveApiKey(apiKey) {
+    apiKeyCache = apiKey;
     fs.writeFileSync(API_KEY_FILE, JSON.stringify({ apiKey }, null, 2));
     if (fs.existsSync(USERS_FILE)) {
         try {
