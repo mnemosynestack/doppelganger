@@ -1,6 +1,6 @@
 {
   "name": "@doppelgangerdev/doppelganger",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "main": "index.js",
   "bin": {
     "doppelganger": "bin/cli.js"
