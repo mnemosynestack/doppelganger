@@ -106,14 +106,15 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                                         <button
                                             onClick={() => onEditTask(task)}
                                             className="flex-1 py-2 rounded-xl bg-white text-black text-[9px] font-bold uppercase tracking-widest hover:scale-105 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                            aria-label={`Edit task: ${task.name || 'Untitled'}`}
                                         >
                                             Edit Task
                                         </button>
                                         <button
                                             onClick={() => onDeleteTask(task.id!)}
                                             className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-                                            aria-label="Delete task"
-                                            title="Delete task"
+                                            aria-label={`Delete task: ${task.name || 'Untitled'}`}
+                                            title={`Delete task: ${task.name || 'Untitled'}`}
                                         >
                                             <X className="w-4 h-4" />
                                         </button>

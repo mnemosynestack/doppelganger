@@ -45,6 +45,7 @@ const renderCaptureRow = ({ index, style, data }: ListChildComponentProps<Captur
                     <button
                         onClick={() => data.onDelete(capture.name)}
                         className="px-3 py-2 rounded-xl border border-red-500/20 text-[9px] font-bold uppercase tracking-widest text-red-300 hover:bg-red-500/10 transition-all"
+                        aria-label={`Delete capture ${capture.name}`}
                     >
                         Delete
                     </button>
