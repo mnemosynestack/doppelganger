@@ -42,6 +42,8 @@ async function saveTasks(tasks) {
 // Execution Storage
 let executionsCache = null;
 let executionsLoadPromise = null;
+let saveExecutionsTimer = null;
+const SAVE_DELAY_MS = 1000;
 
 async function loadExecutions() {
     // Return a shallow copy if cache exists to prevent mutation by callers
@@ -69,9 +71,26 @@ async function loadExecutions() {
 }
 
 async function saveExecutions(executions) {
+    // Cancel any pending debounced save to avoid overwriting or double writing
+    if (saveExecutionsTimer) {
+        clearTimeout(saveExecutionsTimer);
+        saveExecutionsTimer = null;
+    }
+
     // Update cache immediately for read consistency
     executionsCache = executions;
     await fs.promises.writeFile(EXECUTIONS_FILE, JSON.stringify(executions, null, 2));
+}
+
+function saveExecutionsDebounced() {
+    if (saveExecutionsTimer) clearTimeout(saveExecutionsTimer);
+    saveExecutionsTimer = setTimeout(() => {
+        saveExecutionsTimer = null;
+        if (executionsCache) {
+            fs.promises.writeFile(EXECUTIONS_FILE, JSON.stringify(executionsCache, null, 2))
+                .catch(err => console.error('[STORAGE] Failed to save executions:', err));
+        }
+    }, SAVE_DELAY_MS);
 }
 
 async function appendExecution(entry) {
@@ -85,7 +104,8 @@ async function appendExecution(entry) {
     if (executionsCache.length > MAX_EXECUTIONS) {
         executionsCache.length = MAX_EXECUTIONS;
     }
-    await saveExecutions(executionsCache);
+    // Use debounced save
+    saveExecutionsDebounced();
 }
 
 // API Key Storage
