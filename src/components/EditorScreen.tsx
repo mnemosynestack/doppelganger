@@ -23,7 +23,8 @@ import {
     PlayCircle,
     Table,
     Camera,
-    Save
+    Save,
+    Navigation
 } from 'lucide-react';
 import { Task, TaskMode, ViewMode, VarType, Action, Results, ConfirmRequest } from '../types';
 import RichInput from './RichInput';
@@ -821,6 +822,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                     if (type === 'merge') return <Layers className={`${iconClass} text-emerald-200`} />;
                                                     if (type === 'screenshot') return <Camera className={`${iconClass} text-emerald-300`} />;
                                                     if (type === 'start') return <PlayCircle className={`${iconClass} text-emerald-300`} />;
+                                                    if (type === 'navigate') return <Navigation className={`${iconClass} text-blue-400`} />;
                                                     return <span className="text-[9px] text-white/20">|</span>;
                                                 };
 
@@ -930,18 +932,20 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                             </div>
                                                         )}
 
-                                                        {(action.type === 'type' || action.type === 'wait' || action.type === 'scroll' || action.type === 'javascript' || action.type === 'csv') && (
+                                                        {(action.type === 'navigate' || action.type === 'type' || action.type === 'wait' || action.type === 'scroll' || action.type === 'javascript' || action.type === 'csv') && (
                                                             <div className="space-y-1.5">
                                                                 <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">
-                                                                    {action.type === 'type'
-                                                                        ? 'Content'
-                                                                        : action.type === 'wait'
-                                                                            ? 'Seconds'
-                                                                            : action.type === 'scroll'
-                                                                                ? 'Pixels'
-                                                                                : action.type === 'csv'
-                                                                                    ? 'CSV Input'
-                                                                                    : 'Script'}
+                                                                    {action.type === 'navigate'
+                                                                        ? 'URL'
+                                                                        : action.type === 'type'
+                                                                            ? 'Content'
+                                                                            : action.type === 'wait'
+                                                                                ? 'Seconds'
+                                                                                : action.type === 'scroll'
+                                                                                    ? 'Pixels'
+                                                                                    : action.type === 'csv'
+                                                                                        ? 'CSV Input'
+                                                                                        : 'Script'}
                                                                 </label>
                                                                 <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
                                                                     {action.type === 'javascript' ? (
@@ -970,7 +974,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                                             onChange={(v) => updateAction(action.id, { value: v })}
                                                                             onBlur={() => handleAutoSave()}
                                                                             variables={currentTask.variables}
-                                                                            placeholder={action.type === 'type' ? 'Search keywords' : action.type === 'wait' ? '3' : '400'}
+                                                                            placeholder={action.type === 'navigate' ? 'https://example.com' : action.type === 'type' ? 'Search keywords' : action.type === 'wait' ? '3' : '400'}
                                                                         />
                                                                     )}
                                                                 </div>

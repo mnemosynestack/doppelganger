@@ -19,26 +19,27 @@ export interface StealthConfig {
 export interface Action {
     id: string;
     type:
-        | 'click'
-        | 'type'
-        | 'wait'
-        | 'press'
-        | 'scroll'
-        | 'javascript'
-        | 'csv'
-        | 'hover'
-        | 'merge'
-        | 'screenshot'
-        | 'if'
-        | 'else'
-        | 'end'
-        | 'while'
-        | 'repeat'
-        | 'foreach'
-        | 'stop'
-        | 'set'
-        | 'on_error'
-        | 'start';
+    | 'click'
+    | 'type'
+    | 'wait'
+    | 'press'
+    | 'scroll'
+    | 'javascript'
+    | 'csv'
+    | 'hover'
+    | 'merge'
+    | 'screenshot'
+    | 'if'
+    | 'else'
+    | 'end'
+    | 'while'
+    | 'repeat'
+    | 'foreach'
+    | 'stop'
+    | 'set'
+    | 'on_error'
+    | 'navigate'
+    | 'start';
     selector?: string;
     value?: string;
     key?: string;
