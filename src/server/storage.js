@@ -64,6 +64,8 @@ async function saveTasks(tasks) {
 // Execution Storage
 let executionsCache = null;
 let executionsLoadPromise = null;
+let executionsSaveTimeout = null;
+const EXECUTIONS_SAVE_DELAY_MS = 1000;
 
 async function loadExecutions() {
     // Return a shallow copy if cache exists to prevent mutation by callers
@@ -93,7 +95,22 @@ async function loadExecutions() {
 async function saveExecutions(executions) {
     // Update cache immediately for read consistency
     executionsCache = executions;
-    await fs.promises.writeFile(EXECUTIONS_FILE, JSON.stringify(executions, null, 2));
+
+    // Debounce the disk write
+    if (executionsSaveTimeout) {
+        clearTimeout(executionsSaveTimeout);
+    }
+
+    // Return a promise that resolves immediately (optimistic success)
+    // The actual write happens asynchronously
+    executionsSaveTimeout = setTimeout(async () => {
+        executionsSaveTimeout = null;
+        try {
+            await fs.promises.writeFile(EXECUTIONS_FILE, JSON.stringify(executionsCache, null, 2));
+        } catch (e) {
+            console.error('[STORAGE] Failed to save executions:', e);
+        }
+    }, EXECUTIONS_SAVE_DELAY_MS);
 }
 
 async function appendExecution(entry) {

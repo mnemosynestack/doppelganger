@@ -2,7 +2,7 @@ const path = require('path');
 
 const DEFAULT_PORT = 11345;
 const DIST_DIR = path.join(__dirname, '../../dist');
-const DATA_DIR = path.join(__dirname, '../../data');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../../data');
 const SESSIONS_DIR = path.join(DATA_DIR, 'sessions');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const ALLOWED_IPS_FILE = path.join(DATA_DIR, 'allowed_ips.json');
