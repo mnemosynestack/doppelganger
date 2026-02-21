@@ -7,15 +7,15 @@ const { listProxies, addProxy, addProxies, updateProxy, deleteProxy, setDefaultP
 
 const router = express.Router();
 
-function generateApiKey() {
+function createNewApiKey() {
     return crypto.randomBytes(32).toString('hex');
 }
 
 // API Key
 router.get('/api-key', authRateLimiter, requireAuthForSettings, async (req, res) => {
     try {
-        const apiKey = await loadApiKey();
-        res.json({ apiKey: apiKey || null });
+        const currentKey = await loadApiKey();
+        res.json({ apiKey: currentKey || null });
     } catch (e) {
         console.error('[API_KEY] Load failed:', e);
         res.status(500).json({ error: 'API_KEY_LOAD_FAILED' });
@@ -25,9 +25,9 @@ router.get('/api-key', authRateLimiter, requireAuthForSettings, async (req, res)
 router.post('/api-key', requireAuthForSettings, (req, res) => {
     try {
         const bodyKey = req.body && typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : '';
-        const apiKey = bodyKey || generateApiKey();
-        saveApiKey(apiKey);
-        res.json({ apiKey });
+        const newKey = bodyKey || createNewApiKey();
+        saveApiKey(newKey);
+        res.json({ apiKey: newKey });
     } catch (e) {
         console.error('[API_KEY] Save failed:', e);
         res.status(500).json({ error: 'API_KEY_SAVE_FAILED', message: e.message });

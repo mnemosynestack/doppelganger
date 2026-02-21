@@ -118,33 +118,59 @@ async function appendExecution(entry) {
 }
 
 // API Key Storage
+let apiKeyCache = undefined;
+let apiKeyLoadPromise = null;
+
 async function loadApiKey() {
-    let apiKey = null;
-    try {
-        const raw = await fs.promises.readFile(API_KEY_FILE, 'utf8');
-        const data = JSON.parse(raw);
-        apiKey = data && data.apiKey ? data.apiKey : null;
-    } catch (e) {
-        apiKey = null;
-    }
+    if (apiKeyCache !== undefined) return apiKeyCache;
 
-    if (!apiKey) {
+    if (apiKeyLoadPromise) return apiKeyLoadPromise;
+
+    apiKeyLoadPromise = (async () => {
+        let apiKey = null;
         try {
-            const usersRaw = await fs.promises.readFile(USERS_FILE, 'utf8');
-            const users = JSON.parse(usersRaw);
-            if (Array.isArray(users) && users.length > 0 && users[0].apiKey) {
-                apiKey = users[0].apiKey;
-                saveApiKey(apiKey);
-            }
+            const raw = await fs.promises.readFile(API_KEY_FILE, 'utf8');
+            const data = JSON.parse(raw);
+            apiKey = data && data.apiKey ? data.apiKey : null;
         } catch (e) {
-            // ignore
+            apiKey = null;
         }
-    }
 
-    return apiKey;
+        // Check if cache was updated while we were reading (race condition fix)
+        if (apiKeyCache !== undefined) {
+            apiKeyLoadPromise = null;
+            return apiKeyCache;
+        }
+
+        if (!apiKey) {
+            try {
+                const usersRaw = await fs.promises.readFile(USERS_FILE, 'utf8');
+                const users = JSON.parse(usersRaw);
+                if (Array.isArray(users) && users.length > 0 && users[0].apiKey) {
+                    apiKey = users[0].apiKey;
+                    saveApiKey(apiKey);
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        // Final check before setting cache in case it was updated during fallback logic
+        if (apiKeyCache !== undefined) {
+            apiKeyLoadPromise = null;
+            return apiKeyCache;
+        }
+
+        apiKeyCache = apiKey;
+        apiKeyLoadPromise = null;
+        return apiKey;
+    })();
+
+    return apiKeyLoadPromise;
 }
 
 function saveApiKey(apiKey) {
+    apiKeyCache = apiKey;
     fs.writeFileSync(API_KEY_FILE, JSON.stringify({ apiKey }, null, 2));
     if (fs.existsSync(USERS_FILE)) {
         try {
