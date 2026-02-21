@@ -19,7 +19,6 @@ const {
 
 // Context & Utils
 const {
-    taskMutex,
     executionStreams,
     stopRequests,
     sendExecutionUpdate
