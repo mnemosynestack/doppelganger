@@ -33,7 +33,7 @@ const normalizeProxy = (entry) => {
             const username = parsed.username ? decodeURIComponent(parsed.username) : undefined;
             const password = parsed.password ? decodeURIComponent(parsed.password) : undefined;
             return {
-                id: createProxyId(`${server}|${username || ''}|${password || ''}`),
+                id: createProxyId(`${server}|${username || ''}`),
                 server,
                 username,
                 password
@@ -48,7 +48,7 @@ const normalizeProxy = (entry) => {
         if (!server) return null;
         const username = entry.username || entry.user;
         const password = entry.password || entry.pass;
-        const id = entry.id || createProxyId(`${server}|${username || ''}|${password || ''}`);
+        const id = entry.id || createProxyId(`${server}|${username || ''}`);
         return {
             id,
             server,
