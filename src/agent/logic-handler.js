@@ -93,10 +93,11 @@ const evalCondition = async (expr, page, runtimeVars, lastBlockOutput, resolveTe
             return el ? (el.textContent || '').trim() : '';
         };
         const url = () => window.location.href;
+        const html = document.documentElement.outerHTML;
         const block = { output: blockOutput };
         // eslint-disable-next-line no-new-func
-        const fn = new Function('vars', 'block', 'exists', 'text', 'url', `return !!(${expression});`);
-        return fn(vars || {}, block, exists, text, url);
+        const fn = new Function('vars', 'block', 'exists', 'text', 'url', 'html', `return !!(${expression});`);
+        return fn(vars || {}, block, exists, text, url, html);
     }, { expression: resolved, vars: runtimeVars, blockOutput: lastBlockOutput });
 };
 

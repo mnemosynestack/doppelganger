@@ -218,6 +218,14 @@ async function handleAgent(req, res) {
             const act = actions[index];
             actionIdx += 1;
 
+            if (JSON.stringify(act).includes('{$html}')) {
+                try {
+                    runtimeVars.html = await page.content();
+                } catch (err) {
+                    runtimeVars.html = '';
+                }
+            }
+
             if (act.disabled) {
                 logs.push(`SKIPPED disabled action: ${act.type}`);
                 reportProgress(runId, { actionId: act.id, status: 'skipped' });
@@ -451,6 +459,15 @@ async function handleAgent(req, res) {
         const extractionScriptRaw = typeof data.extractionScript === 'string'
             ? data.extractionScript
             : (data.taskSnapshot && typeof data.taskSnapshot.extractionScript === 'string' ? data.taskSnapshot.extractionScript : undefined);
+
+        if (extractionScriptRaw && extractionScriptRaw.includes('{$html}')) {
+            try {
+                runtimeVars.html = await page.content();
+            } catch (err) {
+                runtimeVars.html = '';
+            }
+        }
+
         const extractionScript = extractionScriptRaw ? resolveTemplate(extractionScriptRaw) : undefined;
         const extraction = await runExtractionScript(extractionScript, cleanedHtml, page.url(), includeShadowDom);
 

@@ -297,6 +297,7 @@ const executeAction = async (act, context) => {
             logs.push('Running custom JavaScript...');
             if (act.value) {
                 result = await page.evaluate((code) => {
+                    const html = document.documentElement.outerHTML;
                     // eslint-disable-next-line no-eval
                     return eval(code);
                 }, resolveMaybe(act.value));
