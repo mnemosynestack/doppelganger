@@ -22,6 +22,7 @@ export interface Action {
     | 'click'
     | 'type'
     | 'wait'
+    | 'wait_selector'
     | 'press'
     | 'scroll'
     | 'javascript'

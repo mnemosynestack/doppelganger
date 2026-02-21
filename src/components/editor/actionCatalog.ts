@@ -6,6 +6,7 @@ export const ACTION_CATALOG: { type: Action['type']; label: string; description:
     { type: 'hover', label: 'Hover', description: 'Hover an element' },
     { type: 'press', label: 'Press', description: 'Press a key' },
     { type: 'wait', label: 'Wait', description: 'Pause for seconds' },
+    { type: 'wait_selector', label: 'Wait for Selector', description: 'Wait until element appears' },
     { type: 'scroll', label: 'Scroll', description: 'Scroll the page or container' },
     { type: 'javascript', label: 'JavaScript', description: 'Run custom JS' },
     { type: 'csv', label: 'CSV', description: 'Parse CSV into rows' },

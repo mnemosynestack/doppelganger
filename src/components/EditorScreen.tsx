@@ -816,6 +816,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                     if (type === 'hover') return <Target className={`${iconClass} text-purple-300`} />;
                                                     if (type === 'press') return <Keyboard className={`${iconClass} text-amber-300`} />;
                                                     if (type === 'wait') return <Clock className={`${iconClass} text-slate-300`} />;
+                                                    if (type === 'wait_selector') return <Clock className={`${iconClass} text-orange-300`} />;
                                                     if (type === 'scroll') return <ArrowDownUp className={`${iconClass} text-cyan-300`} />;
                                                     if (type === 'javascript') return <Code className={`${iconClass} text-yellow-300`} />;
                                                     if (type === 'csv') return <Table className={`${iconClass} text-emerald-300`} />;
@@ -888,7 +889,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                                 <X className="w-4 h-4" />
                                                             </button>
                                                         </div>
-                                                        {(action.type === 'click' || action.type === 'type' || action.type === 'hover') && (
+                                                        {(action.type === 'click' || action.type === 'type' || action.type === 'hover' || action.type === 'wait_selector') && (
                                                             <div className="space-y-1.5">
                                                                 <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Selector</label>
                                                                 <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
@@ -932,7 +933,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                             </div>
                                                         )}
 
-                                                        {(action.type === 'navigate' || action.type === 'type' || action.type === 'wait' || action.type === 'scroll' || action.type === 'javascript' || action.type === 'csv') && (
+                                                        {(action.type === 'navigate' || action.type === 'type' || action.type === 'wait' || action.type === 'wait_selector' || action.type === 'scroll' || action.type === 'javascript' || action.type === 'csv') && (
                                                             <div className="space-y-1.5">
                                                                 <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">
                                                                     {action.type === 'navigate'
@@ -941,11 +942,13 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                                             ? 'Content'
                                                                             : action.type === 'wait'
                                                                                 ? 'Seconds'
-                                                                                : action.type === 'scroll'
-                                                                                    ? 'Pixels'
-                                                                                    : action.type === 'csv'
-                                                                                        ? 'CSV Input'
-                                                                                        : 'Script'}
+                                                                                : action.type === 'wait_selector'
+                                                                                    ? 'Timeout (Sec)'
+                                                                                    : action.type === 'scroll'
+                                                                                        ? 'Pixels'
+                                                                                        : action.type === 'csv'
+                                                                                            ? 'CSV Input'
+                                                                                            : 'Script'}
                                                                 </label>
                                                                 <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
                                                                     {action.type === 'javascript' ? (
@@ -974,7 +977,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                                             onChange={(v) => updateAction(action.id, { value: v })}
                                                                             onBlur={() => handleAutoSave()}
                                                                             variables={currentTask.variables}
-                                                                            placeholder={action.type === 'navigate' ? 'https://example.com' : action.type === 'type' ? 'Search keywords' : action.type === 'wait' ? '3' : '400'}
+                                                                            placeholder={action.type === 'navigate' ? 'https://example.com' : action.type === 'type' ? 'Search keywords' : action.type === 'wait' ? '3' : action.type === 'wait_selector' ? '10' : '400'}
                                                                         />
                                                                     )}
                                                                 </div>

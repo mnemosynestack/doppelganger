@@ -231,6 +231,18 @@ const executeAction = async (act, context) => {
             }
             result = ms;
             break;
+        case 'wait_selector': {
+            const selector = resolveMaybe(act.selector);
+            const ms = act.value ? parseFloat(resolveMaybe(act.value)) * 1000 : 10000;
+            logs.push(`Waiting for selector: ${selector} (${ms}ms)`);
+            if (selector) {
+                await page.waitForSelector(selector, { timeout: ms, state: 'visible' });
+                result = true;
+            } else {
+                logs.push('No selector provided for wait_selector');
+            }
+            break;
+        }
         case 'select':
             logs.push(`Selecting ${resolveMaybe(act.value)} from ${resolveMaybe(act.selector)}`);
             await page.waitForSelector(resolveMaybe(act.selector), { timeout: actionTimeout });
