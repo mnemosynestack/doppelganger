@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { REQUEST_LIMIT_WINDOW_MS, AUTH_RATE_LIMIT_MAX, DATA_RATE_LIMIT_MAX } = require('./constants');
 const { loadAllowedIps, loadApiKey } = require('./storage');
@@ -123,7 +124,18 @@ const requireApiKey = async (req, res, next) => {
     if (!storedKey) {
         return res.status(403).json({ error: 'API_KEY_NOT_SET' });
     }
-    if (!providedKey || providedKey !== storedKey) {
+
+    if (!providedKey || typeof providedKey !== 'string') {
+        return res.status(401).json({ error: 'INVALID_API_KEY' });
+    }
+
+    // Use HMAC with a random ephemeral key to perform constant-time comparison
+    // This prevents timing attacks and ensures secure handling of the comparison
+    const nonce = crypto.randomBytes(32);
+    const providedHmac = crypto.createHmac('sha256', nonce).update(providedKey).digest();
+    const storedHmac = crypto.createHmac('sha256', nonce).update(storedKey).digest();
+
+    if (!crypto.timingSafeEqual(providedHmac, storedHmac)) {
         return res.status(401).json({ error: 'INVALID_API_KEY' });
     }
     next();
