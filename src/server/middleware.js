@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { REQUEST_LIMIT_WINDOW_MS, AUTH_RATE_LIMIT_MAX, DATA_RATE_LIMIT_MAX } = require('./constants');
 const { loadAllowedIps, loadApiKey } = require('./storage');
@@ -123,7 +124,15 @@ const requireApiKey = async (req, res, next) => {
     if (!storedKey) {
         return res.status(403).json({ error: 'API_KEY_NOT_SET' });
     }
-    if (!providedKey || providedKey !== storedKey) {
+
+    if (!providedKey || typeof providedKey !== 'string') {
+        return res.status(401).json({ error: 'INVALID_API_KEY' });
+    }
+
+    const providedHash = crypto.createHash('sha256').update(providedKey).digest();
+    const storedHash = crypto.createHash('sha256').update(storedKey).digest();
+
+    if (!crypto.timingSafeEqual(providedHash, storedHash)) {
         return res.status(401).json({ error: 'INVALID_API_KEY' });
     }
     next();
