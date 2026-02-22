@@ -10,6 +10,7 @@ const ipv4Cases = [
     { ip: '172.31.255.255', expected: true },
     { ip: '192.168.1.1', expected: true },
     { ip: '169.254.1.1', expected: true },
+    { ip: '0.0.0.0', expected: true },
     { ip: '8.8.8.8', expected: false },
     { ip: '1.1.1.1', expected: false },
     { ip: '172.32.0.1', expected: false },
@@ -50,6 +51,7 @@ async function testValidateUrl() {
         { url: 'http://[fe80::1]', expectedBlock: true },
         { url: 'http://[::]', expectedBlock: true },
         { url: 'http://[::ffff:127.0.0.1]', expectedBlock: true },
+        { url: 'http://0.0.0.0', expectedBlock: true },
         { url: 'https://www.google.com', expectedBlock: false },
     ];
 
