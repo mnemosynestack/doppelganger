@@ -27,16 +27,54 @@ function saveUsers(users) {
 }
 
 // Task Storage
+let tasksCache = null;
+let tasksLoadPromise = null;
+let tasksMtime = 0;
+
 async function loadTasks() {
+    let stat;
     try {
-        return JSON.parse(await fs.promises.readFile(TASKS_FILE, 'utf8'));
-    } catch (e) {
+        stat = await fs.promises.stat(TASKS_FILE);
+    } catch {
+        tasksCache = [];
         return [];
     }
+
+    if (tasksCache && tasksMtime === stat.mtimeMs) {
+        return [...tasksCache];
+    }
+
+    if (tasksLoadPromise) {
+        const result = await tasksLoadPromise;
+        return [...result];
+    }
+
+    tasksLoadPromise = (async () => {
+        try {
+            const data = await fs.promises.readFile(TASKS_FILE, 'utf8');
+            tasksCache = JSON.parse(data);
+            tasksMtime = stat.mtimeMs;
+        } catch (e) {
+            tasksCache = [];
+            tasksMtime = 0;
+        }
+        tasksLoadPromise = null;
+        return tasksCache;
+    })();
+
+    const result = await tasksLoadPromise;
+    return [...result];
 }
 
 async function saveTasks(tasks) {
+    tasksCache = tasks;
     await fs.promises.writeFile(TASKS_FILE, JSON.stringify(tasks, null, 2));
+    try {
+        const stat = await fs.promises.stat(TASKS_FILE);
+        tasksMtime = stat.mtimeMs;
+    } catch {
+        // ignore
+    }
 }
 
 // Execution Storage
