@@ -44,9 +44,13 @@ const ApiKeyPanel: React.FC<ApiKeyPanelProps> = ({ apiKey, loading, saving, onRe
                     <button
                         onClick={onRegenerate}
                         disabled={saving}
-                        className="flex-1 px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest bg-white text-black hover:scale-105 transition-all disabled:opacity-60 disabled:hover:scale-100"
+                        aria-busy={saving}
+                        className="flex-1 px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest bg-white text-black hover:scale-105 transition-all disabled:opacity-60 disabled:hover:scale-100 flex items-center justify-center gap-2"
                     >
-                        {apiKey ? 'Rotate Key' : 'Generate Key'}
+                        {saving && (
+                            <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                        )}
+                        {saving ? (apiKey ? 'Rotating...' : 'Generating...') : (apiKey ? 'Rotate Key' : 'Generate Key')}
                     </button>
                     <button
                         onClick={onCopy}

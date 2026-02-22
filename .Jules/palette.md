@@ -9,3 +9,7 @@
 ## 2025-05-20 - Loading State Feedback
 **Learning:** Async buttons (like Auth submit) often rely on text changes ("Authenticating...") which can be missed. A visual spinner provides immediate, universal feedback.
 **Action:** When adding async actions, always pair the disabled state with a visual indicator (spinner) inside the button.
+
+## 2025-05-27 - Loading State Accessibility
+**Learning:** Visual spinners inside disabled buttons improve visual feedback but don't communicate state changes to screen readers. Adding `aria-busy={isLoading}` bridges this gap.
+**Action:** Always include `aria-busy` on async buttons to signal ongoing processing to assistive technologies.
