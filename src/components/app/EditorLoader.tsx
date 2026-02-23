@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Dispatch, SetStateAction } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Task } from '../../types';
 import LoadingScreen from '../LoadingScreen';
@@ -10,7 +10,7 @@ interface EditorLoaderProps {
     loadTasks: () => Promise<Task[]>;
     touchTask: (id: string) => void;
     currentTask: Task | null;
-    setCurrentTask: (task: Task) => void;
+    setCurrentTask: Dispatch<SetStateAction<Task | null>>;
     editorView: any;
     setEditorView: any;
     isExecuting: boolean;

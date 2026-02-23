@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Task } from '../types';
 import { normalizeImportedTask, buildNewTask, parseBooleanFlag, ensureActionIds } from '../utils/taskUtils';
 
@@ -9,6 +9,11 @@ export function useTasks(
 ) {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [currentTask, setCurrentTask] = useState<Task | null>(null);
+    const currentTaskRef = useRef<Task | null>(null);
+
+    useEffect(() => {
+        currentTaskRef.current = currentTask;
+    }, [currentTask]);
 
     const loadTasks = useCallback(async () => {
         try {
@@ -79,7 +84,7 @@ export function useTasks(
     }, [requestConfirm, loadTasks, navigate]);
 
     const saveTask = useCallback(async (markTaskAsSaved: (task: Task | null) => void, currentPath: string, taskOverride?: Task, createVersion: boolean = false) => {
-        const taskToUpdate = taskOverride || currentTask;
+        const taskToUpdate = taskOverride || currentTaskRef.current;
         if (!taskToUpdate) return;
         const taskToSave = { ...taskToUpdate, last_opened: Date.now() };
         const query = createVersion ? '?version=true' : '';
@@ -95,7 +100,7 @@ export function useTasks(
         if (currentPath.includes('new')) {
             navigate(`/tasks/${saved.id}`, { replace: true });
         }
-    }, [currentTask, navigate, loadTasks]);
+    }, [navigate, loadTasks]);
 
     const exportTasks = useCallback(() => {
         const payload = {

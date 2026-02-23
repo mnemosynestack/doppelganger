@@ -239,9 +239,18 @@ async function handleScrape(req, res) {
             if (!script || typeof script !== 'string') return { result: undefined, logs: [] };
 
             return new Promise((resolve) => {
+                // Security: Only pass safe environment variables to the worker process
+                // to prevent leaking secrets (like API keys) if the worker is compromised.
+                const safeEnv = {
+                    NODE_ENV: 'production',
+                    PATH: process.env.PATH,
+                    LANG: process.env.LANG,
+                    TZ: process.env.TZ
+                };
+
                 const worker = spawn('node', [path.join(__dirname, 'extraction-worker.js')], {
                     stdio: ['pipe', 'pipe', 'pipe'],
-                    env: { ...process.env, NODE_ENV: 'production' } // Minimal env
+                    env: safeEnv
                 });
 
                 let stdout = '';
