@@ -144,6 +144,7 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
                 html: data.html,
                 data: data.data ?? data.html ?? "No data captured.",
                 screenshotUrl: data.screenshot_url,
+                downloads: data.downloads,
                 logs: data.logs || [],
                 timestamp: new Date().toLocaleTimeString(),
             });
@@ -181,6 +182,7 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
                         html: data.html,
                         data: data.data ?? data.html ?? "No data captured.",
                         screenshotUrl: data.screenshot_url,
+                        downloads: data.downloads,
                         logs: data.logs || [],
                         timestamp: new Date().toLocaleTimeString(),
                     });

@@ -49,6 +49,7 @@ async function createBrowserContext(browser, options = {}) {
         timezoneId: 'America/New_York',
         colorScheme: 'dark',
         permissions: ['geolocation'],
+        acceptDownloads: true,
     };
 
     if (!statelessExecution && storageStateFile && fs.existsSync(storageStateFile)) {

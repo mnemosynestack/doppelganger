@@ -362,6 +362,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             base.conditionOp = 'equals';
             base.conditionValue = '';
         }
+        if (type === 'wait_downloads') base.value = '30';
         const next = { ...currentTask, actions: [...currentTask.actions, base] };
         setCurrentTask(next);
         handleAutoSave(next);
@@ -791,6 +792,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                     if (type === 'press') return <MaterialIcon name="keyboard" className={`${iconClass} text-amber-300`} />;
                                                     if (type === 'wait') return <MaterialIcon name="schedule" className={`${iconClass} text-slate-300`} />;
                                                     if (type === 'wait_selector') return <MaterialIcon name="schedule" className={`${iconClass} text-orange-300`} />;
+                                                    if (type === 'wait_downloads') return <MaterialIcon name="file_download_done" className={`${iconClass} text-indigo-300`} />;
                                                     if (type === 'scroll') return <MaterialIcon name="swap_vert" className={`${iconClass} text-cyan-300`} />;
                                                     if (type === 'javascript') return <MaterialIcon name="code" className={`${iconClass} text-yellow-300`} />;
                                                     if (type === 'csv') return <MaterialIcon name="table_chart" className={`${iconClass} text-emerald-300`} />;
@@ -907,7 +909,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                             </div>
                                                         )}
 
-                                                        {(action.type === 'navigate' || action.type === 'type' || action.type === 'wait' || action.type === 'wait_selector' || action.type === 'scroll' || action.type === 'javascript' || action.type === 'csv') && (
+                                                        {(action.type === 'navigate' || action.type === 'type' || action.type === 'wait' || action.type === 'wait_selector' || action.type === 'wait_downloads' || action.type === 'scroll' || action.type === 'javascript' || action.type === 'csv') && (
                                                             <div className="space-y-1.5">
                                                                 <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">
                                                                     {action.type === 'navigate'
@@ -918,11 +920,13 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                                                 ? 'Seconds'
                                                                                 : action.type === 'wait_selector'
                                                                                     ? 'Timeout (Sec)'
-                                                                                    : action.type === 'scroll'
-                                                                                        ? 'Pixels'
-                                                                                        : action.type === 'csv'
-                                                                                            ? 'CSV Input'
-                                                                                            : 'Script'}
+                                                                                    : action.type === 'wait_downloads'
+                                                                                        ? 'Timeout (Sec)'
+                                                                                        : action.type === 'scroll'
+                                                                                            ? 'Pixels'
+                                                                                            : action.type === 'csv'
+                                                                                                ? 'CSV Input'
+                                                                                                : 'Script'}
                                                                 </label>
                                                                 <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
                                                                     {action.type === 'javascript' ? (
@@ -951,7 +955,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                                             onChange={(v) => updateAction(action.id, { value: v })}
                                                                             onBlur={() => handleAutoSave()}
                                                                             variables={currentTask.variables}
-                                                                            placeholder={action.type === 'navigate' ? 'https://example.com' : action.type === 'type' ? 'Search keywords' : action.type === 'wait' ? '3' : action.type === 'wait_selector' ? '10' : '400'}
+                                                                            placeholder={action.type === 'navigate' ? 'https://example.com' : action.type === 'type' ? 'Search keywords' : action.type === 'wait' ? '3' : action.type === 'wait_selector' ? '10' : action.type === 'wait_downloads' ? '30' : action.type === 'scroll' ? '400' : ''}
                                                                         />
                                                                     )}
                                                                 </div>

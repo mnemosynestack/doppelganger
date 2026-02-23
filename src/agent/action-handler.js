@@ -65,7 +65,8 @@ const executeAction = async (act, context) => {
         baseUrl,
         lastBlockOutput,
         setStopOutcome,
-        setStopRequested
+        setStopRequested,
+        pendingDownloads
     } = context;
 
     const {
@@ -231,6 +232,38 @@ const executeAction = async (act, context) => {
             }
             result = ms;
             break;
+        case 'wait_downloads': {
+            const rawVal = resolveMaybe(act.value);
+            const ms = (rawVal !== undefined && rawVal !== null && rawVal !== '') ? parseFloat(rawVal) * 1000 : 30000;
+
+            if (!pendingDownloads || pendingDownloads.size === 0) {
+                logs.push(`No active downloads found. Waiting up to 10s for a download to initiate...`);
+                if (context.waitForNewDownload) {
+                    await Promise.race([
+                        context.waitForNewDownload(),
+                        new Promise((resolve) => setTimeout(resolve, 10000))
+                    ]);
+                } else {
+                    await new Promise((resolve) => setTimeout(resolve, 5000));
+                }
+            }
+
+            if (pendingDownloads && pendingDownloads.size > 0) {
+                logs.push(`Waiting for ${pendingDownloads.size} pending download(s) (${ms === 0 ? 'no' : ms + 'ms'} timeout)...`);
+                try {
+                    const waitPromises = [Promise.all(Array.from(pendingDownloads))];
+                    if (ms > 0) waitPromises.push(new Promise((resolve) => setTimeout(resolve, ms)));
+                    await Promise.race(waitPromises);
+                    logs.push(`Downloads finished wait period.`);
+                } catch (e) {
+                    logs.push(`Wait downloads errored: ${e.message}`);
+                }
+            } else {
+                logs.push(`No downloads initiated within the grace period.`);
+            }
+            result = true;
+            break;
+        }
         case 'wait_selector': {
             const selector = resolveMaybe(act.selector);
             const ms = act.value ? parseFloat(resolveMaybe(act.value)) * 1000 : 10000;

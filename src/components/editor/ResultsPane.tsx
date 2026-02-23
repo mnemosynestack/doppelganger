@@ -4,7 +4,30 @@ import { ConfirmRequest, Results, CaptureEntry } from '../../types';
 import { FixedSizeList, ListChildComponentProps } from 'react-window';
 import CaptureCard from '../CaptureCard';
 import CodeEditor from '../CodeEditor';
+import JSZip from 'jszip';
 import { SyntaxLanguage } from '../../utils/syntaxHighlight';
+
+const getFileIcon = (filename: string) => {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    switch (ext) {
+        case 'pdf': return 'picture_as_pdf';
+        case 'csv':
+        case 'xls':
+        case 'xlsx': return 'table_view';
+        case 'png':
+        case 'jpg':
+        case 'jpeg':
+        case 'gif':
+        case 'svg': return 'image';
+        case 'txt':
+        case 'md': return 'description';
+        case 'json': return 'data_object';
+        case 'zip':
+        case 'tar':
+        case 'gz': return 'folder_zip';
+        default: return 'insert_drive_file';
+    }
+};
 
 interface ResultsPaneProps {
     results: Results | null;
@@ -272,6 +295,7 @@ const downloadText = (filename: string, content: string, mime: string) => {
 const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExecuting, isHeadful, runId, onConfirm, onNotify, onPin, onUnpin, fullWidth }) => {
     const [copied, setCopied] = useState<string | null>(null);
     const [dataView, setDataView] = useState<'raw' | 'table'>('raw');
+    const [mainView, setMainView] = useState<'data' | 'downloads'>('data');
     const [resultView, setResultView] = useState<'latest' | 'pinned'>(() => (pinnedResults && !results ? 'pinned' : 'latest'));
     const [headfulViewer, setHeadfulViewer] = useState<'checking' | 'native' | 'novnc'>('checking');
     const [capturesOpen, setCapturesOpen] = useState(false);
@@ -314,6 +338,11 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
             setDataView('table');
         } else {
             setDataView('raw');
+        }
+        if (!activeResults?.downloads || activeResults.downloads.length === 0) {
+            setMainView('data');
+        } else if (!activeResults?.data) {
+            setMainView('downloads');
         }
     }, [activeResults]);
 
@@ -469,10 +498,10 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                     </h2>
                 </div>
                 <div className={`px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-[0.2em] ${resultView === 'pinned'
-                        ? 'bg-amber-500/10 text-amber-300'
-                        : isExecuting
-                            ? 'bg-blue-500/10 text-blue-400 animate-pulse'
-                            : 'bg-green-500/10 text-green-400'
+                    ? 'bg-amber-500/10 text-amber-300'
+                    : isExecuting
+                        ? 'bg-blue-500/10 text-blue-400 animate-pulse'
+                        : 'bg-green-500/10 text-green-400'
                     }`}>
                     {resultView === 'pinned' ? 'Pinned' : (isExecuting ? 'Running' : 'Finished')}
                 </div>
@@ -565,8 +594,23 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
 
             <div className="glass-card rounded-[32px] p-8 flex flex-col relative">
                 <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
-                    <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Data</span>
+                    <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+                        {mainView === 'downloads' ? 'Downloads' : 'Data'}
+                    </span>
                     <div className="flex items-center gap-2">
+                        {activeResults?.downloads && activeResults.downloads.length > 0 && (
+                            <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/10">
+                                {(['data', 'downloads'] as const).map((mode) => (
+                                    <button
+                                        key={mode}
+                                        onClick={() => setMainView(mode)}
+                                        className={`px-3 py-1 rounded text-[8px] font-bold uppercase tracking-widest transition-all ${mainView === mode ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
+                                    >
+                                        {mode}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {pinnedResults && (
                             <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/10">
                                 {(['latest', 'pinned'] as const).map((mode) => (
@@ -580,7 +624,7 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                                 ))}
                             </div>
                         )}
-                        {tableData && (
+                        {tableData && mainView === 'data' && (
                             <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/10">
                                 {(['table', 'raw'] as const).map((mode) => (
                                     <button
@@ -620,67 +664,115 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                                 {pinnedResults ? 'Update Pin' : 'Pin'}
                             </button>
                         )}
-                        <button
-                            onClick={() => {
-                                const payload = getExportPayload(activeResults?.data, tableData);
-                                if (!payload) {
-                                    onNotify('No data to export.', 'error');
-                                    return;
-                                }
-                                const name = `doppelganger-data-${new Date().toISOString().replace(/[:.]/g, '-')}.${payload.ext}`;
-                                downloadText(name, payload.content, payload.mime);
-                                onNotify(`Exported ${payload.ext.toUpperCase()}.`, 'success');
-                            }}
-                            className="px-3 py-2 border text-[9px] font-bold rounded-xl uppercase transition-all flex items-center gap-2 bg-white/5 border-white/10 text-white hover:bg-white/10"
-                            title="Export extracted data"
-                        >
-                            Export
-                        </button>
-                        <button
-                            onClick={async () => {
-                                const payload = getResultsCopyPayload(activeResults);
-                                if (payload.reason) {
-                                    onNotify(payload.reason || 'Data too large to copy safely.', 'error');
-                                    return;
-                                }
-                                const preview = getResultsPreview(activeResults);
-                                const fullText = getFullCopyText(payload.raw);
-                                let copyText = fullText;
-                                let usedTruncated = false;
-
-                                if (preview.truncated) {
-                                    const confirmed = await onConfirm({
-                                        message: 'Preview is truncated for performance.',
-                                        confirmLabel: 'Copy full',
-                                        cancelLabel: 'Copy preview'
-                                    });
-                                    if (!confirmed) {
-                                        copyText = preview.text || '';
-                                        usedTruncated = true;
+                        {mainView === 'data' && (
+                            <button
+                                onClick={() => {
+                                    const payload = getExportPayload(activeResults?.data, tableData);
+                                    if (!payload) {
+                                        onNotify('No data to export.', 'error');
+                                        return;
                                     }
-                                }
-
-                                if (copyText.length > MAX_COPY_CHARS) {
-                                    const proceed = await onConfirm({
-                                        message: `Copying ${formatSize(copyText.length)} may freeze your browser.`,
-                                        confirmLabel: 'Copy full',
-                                        cancelLabel: usedTruncated ? 'Copy preview' : 'Copy truncated'
-                                    });
-                                    if (!proceed) {
-                                        const truncated = getTruncatedCopyText(payload.raw);
-                                        copyText = truncated.text;
-                                        usedTruncated = true;
+                                    const name = `doppelganger-data-${new Date().toISOString().replace(/[:.]/g, '-')}.${payload.ext}`;
+                                    downloadText(name, payload.content, payload.mime);
+                                    onNotify(`Exported ${payload.ext.toUpperCase()}.`, 'success');
+                                }}
+                                className="px-3 py-2 border text-[9px] font-bold rounded-xl uppercase transition-all flex items-center gap-2 bg-white/5 border-white/10 text-white hover:bg-white/10"
+                                title="Export extracted data"
+                            >
+                                Export
+                            </button>
+                        )}
+                        {mainView === 'downloads' && (
+                            <button
+                                onClick={async () => {
+                                    if (!activeResults?.downloads || activeResults.downloads.length === 0) return;
+                                    if (activeResults.downloads.length === 1) {
+                                        const file = activeResults.downloads[0];
+                                        const link = document.createElement('a');
+                                        link.href = file.path;
+                                        link.download = file.name;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.remove();
+                                        onNotify(`Downloading ${file.name}`, 'success');
+                                        return;
                                     }
-                                }
+                                    onNotify('Generating ZIP...', 'success');
+                                    try {
+                                        const zip = new JSZip();
+                                        for (const file of activeResults.downloads) {
+                                            const res = await fetch(file.path);
+                                            const blob = await res.blob();
+                                            zip.file(file.name, blob);
+                                        }
+                                        const content = await zip.generateAsync({ type: 'blob' });
+                                        const url = URL.createObjectURL(content);
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.download = `doppelganger-downloads-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.remove();
+                                        URL.revokeObjectURL(url);
+                                    } catch (err) {
+                                        console.error('Failed to zip files:', err);
+                                        onNotify('Failed to zip files.', 'error');
+                                    }
+                                }}
+                                className="px-3 py-2 border text-[9px] font-bold rounded-xl uppercase transition-all flex items-center gap-2 bg-white/5 border-white/10 text-white hover:bg-white/10"
+                                title={activeResults?.downloads?.length === 1 ? 'Download File' : 'Download ZIP'}
+                            >
+                                <MaterialIcon name="folder_zip" className="text-[14px]" />
+                                {activeResults?.downloads?.length === 1 ? 'Download' : 'Download ZIP'}
+                            </button>
+                        )}
+                        {mainView === 'data' && (
+                            <button
+                                onClick={async () => {
+                                    const payload = getResultsCopyPayload(activeResults);
+                                    if (payload.reason) {
+                                        onNotify(payload.reason || 'Data too large to copy safely.', 'error');
+                                        return;
+                                    }
+                                    const preview = getResultsPreview(activeResults);
+                                    const fullText = getFullCopyText(payload.raw);
+                                    let copyText = fullText;
+                                    let usedTruncated = false;
 
-                                void handleCopy(copyText, 'data', { skipSizeConfirm: true, truncatedNotice: usedTruncated });
-                            }}
-                            className={`px-3 py-2 border text-[9px] font-bold rounded-xl uppercase transition-all flex items-center gap-2 ${copied === 'data' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}
-                            title="Copy extracted data"
-                        >
-                            {copied === 'data' ? <MaterialIcon name="check" className="text-sm" /> : <MaterialIcon name="content_copy" className="text-sm" />}
-                            {copied === 'data' ? 'Copied' : 'Copy'}
-                        </button>
+                                    if (preview.truncated) {
+                                        const confirmed = await onConfirm({
+                                            message: 'Preview is truncated for performance.',
+                                            confirmLabel: 'Copy full',
+                                            cancelLabel: 'Copy preview'
+                                        });
+                                        if (!confirmed) {
+                                            copyText = preview.text || '';
+                                            usedTruncated = true;
+                                        }
+                                    }
+
+                                    if (copyText.length > MAX_COPY_CHARS) {
+                                        const proceed = await onConfirm({
+                                            message: `Copying ${formatSize(copyText.length)} may freeze your browser.`,
+                                            confirmLabel: 'Copy full',
+                                            cancelLabel: usedTruncated ? 'Copy preview' : 'Copy truncated'
+                                        });
+                                        if (!proceed) {
+                                            const truncated = getTruncatedCopyText(payload.raw);
+                                            copyText = truncated.text;
+                                            usedTruncated = true;
+                                        }
+                                    }
+
+                                    void handleCopy(copyText, 'data', { skipSizeConfirm: true, truncatedNotice: usedTruncated });
+                                }}
+                                className={`px-3 py-2 border text-[9px] font-bold rounded-xl uppercase transition-all flex items-center gap-2 ${copied === 'data' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}
+                                title="Copy extracted data"
+                            >
+                                {copied === 'data' ? <MaterialIcon name="check" className="text-sm" /> : <MaterialIcon name="content_copy" className="text-sm" />}
+                                {copied === 'data' ? 'Copied' : 'Copy'}
+                            </button>
+                        )}
                     </div>
                 </div>
                 {preview?.truncated && (
@@ -693,15 +785,41 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                 )}
                 <div className="max-h-[70vh] overflow-y-auto custom-scrollbar pr-2 relative">
                     {(() => {
-                        if (isExecuting && resultView === 'latest' && (!activeResults || activeResults.data === undefined)) {
+                        const hasData = activeResults && activeResults.data !== undefined && activeResults.data !== null && activeResults.data !== '';
+                        const hasDownloads = activeResults && activeResults.downloads && activeResults.downloads.length > 0;
+                        if (isExecuting && resultView === 'latest' && (!activeResults || (!hasData && !hasDownloads))) {
                             return <pre className="font-mono text-[10px] text-blue-300/60 whitespace-pre-wrap leading-relaxed">Buffering data stream...</pre>;
                         }
-                        if (!activeResults || activeResults.data === undefined || activeResults.data === null || activeResults.data === '') {
+                        if (!activeResults || (!hasData && !hasDownloads)) {
                             return <pre className="font-mono text-[10px] text-blue-300/60 whitespace-pre-wrap leading-relaxed">No data available.</pre>;
                         }
                         return (
-                            <div>
-                                {tableData && dataView === 'table' ? (
+                            <div className="h-full">
+                                {mainView === 'downloads' ? (
+                                    <div className="space-y-2">
+                                        {activeResults.downloads!.map((file, idx) => (
+                                            <div key={idx} className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-xl p-4 hover:bg-white/[0.04] transition-colors">
+                                                <div className="flex items-center gap-4 overflow-hidden pr-4">
+                                                    <div className="p-3 bg-white/5 rounded-lg border border-white/10 shrink-0">
+                                                        <MaterialIcon name={getFileIcon(file.name)} className="text-2xl text-white/70" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-sm font-bold text-white truncate">{file.name}</h4>
+                                                        <p className="text-[10px] text-gray-500 truncate mt-1">{file.url}</p>
+                                                    </div>
+                                                </div>
+                                                <a
+                                                    href={file.path}
+                                                    download={file.name}
+                                                    className="shrink-0 p-3 rounded-lg border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white transition-all flex items-center justify-center"
+                                                    title="Download file"
+                                                >
+                                                    <MaterialIcon name="download" className="text-[18px]" />
+                                                </a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : tableData && dataView === 'table' ? (
                                     <div className="overflow-auto custom-scrollbar rounded-2xl border border-white/10">
                                         <table className="min-w-full table-auto text-[10px] text-left text-white/80 font-mono">
                                             <thead className="bg-white/5 text-[9px] uppercase tracking-widest text-white/50">

@@ -40,6 +40,7 @@ export interface Action {
     | 'set'
     | 'on_error'
     | 'navigate'
+    | 'wait_downloads'
     | 'start';
     selector?: string;
     value?: string;
@@ -88,6 +89,7 @@ export interface Results {
     html?: string;
     data?: any;
     screenshotUrl?: string;
+    downloads?: { name: string; url: string; path: string }[];
     logs: string[];
     timestamp: string;
 }

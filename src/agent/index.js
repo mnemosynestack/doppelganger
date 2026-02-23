@@ -148,13 +148,52 @@ async function handleAgent(req, res) {
             includeShadowDom
         });
 
+        const logs = [];
+        const downloads = [];
+        const pendingDownloads = new Set();
+        const newDownloadListeners = new Set();
+
+        context.on('page', (p) => {
+            p.on('download', async (download) => {
+                for (const listener of newDownloadListeners) listener();
+
+                const originalName = download.suggestedFilename() || 'download';
+                logs.push(`[DOWNLOAD] Intercepted: ${originalName}`);
+                const promise = new Promise(async (resolve) => {
+                    try {
+                        const safeName = originalName.replace(/[^a-zA-Z0-9_.-]/g, '_');
+                        const downloadName = `${captureRunId}_dl_${Date.now()}_${safeName}`;
+                        const customCapturesDir = path.join(__dirname, '../../public', 'captures');
+                        if (!fs.existsSync(customCapturesDir)) {
+                            fs.mkdirSync(customCapturesDir, { recursive: true });
+                        }
+                        const downloadPath = path.join(customCapturesDir, downloadName);
+
+                        await download.saveAs(downloadPath);
+                        downloads.push({
+                            name: originalName,
+                            url: download.url(),
+                            path: `/captures/${downloadName}`
+                        });
+                        logs.push(`[DOWNLOAD] Saved locally: ${originalName}`);
+                    } catch (e) {
+                        logs.push(`[DOWNLOAD ERROR]: ${e.message}`);
+                        console.error('Download failed:', e.message);
+                    } finally {
+                        resolve();
+                    }
+                });
+                pendingDownloads.add(promise);
+                promise.finally(() => pendingDownloads.delete(promise));
+            });
+        });
+
         page = await context.newPage();
 
         if (url) {
             await page.goto(resolveTemplate(url), { waitUntil: 'domcontentloaded', timeout: 60000 });
         }
 
-        const logs = [];
         let actionIdx = 0;
         const baseDelay = (ms) => {
             const fatigueMultiplier = fatigue ? 1 + (actionIdx * 0.1) : 1;
@@ -423,7 +462,12 @@ async function handleAgent(req, res) {
                     baseUrl,
                     lastBlockOutput,
                     setStopOutcome: (out) => { stopOutcome = out; },
-                    setStopRequested: (req) => { stopRequested = req; }
+                    setStopRequested: (req) => { stopRequested = req; },
+                    pendingDownloads,
+                    waitForNewDownload: () => new Promise(res => {
+                        newDownloadListeners.add(res);
+                        setTimeout(() => newDownloadListeners.delete(res), 15000);
+                    })
                 };
                 const result = await executeAction(act, actionContext);
 
@@ -453,6 +497,16 @@ async function handleAgent(req, res) {
 
         if (globalWait) await page.waitForTimeout(parseFloat(globalWait) * 1000);
         await page.waitForTimeout(baseDelay(500));
+
+        if (pendingDownloads.size > 0) {
+            logs.push(`Waiting for ${pendingDownloads.size} pending download(s)...`);
+            try {
+                await Promise.race([
+                    Promise.all(Array.from(pendingDownloads)),
+                    new Promise(resolve => setTimeout(resolve, 30000))
+                ]);
+            } catch (e) { }
+        }
 
         const cleanedHtml = await page.evaluate(cleanHtml, includeShadowDom);
 
@@ -492,6 +546,7 @@ async function handleAgent(req, res) {
 
         const outputData = {
             final_url: page.url() || url || '',
+            downloads: downloads.length > 0 ? downloads : undefined,
             logs: logs || [],
             html: typeof cleanedHtml === 'string' ? safeFormatHTML(cleanedHtml) : '',
             data: formattedExtraction,

@@ -30,7 +30,7 @@ This document is a concise, implementation-focused reference for AI agents that 
 ## 2) Action types
 Supported action `type` values:
 ```
-navigate, click, type, wait, press, scroll, javascript, csv, hover, merge,
+navigate, click, type, wait, wait_selector, wait_downloads, press, scroll, javascript, csv, hover, merge,
 screenshot, if, else, end, while, repeat, foreach, stop, set, on_error, start
 ```
 

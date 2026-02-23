@@ -132,6 +132,11 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `TRUST_PROXY` | Honor `X-Forwarded-*` when behind a reverse proxy. | `0` |
 | `VITE_DEV_PORT` | Port for front-end dev server. | `5173` |
 | `VITE_BACKEND_PORT` | Backend port for proxying + scripts. | `11345` |
+| `DB_TYPE` | Optional database type overriding disk storage. Set to `postgres` to use PostgreSQL. | — |
+| `DB_POSTGRESDB_HOST` | Hostname for the PostgreSQL database (required if DB_TYPE is postgres). | — |
+| `DB_POSTGRESDB_PORT` | Port for the PostgreSQL database (required if DB_TYPE is postgres). | — |
+| `DB_POSTGRESDB_USER` | Username for the PostgreSQL database (required if DB_TYPE is postgres). | — |
+| `DB_POSTGRESDB_PASSWORD` | Password for the PostgreSQL database (required if DB_TYPE is postgres). | — |
 
 Proxy rotation also respects `data/proxies.json` (see below), and `data/allowed_ips.json` works as an alternate allowlist format.
 
@@ -225,7 +230,6 @@ Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/a
 # Troubleshooting
 
 - **“Session expired”** in the UI: confirm `SESSION_SECRET` is consistent and cookies aren’t blocked by your browser.
-- **Tasks hang**: ensure the target site isn’t blocking automated browsers; try toggling `headful`/`headless` modes or adding delays.
 - **Proxy import fails**: inspect `data/proxies.json` for valid URLs; the backend validates `server` as a string.
 - **API key lost**: regenerate from Settings → System tab; the UI copies it automatically.
 
