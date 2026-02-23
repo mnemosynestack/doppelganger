@@ -3,6 +3,7 @@ import { FixedSizeList, ListChildComponentProps } from 'react-window';
 import { useNavigate } from 'react-router-dom';
 import { ConfirmRequest, CaptureEntry } from '../types';
 import CaptureCard from './CaptureCard';
+import MaterialIcon from './MaterialIcon';
 
 interface CapturesScreenProps {
     onConfirm: (request: string | ConfirmRequest) => Promise<boolean>;
@@ -84,8 +85,11 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
                     <div className="flex items-center gap-2">
                         <button
                             onClick={loadCaptures}
-                            className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
+                            disabled={loading}
+                            aria-busy={loading}
+                            className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 inline-flex items-center gap-2"
                         >
+                            <MaterialIcon name="sync" className={`text-base ${loading ? 'animate-spin' : ''}`} />
                             Refresh
                         </button>
                         <button
