@@ -102,10 +102,20 @@ export function useTasks(
         }
     }, [navigate, loadTasks]);
 
-    const exportTasks = useCallback(() => {
+    const exportTasks = useCallback((taskIds?: string[]) => {
+        let tasksToExport = tasks;
+        if (taskIds && taskIds.length > 0) {
+            tasksToExport = tasks.filter(t => t.id && taskIds.includes(t.id));
+        }
+
+        if (tasksToExport.length === 0) {
+            showAlert('No tasks selected to export.', 'error');
+            return;
+        }
+
         const payload = {
             exportedAt: new Date().toISOString(),
-            tasks
+            tasks: tasksToExport
         };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -117,7 +127,7 @@ export function useTasks(
         link.click();
         link.remove();
         URL.revokeObjectURL(url);
-        showAlert('Tasks exported.', 'success');
+        showAlert(`Exported ${tasksToExport.length} task(s).`, 'success');
     }, [tasks, showAlert]);
 
     const importTasks = useCallback(async (file: File) => {

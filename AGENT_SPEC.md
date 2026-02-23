@@ -2,6 +2,9 @@
 
 This document is a concise, implementation-focused reference for AI agents that generate tasks for Doppelganger. It covers the JSON schema, supported actions, variable templating, control flow, JavaScript execution context, and extraction scripts.
 
+
+
+
 ## 1) Task JSON schema (minimal)
 ```json
 {
