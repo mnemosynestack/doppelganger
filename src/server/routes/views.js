@@ -7,13 +7,13 @@ const { DIST_DIR } = require('../constants');
 const router = express.Router();
 
 // Login page
-router.get('/login', (req, res) => {
+router.get('/login', async (req, res) => {
     // Check if already logged in
     if (req.session.user) {
         return res.redirect('/');
     }
     // Check if setup is needed
-    const users = loadUsers();
+    const users = await loadUsers();
     if (users.length === 0) {
         return res.redirect('/signup');
     }
@@ -21,8 +21,8 @@ router.get('/login', (req, res) => {
 });
 
 // Signup/setup page
-router.get('/signup', (req, res) => {
-    const users = loadUsers();
+router.get('/signup', async (req, res) => {
+    const users = await loadUsers();
     if (users.length > 0) {
         return res.redirect('/login');
     }

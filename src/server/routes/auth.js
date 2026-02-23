@@ -5,9 +5,9 @@ const { authRateLimiter } = require('../middleware');
 
 const router = express.Router();
 
-router.get('/check-setup', (req, res) => {
+router.get('/check-setup', async (req, res) => {
     try {
-        const users = loadUsers();
+        const users = await loadUsers();
         res.json({ setupRequired: users.length === 0 });
     } catch (e) {
         console.error('[AUTH] check-setup error:', e);
@@ -16,7 +16,7 @@ router.get('/check-setup', (req, res) => {
 });
 
 router.post('/setup', authRateLimiter, async (req, res) => {
-    const users = loadUsers();
+    const users = await loadUsers();
     if (users.length > 0) return res.status(403).json({ error: 'ALREADY_SETUP' });
     const { name, email, password } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -24,7 +24,7 @@ router.post('/setup', authRateLimiter, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = { id: Date.now(), name, email: normalizedEmail, password: hashedPassword };
-    saveUsers([newUser]);
+    await saveUsers([newUser]);
 
     try {
         // Fire and forget webhook ping for telemetry
@@ -62,7 +62,7 @@ router.post('/setup', authRateLimiter, async (req, res) => {
 router.post('/login', authRateLimiter, async (req, res) => {
     const { email, password } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
-    const users = loadUsers();
+    const users = await loadUsers();
     const user = users.find(u => String(u.email || '').toLowerCase() === normalizedEmail);
     if (user && await bcrypt.compare(password, user.password)) {
         if (!user.telemetrySent) {
@@ -80,9 +80,9 @@ router.post('/login', authRateLimiter, async (req, res) => {
                         timestamp: new Date().toISOString()
                     })
                 })
-                    .then(() => {
+                    .then(async () => {
                         user.telemetrySent = true;
-                        saveUsers(users); // Update the local JSON database to mark as sent
+                        await saveUsers(users); // Update the local JSON database to mark as sent
                     })
                     .catch(err => console.error('[TELEMETRY] Failed to ping metrics', err.message));
             } catch (e) {

@@ -11,9 +11,37 @@ const {
     ALLOWED_IPS_TTL_MS
 } = require('./constants');
 const { parseIpList, normalizeIp } = require('./utils');
+const { initDB, getPool } = require('./db');
+
+let dbInitPromise = null;
+let usingDisk = true;
+
+async function ensureDB() {
+    if (dbInitPromise) return dbInitPromise;
+    dbInitPromise = (async () => {
+        try {
+            const pool = await initDB();
+            if (pool) usingDisk = false;
+        } catch (err) {
+            console.error('[STORAGE] Database initialization failed:', err.message);
+            console.error('[STORAGE] Falling back to disk storage.');
+            usingDisk = true;
+        }
+        return !usingDisk;
+    })();
+    return dbInitPromise;
+}
 
 // User Storage
-function loadUsers() {
+// Load users is now asynchronous since DB query is async
+async function loadUsers() {
+    const useDB = await ensureDB();
+    if (useDB) {
+        const pool = getPool();
+        const res = await pool.query('SELECT data FROM users ORDER BY id ASC');
+        return res.rows.map(r => r.data);
+    }
+
     if (!fs.existsSync(USERS_FILE)) return [];
     try {
         return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
@@ -22,7 +50,27 @@ function loadUsers() {
     }
 }
 
-function saveUsers(users) {
+async function saveUsers(users) {
+    const useDB = await ensureDB();
+    if (useDB) {
+        const pool = getPool();
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query('TRUNCATE users');
+            for (let i = 0; i < users.length; i++) {
+                await client.query('INSERT INTO users (id, data) VALUES ($1, $2)', [i + 1, users[i]]);
+            }
+            await client.query('COMMIT');
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+        return;
+    }
+
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
@@ -32,6 +80,32 @@ let tasksLoadPromise = null;
 let tasksMtime = 0;
 
 async function loadTasks() {
+    const useDB = await ensureDB();
+    if (useDB) {
+        // Simple cache without mtime check if we rely on in-memory operations to mutate it
+        if (tasksCache) return [...tasksCache];
+
+        if (tasksLoadPromise) {
+            const result = await tasksLoadPromise;
+            return [...result];
+        }
+
+        tasksLoadPromise = (async () => {
+            try {
+                const pool = getPool();
+                const res = await pool.query('SELECT data FROM tasks');
+                tasksCache = res.rows.map(r => r.data);
+            } catch (e) {
+                tasksCache = [];
+            }
+            tasksLoadPromise = null;
+            return tasksCache;
+        })();
+
+        const result = await tasksLoadPromise;
+        return [...result];
+    }
+
     let stat;
     try {
         stat = await fs.promises.stat(TASKS_FILE);
@@ -68,6 +142,26 @@ async function loadTasks() {
 
 async function saveTasks(tasks) {
     tasksCache = tasks;
+    const useDB = await ensureDB();
+    if (useDB) {
+        const pool = getPool();
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query('TRUNCATE tasks');
+            for (const task of tasks) {
+                await client.query('INSERT INTO tasks (id, data) VALUES ($1, $2)', [task.id, task]);
+            }
+            await client.query('COMMIT');
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+        return;
+    }
+
     await fs.promises.writeFile(TASKS_FILE, JSON.stringify(tasks, null, 2));
     try {
         const stat = await fs.promises.stat(TASKS_FILE);
@@ -84,29 +178,37 @@ let executionsSaveTimer = null;
 let executionsWritePromise = Promise.resolve();
 
 async function performExecutionsWrite(data) {
-    // Chain the write operation to ensure sequential execution preventing race conditions
     const nextWrite = executionsWritePromise.then(() => fs.promises.writeFile(EXECUTIONS_FILE, data));
-    // Update the promise reference, handling potential rejections to keep the chain alive
-    executionsWritePromise = nextWrite.catch(() => {});
+    executionsWritePromise = nextWrite.catch(() => { });
     return nextWrite;
 }
 
 async function loadExecutions() {
-    // Return a shallow copy if cache exists to prevent mutation by callers
     if (executionsCache) return [...executionsCache];
 
-    // Handle concurrent initial loads
     if (executionsLoadPromise) {
         const result = await executionsLoadPromise;
         return [...result];
     }
 
     executionsLoadPromise = (async () => {
-        try {
-            const data = await fs.promises.readFile(EXECUTIONS_FILE, 'utf8');
-            executionsCache = JSON.parse(data);
-        } catch (e) {
-            executionsCache = [];
+        const useDB = await ensureDB();
+        if (useDB) {
+            try {
+                const pool = getPool();
+                // order by timestamp descending in postgres JSONB field
+                const res = await pool.query("SELECT data FROM executions ORDER BY CAST(data->>'timestamp' AS BIGINT) DESC LIMIT $1", [MAX_EXECUTIONS]);
+                executionsCache = res.rows.map(r => r.data);
+            } catch (e) {
+                executionsCache = [];
+            }
+        } else {
+            try {
+                const data = await fs.promises.readFile(EXECUTIONS_FILE, 'utf8');
+                executionsCache = JSON.parse(data);
+            } catch (e) {
+                executionsCache = [];
+            }
         }
         executionsLoadPromise = null;
         return executionsCache;
@@ -117,36 +219,74 @@ async function loadExecutions() {
 }
 
 async function saveExecutions(executions) {
-    // Cancel any pending debounced save to avoid overwriting this immediate save
     if (executionsSaveTimer) {
         clearTimeout(executionsSaveTimer);
         executionsSaveTimer = null;
     }
-    // Update cache immediately for read consistency
     executionsCache = executions;
+
+    const useDB = await ensureDB();
+    if (useDB) {
+        const pool = getPool();
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query('TRUNCATE executions');
+            for (const exec of executions) {
+                await client.query('INSERT INTO executions (id, data) VALUES ($1, $2)', [exec.id, exec]);
+            }
+            await client.query('COMMIT');
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+        return;
+    }
+
     const data = JSON.stringify(executions, null, 2);
     await performExecutionsWrite(data);
 }
 
 async function appendExecution(entry) {
-    // Ensure cache is loaded, but ignore the return value since it's a copy
     if (!executionsCache) await loadExecutions();
 
-    // Modify the cache directly to ensure atomic updates for concurrent appends
-    // This prevents the race condition where multiple concurrent appends
-    // would otherwise read the same state and overwrite each other.
     executionsCache.unshift(entry);
     if (executionsCache.length > MAX_EXECUTIONS) {
         executionsCache.length = MAX_EXECUTIONS;
     }
 
-    // Debounce save (1000ms delay)
+    const useDB = await ensureDB();
+    if (useDB) {
+        const pool = getPool();
+        try {
+            await pool.query('INSERT INTO executions (id, data) VALUES ($1, $2)', [entry.id, entry]);
+
+            // Delete oldest if we exceed limit
+            const countRes = await pool.query('SELECT COUNT(*) FROM executions');
+            if (parseInt(countRes.rows[0].count) > MAX_EXECUTIONS) {
+                // Find oldest id to delete using timestamp from JSONB
+                await pool.query(`
+                    DELETE FROM executions 
+                    WHERE id IN (
+                        SELECT id FROM executions
+                        ORDER BY CAST(data->>'timestamp' AS BIGINT) ASC
+                        LIMIT 1
+                    )
+                `);
+            }
+        } catch (e) {
+            console.error('[STORAGE] Failed to append execution to DB:', e);
+        }
+        return;
+    }
+
     if (executionsSaveTimer) clearTimeout(executionsSaveTimer);
 
     executionsSaveTimer = setTimeout(async () => {
         executionsSaveTimer = null;
         try {
-            // We use the internal cache which is the source of truth
             const data = JSON.stringify(executionsCache, null, 2);
             await performExecutionsWrite(data);
         } catch (err) {
@@ -161,20 +301,28 @@ let apiKeyLoadPromise = null;
 
 async function loadApiKey() {
     if (apiKeyCache !== undefined) return apiKeyCache;
-
     if (apiKeyLoadPromise) return apiKeyLoadPromise;
 
     apiKeyLoadPromise = (async () => {
         let apiKey = null;
-        try {
-            const raw = await fs.promises.readFile(API_KEY_FILE, 'utf8');
-            const data = JSON.parse(raw);
-            apiKey = data && data.apiKey ? data.apiKey : null;
-        } catch (e) {
-            apiKey = null;
+
+        const useDB = await ensureDB();
+        if (useDB) {
+            try {
+                const pool = getPool();
+                const res = await pool.query('SELECT key FROM api_key WHERE id = 1');
+                if (res.rows.length > 0) apiKey = res.rows[0].key;
+            } catch (e) { }
+        } else {
+            try {
+                const raw = await fs.promises.readFile(API_KEY_FILE, 'utf8');
+                const data = JSON.parse(raw);
+                apiKey = data && data.apiKey ? data.apiKey : null;
+            } catch (e) {
+                apiKey = null;
+            }
         }
 
-        // Check if cache was updated while we were reading (race condition fix)
         if (apiKeyCache !== undefined) {
             apiKeyLoadPromise = null;
             return apiKeyCache;
@@ -182,18 +330,17 @@ async function loadApiKey() {
 
         if (!apiKey) {
             try {
-                const usersRaw = await fs.promises.readFile(USERS_FILE, 'utf8');
-                const users = JSON.parse(usersRaw);
+                // Now loadUsers is async
+                const users = await loadUsers();
                 if (Array.isArray(users) && users.length > 0 && users[0].apiKey) {
                     apiKey = users[0].apiKey;
-                    saveApiKey(apiKey);
+                    await saveApiKey(apiKey);
                 }
             } catch (e) {
                 // ignore
             }
         }
 
-        // Final check before setting cache in case it was updated during fallback logic
         if (apiKeyCache !== undefined) {
             apiKeyLoadPromise = null;
             return apiKeyCache;
@@ -207,20 +354,26 @@ async function loadApiKey() {
     return apiKeyLoadPromise;
 }
 
-function saveApiKey(apiKey) {
+async function saveApiKey(apiKey) {
     apiKeyCache = apiKey;
-    fs.writeFileSync(API_KEY_FILE, JSON.stringify({ apiKey }, null, 2));
-    if (fs.existsSync(USERS_FILE)) {
+    const useDB = await ensureDB();
+    if (useDB) {
+        const pool = getPool();
         try {
-            const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-            if (Array.isArray(users) && users.length > 0) {
-                users[0].apiKey = apiKey;
-                fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-            }
-        } catch (e) {
-            // ignore
-        }
+            await pool.query('INSERT INTO api_key (id, key) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET key = EXCLUDED.key', [apiKey]);
+        } catch (e) { }
+    } else {
+        fs.writeFileSync(API_KEY_FILE, JSON.stringify({ apiKey }, null, 2));
     }
+
+    // Try to update user with the new API key too
+    try {
+        const users = await loadUsers();
+        if (Array.isArray(users) && users.length > 0) {
+            users[0].apiKey = apiKey;
+            await saveUsers(users);
+        }
+    } catch (e) { }
 }
 
 // Session Helper
