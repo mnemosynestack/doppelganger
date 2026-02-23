@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import MaterialIcon from '../MaterialIcon';
 import { ConfirmRequest, Results, CaptureEntry } from '../../types';
 import { FixedSizeList, ListChildComponentProps } from 'react-window';
@@ -303,10 +303,10 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
     const [captures, setCaptures] = useState<CaptureEntry[]>([]);
     const headfulFrameRef = useRef<HTMLDivElement | null>(null);
     const activeResults = resultView === 'pinned' && pinnedResults ? pinnedResults : results;
-    const tableData = getTableData(activeResults?.data);
-    const preview = activeResults && activeResults.data !== undefined && activeResults.data !== null && activeResults.data !== ''
+    const tableData = useMemo(() => getTableData(activeResults?.data), [activeResults]);
+    const preview = useMemo(() => activeResults && activeResults.data !== undefined && activeResults.data !== null && activeResults.data !== ''
         ? getResultsPreview(activeResults)
-        : null;
+        : null, [activeResults]);
     const screenshotSrc = activeResults?.screenshotUrl
         ? `${activeResults.screenshotUrl}${resultView === 'latest' ? `?t=${Date.now()}` : ''}`
         : null;
