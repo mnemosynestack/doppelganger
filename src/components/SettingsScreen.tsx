@@ -441,26 +441,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
     };
 
-    const copyApiKey = async () => {
-        if (!apiKey) return;
-        try {
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(apiKey);
-            } else {
-                const textarea = document.createElement('textarea');
-                textarea.value = apiKey;
-                textarea.style.position = 'fixed';
-                textarea.style.opacity = '0';
-                document.body.appendChild(textarea);
-                textarea.select();
-                const ok = document.execCommand('copy');
-                document.body.removeChild(textarea);
-                if (!ok) throw new Error('Copy failed');
-            }
-            onNotify('API key copied.', 'success');
-        } catch {
-            onNotify('Copy failed.', 'error');
-        }
+    const copyApiKey = () => {
+        onNotify('API key copied.', 'success');
     };
 
     useEffect(() => {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import MaterialIcon from '../MaterialIcon';
+import CopyButton from '../CopyButton';
 
 interface ApiKeyPanelProps {
     apiKey: string | null;
@@ -52,14 +53,14 @@ const ApiKeyPanel: React.FC<ApiKeyPanelProps> = ({ apiKey, loading, saving, onRe
                         )}
                         {saving ? (apiKey ? 'Rotating...' : 'Generating...') : (apiKey ? 'Rotate Key' : 'Generate Key')}
                     </button>
-                    <button
-                        onClick={onCopy}
+                    <CopyButton
+                        text={apiKey || ''}
+                        label="Copy Key"
                         disabled={!apiKey}
-                        className="flex-1 px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest border border-white/10 text-white hover:bg-white/5 transition-all disabled:opacity-50 inline-flex items-center justify-center gap-2"
-                    >
-                        <MaterialIcon name="content_copy" className="text-base" />
-                        Copy Key
-                    </button>
+                        onCopy={onCopy}
+                        className="flex-1 px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest border border-white/10 text-white hover:bg-white/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                        iconClassName="text-base"
+                    />
                 </div>
                 <p className="text-[9px] text-gray-600 uppercase tracking-widest">
                     Use this key in `key`, `x-api-key`, or `Authorization: Bearer` headers.
