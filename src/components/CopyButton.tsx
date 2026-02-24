@@ -9,6 +9,7 @@ interface CopyButtonProps {
   iconClassName?: string;
   onCopy?: () => void;
   title?: string;
+  disabled?: boolean;
 }
 
 const CopyButton: React.FC<CopyButtonProps> = ({
@@ -18,11 +19,13 @@ const CopyButton: React.FC<CopyButtonProps> = ({
   iconClassName,
   onCopy,
   title,
+  disabled = false,
 }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (disabled) return;
     const success = await copyToClipboard(text);
     if (success) {
       setCopied(true);
@@ -34,17 +37,25 @@ const CopyButton: React.FC<CopyButtonProps> = ({
   return (
     <button
       onClick={handleCopy}
+      disabled={disabled}
       className={
         className ||
-        "flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-[9px] font-bold uppercase tracking-widest"
+        "flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-[9px] font-bold uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
       }
       title={title || (copied ? "Copied" : "Copy")}
       type="button"
+      aria-label={label || title || "Copy to clipboard"}
     >
       {copied ? (
-        <MaterialIcon name="check" className={iconClassName || "text-sm text-green-400"} />
+        <MaterialIcon
+          name="check"
+          className={`${iconClassName || "text-sm"} text-green-400`}
+        />
       ) : (
-        <MaterialIcon name="content_copy" className={iconClassName || "text-sm"} />
+        <MaterialIcon
+          name="content_copy"
+          className={iconClassName || "text-sm"}
+        />
       )}
       {label && <span>{copied ? "Copied" : label}</span>}
     </button>
