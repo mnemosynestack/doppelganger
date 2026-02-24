@@ -307,8 +307,9 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
     const preview = useMemo(() => activeResults && activeResults.data !== undefined && activeResults.data !== null && activeResults.data !== ''
         ? getResultsPreview(activeResults)
         : null, [activeResults]);
+    const timestamp = useMemo(() => Date.now(), [activeResults]);
     const screenshotSrc = activeResults?.screenshotUrl
-        ? `${activeResults.screenshotUrl}${resultView === 'latest' ? `?t=${Date.now()}` : ''}`
+        ? `${activeResults.screenshotUrl}${resultView === 'latest' ? `?t=${timestamp}` : ''}`
         : null;
     const renderCellValue = (value: any) => {
         const boolValue = normalizeBoolean(value);
