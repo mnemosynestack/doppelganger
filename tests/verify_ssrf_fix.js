@@ -1,3 +1,6 @@
+// Enforce blocking for tests
+process.env.ALLOW_PRIVATE_NETWORKS = 'false';
+
 const { validateUrl } = require('../url-utils');
 
 async function testValidateUrl() {

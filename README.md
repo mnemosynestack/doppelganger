@@ -129,6 +129,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 |----------|---------|---------|
 | `SESSION_SECRET` | Signs session cookies. Required. | — |
 | `ALLOWED_IPS` | Comma list for basic IP allowlisting. | none (open) |
+| `ALLOW_PRIVATE_NETWORKS` | Allow scraping local/private IPs (SSRF risk). | `true` |
 | `TRUST_PROXY` | Honor `X-Forwarded-*` when behind a reverse proxy. | `0` |
 | `VITE_DEV_PORT` | Port for front-end dev server. | `5173` |
 | `VITE_BACKEND_PORT` | Backend port for proxying + scripts. | `11345` |
