@@ -17,6 +17,10 @@ const {
     WEBSOCKIFY_PATH
 } = require('./src/server/constants');
 
+const {
+    loadTasks
+} = require('./src/server/storage');
+
 // Context & Utils
 const {
     executionStreams,
@@ -35,7 +39,8 @@ const {
     csrfProtection,
     requireIpAllowlist,
     requireAuth,
-    isIpAllowed
+    isIpAllowed,
+    requireApiKey
 } = require('./src/server/middleware');
 
 // Feature Modules (Legacy/Existing)
@@ -212,6 +217,71 @@ const preprocessScrapeRequest = (req) => {
         if (req.query.extractionScript) req.query.extractionScript = resolve(req.query.extractionScript);
     }
 };
+
+const executeTaskById = async (req, res) => {
+    const taskId = req.params.id;
+    let task;
+    try {
+        const tasks = await loadTasks();
+        task = tasks.find(t => t.id === taskId);
+    } catch (e) {
+        return res.status(500).json({ error: 'FAILED_TO_LOAD_TASK' });
+    }
+
+    if (!task) {
+        return res.status(404).json({ error: 'TASK_NOT_FOUND' });
+    }
+
+    registerExecution(req, res, { mode: task.mode || 'agent', taskId: task.id, taskName: task.name });
+
+    const clientVars = req.body.variables || req.body.taskVariables || {};
+    const taskVars = {};
+    if (task.variables) {
+        for (const [key, v] of Object.entries(task.variables)) {
+            taskVars[key] = v.value;
+        }
+    }
+    const runtimeVars = { ...taskVars, ...clientVars };
+
+    req.body = {
+        ...req.body,
+        ...task,
+        url: req.body.url || task.url,
+        taskId: task.id,
+        variables: runtimeVars,
+        taskVariables: runtimeVars,
+        actions: task.actions || [],
+        mode: task.mode || 'agent',
+        extractionScript: req.body.extractionScript || task.extractionScript
+    };
+
+    if (task.mode === 'scrape') {
+        preprocessScrapeRequest(req);
+        return handleScrape(req, res);
+    } else if (task.mode === 'headful') {
+        if (req.body && typeof req.body.url === 'string') {
+            req.body.url = req.body.url.replace(/\{\$(\w+)\}/g, (_match, name) => {
+                const value = runtimeVars[name];
+                if (value === undefined || value === null) return '';
+                return String(value);
+            });
+        }
+        return handleHeadful(req, res);
+    } else {
+        try {
+            const runId = String((req.body && req.body.runId) || req.query.runId || '').trim();
+            if (runId) {
+                sendExecutionUpdate(runId, { status: 'started' });
+            }
+        } catch {
+            // ignore
+        }
+        return handleAgent(req, res);
+    }
+};
+
+app.post('/tasks/:id/api', requireApiKey, dataRateLimiter, executeTaskById);
+app.post('/api/tasks/:id/api', requireApiKey, dataRateLimiter, executeTaskById);
 
 app.all('/scrape', requireAuth, dataRateLimiter, (req, res) => {
     registerExecution(req, res, { mode: 'scrape' });
