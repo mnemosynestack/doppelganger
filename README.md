@@ -190,16 +190,38 @@ Proxies can be defined via the UI or `data/proxies.json`:
 
 # API Surface
 
-- **Task execution** (`POST /tasks/:id/api`)
-  - Headers: `x-api-key` or `Authorization: Bearer <key>`.
-  - Body: `{ "variables": { ... } }` to override task variables or provide runtime data.
-- **Settings**:
-  - `/api/settings/api-key` — GET current, POST regen.
-  - `/api/settings/user-agent` — toggle system vs custom list.
-  - `/api/settings/proxies*` — GET/POST/PUT/DELETE plus rotation toggles.
-- **Clear data**:
-  - `POST /api/clear-screenshots` — removes files in `public/captures`.
-  - `POST /api/clear-cookies` — deletes `storage_state.json`.
+Doppelganger exposes a comprehensive REST API for integration with agents (like OpenClaw) or custom automation scripts. All endpoints are hosted locally, typically on port `11345`.
+
+**Authentication:** 
+If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For internal network use, this may be optional depending on your settings.
+
+### Core Execution Endpoints
+*   **`POST /scrape`**: Executes a single-pass extraction workflow (renders DOM, parses variables, extracts data via JS).
+    *   **Body:** `{"url": "...", "extractionFormat": "json", "extractionScript": "return document.title;"}`
+*   **`POST /agent`**: Executes a step-by-step interactive workflow.
+    *   **Body:** `{"url": "...", "actions": [{"type": "click", "selector": "#btn"}], "stealth": {"humanTyping": true}}`
+*   **`POST /headful`** & **`POST /headful/stop`**: Launches or stops a visible chromium instance for live debugging.
+
+### Task Management API
+*   **`GET /api/tasks`**: List all saved automation profiles.
+*   **`POST /api/tasks`**: Create a new task profile.
+*   **`PUT /api/tasks/:id`**: Update an existing task profile.
+*   **`POST /api/tasks/:id/api`**: Execute a predefined task. Pass `{"variables": {}}` in the body to override execution variables dynamically.
+
+### Execution & Logging API
+*   **`GET /api/executions`**: Retrieve paginated logs of all past runs.
+*   **`GET /api/executions/:id`**: View the exact steps, result JSON, and configuration state of a specific run.
+
+### Data Management API
+*   **`GET /api/data/captures`**: List generated screenshots, videos, and downloads.
+*   **`DELETE /api/data/captures/:name`**: Delete a specific capture.
+*   **`POST /api/clear-screenshots`**: Removes all files in `public/captures`.
+*   **`POST /api/clear-cookies`**: Deletes `storage_state.json`.
+
+### Settings API
+*   **`GET /api/settings/proxies`**: Retrieve proxy rotation configurations. Use standard `POST`/`PUT`/`DELETE` for managing the pool.
+*   **`GET /api/settings/api-key`**: Retrieve the current key (or `POST` to regenerate).
+*   **`POST /api/settings/user-agent`**: Toggle UA configurations.
 
 Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/auth/me`); read `server.js` to see the guard/middleware logic.
 
