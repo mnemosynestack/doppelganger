@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { FixedSizeList, ListChildComponentProps } from 'react-window';
 import { CaptureEntry } from '../../types';
 
@@ -59,6 +60,8 @@ const CapturesPanel: React.FC<CapturesPanelProps> = ({ captures, loading, onRefr
         CAPTURE_ROW_ITEM_SIZE * CAPTURE_ROW_MAX_VISIBLE
     );
 
+    const itemData = useMemo(() => ({ captures, onDelete }), [captures, onDelete]);
+
     return (
         <div className="glass-card p-8 rounded-[40px] space-y-6">
             <div className="flex items-center justify-between">
@@ -87,7 +90,7 @@ const CapturesPanel: React.FC<CapturesPanelProps> = ({ captures, loading, onRefr
                     itemCount={captures.length}
                     itemSize={CAPTURE_ROW_ITEM_SIZE}
                     overscanCount={CAPTURE_ROW_OVERSCAN}
-                    itemData={{ captures, onDelete }}
+                    itemData={itemData}
                 >
                     {renderCaptureRow}
                 </FixedSizeList>
