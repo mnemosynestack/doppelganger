@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import GithubStarPill from './GithubStarPill';
 import { ConfirmRequest } from '../types';
 import ApiKeyPanel from './settings/ApiKeyPanel';
@@ -55,7 +55,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
     }, []);
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setDataLoading(true);
         try {
             const [capturesRes, cookiesRes] = await Promise.all([
@@ -74,9 +74,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         } finally {
             setDataLoading(false);
         }
-    };
+    }, []);
 
-    const deleteCapture = async (name: string) => {
+    const deleteCapture = useCallback(async (name: string) => {
         const confirmed = await onConfirm(`Delete capture ${name}?`);
         if (!confirmed) return;
         const res = await fetch(`/api/data/captures/${encodeURIComponent(name)}`, { method: 'DELETE' });
@@ -86,9 +86,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         } else {
             onNotify('Delete failed.', 'error');
         }
-    };
+    }, [onConfirm, onNotify, loadData]);
 
-    const deleteCookie = async (cookie: { name: string; domain?: string; path?: string }) => {
+    const deleteCookie = useCallback(async (cookie: { name: string; domain?: string; path?: string }) => {
         const confirmed = await onConfirm(`Delete cookie ${cookie.name}?`);
         if (!confirmed) return;
         const res = await fetch('/api/data/cookies/delete', {
@@ -102,7 +102,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         } else {
             onNotify('Delete failed.', 'error');
         }
-    };
+    }, [onConfirm, onNotify, loadData]);
 
     const loadApiKey = async () => {
         setApiKeyLoading(true);
@@ -452,7 +452,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             loadUserAgent();
         }
         if (tab === 'proxies') loadProxies();
-    }, [tab]);
+    }, [tab, loadData]);
 
     useEffect(() => {
         try {
