@@ -8,7 +8,6 @@ const { requireApiKey } = require('../src/server/middleware');
 // --- Mock FS ---
 const originalReadFile = fs.promises.readFile;
 const originalWriteFile = fs.promises.writeFile;
-const originalStat = fs.promises.stat;
 
 let mockApiKeyFileContent = null;
 
