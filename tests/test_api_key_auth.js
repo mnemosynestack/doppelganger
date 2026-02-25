@@ -88,7 +88,7 @@ async function runTests() {
 
     // Test 3: Middleware - Valid Key
     console.log('Test 3: Middleware - Valid Key');
-    saveApiKey(undefined); // Clear cache
+    await saveApiKey(undefined); // Clear cache
     mockApiKeyFileContent = JSON.stringify({ apiKey: 'valid-key' });
 
     let req = {
