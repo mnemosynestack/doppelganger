@@ -486,6 +486,19 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     }, []);
 
     useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                if (!actionPaletteOpen) {
+                    openActionPalette();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [actionPaletteOpen, openActionPalette]);
+
+    useEffect(() => {
         const handlePointerMove = (event: PointerEvent) => {
             if (!resizingRef.current) return;
             const next = clampEditorWidth(event.clientX);
@@ -810,9 +823,12 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                         })()}
                                         <button
                                             onClick={() => openActionPalette()}
-                                            className="w-full py-3 border border-dashed border-white/20 rounded-xl text-[9px] font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-all bg-white/[0.02]"
+                                            className="w-full py-3 border border-dashed border-white/20 rounded-xl text-[9px] font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-all bg-white/[0.02] flex items-center justify-center gap-2"
                                         >
-                                            + Append Action Seq
+                                            <span>+ Append Action Seq</span>
+                                            <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-white/50">
+                                                <span className="text-xs">⌘</span>K
+                                            </kbd>
                                         </button>
                                     </div>
 
