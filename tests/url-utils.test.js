@@ -1,4 +1,10 @@
 const assert = require('assert');
+
+// Ensure we test with blocking enabled
+process.env.ALLOW_PRIVATE_NETWORKS = 'false';
+delete require.cache[require.resolve('../src/server/constants')];
+delete require.cache[require.resolve('../url-utils')];
+
 const { isPrivateIP, validateUrl } = require('../url-utils');
 
 console.log('Testing isPrivateIP...');
@@ -11,6 +17,11 @@ const ipv4Cases = [
     { ip: '192.168.1.1', expected: true },
     { ip: '169.254.1.1', expected: true },
     { ip: '0.0.0.0', expected: true },
+    { ip: '100.64.0.1', expected: true },
+    { ip: '100.100.100.100', expected: true },
+    { ip: '100.127.255.255', expected: true },
+    { ip: '100.63.255.255', expected: false },
+    { ip: '100.128.0.0', expected: false },
     { ip: '8.8.8.8', expected: false },
     { ip: '1.1.1.1', expected: false },
     { ip: '172.32.0.1', expected: false },
