@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Dispatch, SetStateAction } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Dispatch, SetStateAction } from 'react';
 import MaterialIcon from './MaterialIcon';
 import { Task, TaskMode, ViewMode, VarType, Action, Results, ConfirmRequest } from '../types';
 import RichInput from './RichInput';
@@ -170,7 +170,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         return clampEditorWidth(Math.round(window.innerWidth * pct));
     });
     const resizingRef = useRef(false);
-    const availableTasks = tasks.filter((task) => String(task.id || '') !== String(currentTask.id || ''));
+    const availableTasks = useMemo(() => tasks.filter((task) => String(task.id || '') !== String(currentTask.id || '')), [tasks, currentTask.id]);
     const rotateProxiesDisabled = proxyListLoaded && proxyList.length === 1 && proxyList[0]?.id === 'host';
 
     const MAX_COPY_CHARS = 1000000;

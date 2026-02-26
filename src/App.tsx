@@ -185,6 +185,10 @@ export default function App() {
         deleteTask(id, location.pathname);
     }, [deleteTask, location.pathname]);
 
+    const handleSaveTask = useCallback((t: Task | undefined, createVersion?: boolean) => {
+        return saveTask(markTaskAsSaved, location.pathname, t, createVersion);
+    }, [saveTask, markTaskAsSaved, location.pathname]);
+
     const handleLogout = useCallback(() => {
         logout(requestConfirm);
     }, [logout, requestConfirm]);
@@ -216,7 +220,7 @@ export default function App() {
                                 editorView={editorView}
                                 setEditorView={setEditorView}
                                 isExecuting={isExecuting}
-                                onSave={(t: Task | undefined, createVersion?: boolean) => saveTask(markTaskAsSaved, location.pathname, t, createVersion)}
+                                onSave={handleSaveTask}
                                 onRun={() => runTaskWithSnapshot(currentTask, currentTask, setCurrentTask)}
                                 onRunSnapshot={(t) => runTaskWithSnapshot(t || currentTask, currentTask, setCurrentTask)}
                                 results={results}
@@ -242,7 +246,7 @@ export default function App() {
                                 editorView={editorView}
                                 setEditorView={setEditorView}
                                 isExecuting={isExecuting}
-                                onSave={(t: Task | undefined, createVersion?: boolean) => saveTask(markTaskAsSaved, location.pathname, t, createVersion)}
+                                onSave={handleSaveTask}
                                 onRun={() => runTaskWithSnapshot(currentTask, currentTask, setCurrentTask)}
                                 onRunSnapshot={(t) => runTaskWithSnapshot(t || currentTask, currentTask, setCurrentTask)}
                                 results={results}
