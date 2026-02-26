@@ -175,6 +175,15 @@ const deleteProxy = (id) => {
     return saveProxyConfig({ ...config, proxies, defaultProxyId });
 };
 
+const deleteProxies = (ids) => {
+    if (!Array.isArray(ids) || ids.length === 0) return null;
+    const config = loadProxyConfig();
+    const idSet = new Set(ids);
+    const proxies = config.proxies.filter((proxy) => !idSet.has(proxy.id));
+    const defaultProxyId = idSet.has(config.defaultProxyId) ? null : config.defaultProxyId;
+    return saveProxyConfig({ ...config, proxies, defaultProxyId });
+};
+
 const setDefaultProxy = (id) => {
     const config = loadProxyConfig();
     if (!id) {
@@ -245,6 +254,7 @@ module.exports = {
     addProxies,
     updateProxy,
     deleteProxy,
+    deleteProxies,
     setDefaultProxy,
     setIncludeDefaultInRotation,
     setRotationMode

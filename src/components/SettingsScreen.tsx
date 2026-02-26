@@ -32,7 +32,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     const [apiKeyLoading, setApiKeyLoading] = useState(false);
     const [apiKeySaving, setApiKeySaving] = useState(false);
     const [layoutSplitPercent, setLayoutSplitPercent] = useState(30);
-    const [proxies, setProxies] = useState<{ id: string; server: string; username?: string; password?: string; label?: string }[]>([]);
+    const [proxies, setProxies] = useState<{ id: string; server: string; username?: string; password?: string; label?: string; isRotatingPool?: boolean; estimatedPoolSize?: number }[]>([]);
     const [defaultProxyId, setDefaultProxyId] = useState<string | null>(null);
     const [includeDefaultInRotation, setIncludeDefaultInRotation] = useState(false);
     const [rotationMode, setRotationMode] = useState<'round-robin' | 'random'>('round-robin');
@@ -152,7 +152,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
     };
 
-    const addProxy = async (entry: { server: string; username?: string; password?: string; label?: string }) => {
+    const addProxy = async (entry: { server: string; username?: string; password?: string; label?: string; isRotatingPool?: boolean; estimatedPoolSize?: number }) => {
         setProxiesLoading(true);
         try {
             const res = await fetch('/api/settings/proxies', {
@@ -232,7 +232,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
     };
 
-    const importProxies = async (entries: { server: string; username?: string; password?: string; label?: string }[]) => {
+    const importProxies = async (entries: { server: string; username?: string; password?: string; label?: string; isRotatingPool?: boolean; estimatedPoolSize?: number }[]) => {
         if (!entries.length) {
             onNotify('No valid proxies found in file.', 'error');
             return;
@@ -269,7 +269,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
     };
 
-    const updateProxy = async (id: string, entry: { server: string; username?: string; password?: string; label?: string }) => {
+    const updateProxy = async (id: string, entry: { server: string; username?: string; password?: string; label?: string; isRotatingPool?: boolean; estimatedPoolSize?: number }) => {
         setProxiesLoading(true);
         try {
             const res = await fetch(`/api/settings/proxies/${encodeURIComponent(id)}`, {
@@ -324,6 +324,35 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             onNotify('Proxy deleted.', 'success');
         } catch {
             onNotify('Delete failed.', 'error');
+        } finally {
+            setProxiesLoading(false);
+        }
+    };
+
+    const deleteProxies = async (ids: string[]) => {
+        if (ids.length === 0) return;
+        const confirmed = await onConfirm(`Delete ${ids.length} proxies?`);
+        if (!confirmed) return;
+        setProxiesLoading(true);
+        try {
+            const res = await fetch('/api/settings/proxies', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ ids })
+            });
+            if (!res.ok) {
+                onNotify('Bulk delete failed.', 'error');
+                return;
+            }
+            const data = await res.json();
+            setProxies(Array.isArray(data.proxies) ? data.proxies : []);
+            setDefaultProxyId(data.defaultProxyId || null);
+            setIncludeDefaultInRotation(!!data.includeDefaultInRotation);
+            setRotationMode(data.rotationMode === 'random' ? 'random' : 'round-robin');
+            onNotify(`${ids.length} proxies deleted.`, 'success');
+        } catch {
+            onNotify('Bulk delete failed.', 'error');
         } finally {
             setProxiesLoading(false);
         }
@@ -523,6 +552,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
                         onImport={importProxies}
                         onUpdate={updateProxy}
                         onDelete={deleteProxy}
+                        onDeleteMultiple={deleteProxies}
                         onSetDefault={setDefaultProxy}
                         onToggleIncludeDefault={toggleIncludeDefaultInRotation}
                         onRotationModeChange={updateRotationMode}

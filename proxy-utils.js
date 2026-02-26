@@ -49,12 +49,22 @@ const normalizeProxy = (entry) => {
         const username = entry.username || entry.user;
         const password = entry.password || entry.pass;
         const id = entry.id || createProxyId(`${server}|${username || ''}`);
+        const isRotatingPool = !!entry.isRotatingPool;
+        let estimatedPoolSize = undefined;
+        if (entry.estimatedPoolSize !== undefined && entry.estimatedPoolSize !== null && entry.estimatedPoolSize !== '') {
+            const parsedSize = parseInt(entry.estimatedPoolSize, 10);
+            if (!Number.isNaN(parsedSize) && parsedSize > 0) {
+                estimatedPoolSize = parsedSize;
+            }
+        }
         return {
             id,
             server,
             username,
             password,
-            label: entry.label
+            label: entry.label,
+            isRotatingPool,
+            estimatedPoolSize
         };
     }
     return null;

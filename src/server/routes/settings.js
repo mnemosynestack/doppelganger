@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const { authRateLimiter, requireAuthForSettings, csrfProtection } = require('../middleware');
 const { loadApiKey, saveApiKey } = require('../storage');
 const { getUserAgentConfig, setUserAgentSelection } = require('../../../user-agent-settings');
-const { listProxies, addProxy, addProxies, updateProxy, deleteProxy, setDefaultProxy, setIncludeDefaultInRotation, setRotationMode } = require('../../../proxy-rotation');
+const { listProxies, addProxy, addProxies, updateProxy, deleteProxy, deleteProxies, setDefaultProxy, setIncludeDefaultInRotation, setRotationMode } = require('../../../proxy-rotation');
 
 const router = express.Router();
 
@@ -67,12 +67,12 @@ router.get('/proxies', requireAuthForSettings, (_req, res) => {
 });
 
 router.post('/proxies', requireAuthForSettings, (req, res) => {
-    const { server, username, password, label } = req.body || {};
+    const { server, username, password, label, isRotatingPool, estimatedPoolSize } = req.body || {};
     if (!server || typeof server !== 'string') {
         return res.status(400).json({ error: 'MISSING_SERVER' });
     }
     try {
-        const result = addProxy({ server, username, password, label });
+        const result = addProxy({ server, username, password, label, isRotatingPool, estimatedPoolSize });
         if (!result) return res.status(400).json({ error: 'INVALID_PROXY' });
         res.json(listProxies());
     } catch (e) {
@@ -99,12 +99,12 @@ router.post('/proxies/import', requireAuthForSettings, (req, res) => {
 router.put('/proxies/:id', requireAuthForSettings, (req, res) => {
     const id = String(req.params.id || '').trim();
     if (!id || id === 'host') return res.status(400).json({ error: 'INVALID_ID' });
-    const { server, username, password, label } = req.body || {};
+    const { server, username, password, label, isRotatingPool, estimatedPoolSize } = req.body || {};
     if (!server || typeof server !== 'string') {
         return res.status(400).json({ error: 'MISSING_SERVER' });
     }
     try {
-        const result = updateProxy(id, { server, username, password, label });
+        const result = updateProxy(id, { server, username, password, label, isRotatingPool, estimatedPoolSize });
         if (!result) return res.status(404).json({ error: 'PROXY_NOT_FOUND' });
         res.json(listProxies());
     } catch (e) {
@@ -123,6 +123,21 @@ router.delete('/proxies/:id', requireAuthForSettings, (req, res) => {
     } catch (e) {
         console.error('[PROXIES] Delete failed:', e);
         res.status(500).json({ error: 'PROXY_DELETE_FAILED' });
+    }
+});
+
+router.delete('/proxies', requireAuthForSettings, (req, res) => {
+    const ids = req.body && Array.isArray(req.body.ids) ? req.body.ids : [];
+    if (ids.length === 0) {
+        return res.status(400).json({ error: 'MISSING_IDS' });
+    }
+    try {
+        const result = deleteProxies(ids);
+        if (!result) return res.status(400).json({ error: 'PROXIES_NOT_DELETED' });
+        res.json(listProxies());
+    } catch (e) {
+        console.error('[PROXIES] Bulk delete failed:', e);
+        res.status(500).json({ error: 'PROXIES_BULK_DELETE_FAILED' });
     }
 });
 
