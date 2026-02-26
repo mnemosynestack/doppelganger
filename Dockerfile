@@ -30,6 +30,7 @@ RUN if [ "$INSTALL_VNC" = "1" ]; then \
     x11vnc \
     xvfb \
     curl \
+    openssl \
     ca-certificates \
     fonts-liberation \
     fonts-noto-color-emoji \

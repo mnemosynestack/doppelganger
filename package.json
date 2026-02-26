@@ -41,6 +41,7 @@
     "express-session": "^1.18.2",
     "jsdom": "^22.1.0",
     "jszip": "^3.10.1",
+    "openssl": "^2.0.0",
     "pg": "^8.16.3",
     "playwright": "^1.57.0",
     "playwright-extra": "^4.3.6",
