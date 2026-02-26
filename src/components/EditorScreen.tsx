@@ -139,6 +139,11 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const [proxyList, setProxyList] = useState<{ id: string }[]>([]);
     const [proxyListLoaded, setProxyListLoaded] = useState(false);
 
+    const historyRef = useRef<Task[]>([]);
+    const historyPointerRef = useRef<number>(-1);
+    const isUndoRedoActionRef = useRef<boolean>(false);
+    const lastSavedSnapshotRef = useRef<string>('');
+
     const currentTaskRef = useRef(currentTask);
     useEffect(() => { currentTaskRef.current = currentTask; }, [currentTask]);
 
@@ -251,6 +256,42 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             handleAutoSave(next);
         }
     }, [rotateProxiesDisabled, currentTask]);
+
+    // History tracking effect
+    useEffect(() => {
+        // Prevent adding to history if this update was caused by an undo/redo action
+        if (isUndoRedoActionRef.current) {
+            isUndoRedoActionRef.current = false;
+            return;
+        }
+
+        // Only add to history if the task has actually changed in a meaningful way
+        const snapshot = JSON.stringify(currentTask);
+        if (snapshot === lastSavedSnapshotRef.current) {
+            return;
+        }
+
+        // Debounce history additions to avoid pushing every single keystroke if they somehow bypass text-input checks
+        const timeout = setTimeout(() => {
+            lastSavedSnapshotRef.current = snapshot;
+
+            // If we've undone something and then made a new change, truncate future history
+            if (historyPointerRef.current < historyRef.current.length - 1) {
+                historyRef.current = historyRef.current.slice(0, historyPointerRef.current + 1);
+            }
+
+            historyRef.current.push(JSON.parse(snapshot));
+            historyPointerRef.current = historyRef.current.length - 1;
+
+            // Optional: limit history size to prevent memory leaks
+            if (historyRef.current.length > 50) {
+                historyRef.current.shift();
+                historyPointerRef.current -= 1;
+            }
+        }, 300);
+
+        return () => clearTimeout(timeout);
+    }, [currentTask]);
 
     const blockStartTypes = new Set(['if', 'while', 'repeat', 'foreach', 'on_error']);
 
@@ -493,10 +534,47 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                     openActionPalette();
                 }
             }
+
+            // Undo / Redo handling
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+                // Ignore if the user is focused on an input element to allow native text undo
+                const activeEl = document.activeElement;
+                if (activeEl) {
+                    const tagName = activeEl.tagName.toLowerCase();
+                    const isEditable = activeEl.getAttribute('contenteditable') === 'true';
+                    if (tagName === 'input' || tagName === 'textarea' || isEditable) {
+                        return;
+                    }
+                }
+
+                e.preventDefault();
+
+                if (e.shiftKey) {
+                    // Redo
+                    if (historyPointerRef.current < historyRef.current.length - 1) {
+                        historyPointerRef.current += 1;
+                        const nextTask = historyRef.current[historyPointerRef.current];
+                        isUndoRedoActionRef.current = true;
+                        lastSavedSnapshotRef.current = JSON.stringify(nextTask);
+                        setCurrentTask(nextTask);
+                        handleAutoSave(nextTask);
+                    }
+                } else {
+                    // Undo
+                    if (historyPointerRef.current > 0) {
+                        historyPointerRef.current -= 1;
+                        const prevTask = historyRef.current[historyPointerRef.current];
+                        isUndoRedoActionRef.current = true;
+                        lastSavedSnapshotRef.current = JSON.stringify(prevTask);
+                        setCurrentTask(prevTask);
+                        handleAutoSave(prevTask);
+                    }
+                }
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [actionPaletteOpen, openActionPalette]);
+    }, [actionPaletteOpen, openActionPalette, setCurrentTask, handleAutoSave]);
 
     useEffect(() => {
         const handlePointerMove = (event: PointerEvent) => {

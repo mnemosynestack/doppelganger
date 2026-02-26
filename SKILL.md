@@ -12,11 +12,20 @@ This document enables OpenClaw agents to interface with the Doppelganger browser
 
 ## Table of Contents
 1. [Base URL & Authentication](#1-base-url--authentication)
-2. [Core Execution Endpoints](#2-core-execution-endpoints)
-    - [POST /scrape](#21-post-scrape)
-    - [POST /agent](#22-post-agent)
-    - [POST /headful](#23-post-headful)
-    - [POST /headful/stop](#24-post-headfulstop)
+2. [Task Management API](#2-task-management-api)
+    - [GET /api/tasks](#21-get-apitasks)
+    - [POST /api/tasks](#22-post-apitasks)
+    - [PUT /api/tasks/:id](#23-put-apitasksid)
+    - [POST /api/tasks/:id/api](#24-post-apitasksidapi)
+3. [Execution & Logging API](#3-execution--logging-api)
+    - [GET /api/executions](#31-get-apiexecutions)
+    - [GET /api/executions/:id](#32-get-apiexecutionsid)
+4. [Data Management API](#4-data-management-api)
+    - [GET /api/data/captures](#41-get-apidatacaptures)
+    - [GET /api/data/captures/:name](#42-get-apidatacapturesname)
+5. [Settings API](#5-settings-api)
+    - [GET /api/settings/proxies](#51-get-apisettingsproxies)
+6. [Payload Type Schemas Reference](#6-payload-type-schemas-reference)
 3. [Task Management API](#3-task-management-api)
     - [GET /api/tasks](#31-get-apitasks)
     - [POST /api/tasks](#32-post-apitasks)
@@ -55,161 +64,13 @@ x-api-key: your-api-key-here
 
 ---
 
-## 2. Core Execution Endpoints
 
-These endpoints trigger direct browser automation instances. They are synchronous for `/scrape` and `/agent`, keeping the HTTP connection open until the run completes. Ensure your HTTP client does not timeout prematurely (some instances can take up to 60+ seconds).
 
-### 2.1. POST `/scrape`
-Executes a single-pass extraction workflow. Best used when intermediate clicks or typing are unnecessary. The system fully renders the DOM, optionally traverses Shadow DOM boundaries, and runs sandboxed JavaScript extraction logic.
-
-**Endpoint:** `POST http://127.0.0.1:11345/scrape`
-
-**Request Body Schema:**
-```json
-{
-  "url": "string (Required) - Target URL",
-  "selector": "string (Optional) - CSS selector to restrict HTML extraction",
-  "wait": "number (Optional) - Idle wait time in seconds before extraction",
-  "rotateUserAgents": "boolean (Optional) - Enable UA rotation pool",
-  "rotateProxies": "boolean (Optional) - Enable configured proxies",
-  "rotateViewport": "boolean (Optional) - Randomizes viewport dimensions",
-  "includeShadowDom": "boolean (Optional) - Inline shadow wrappers (default: true)",
-  "disableRecording": "boolean (Optional) - Do not save WebM recordings",
-  "statelessExecution": "boolean (Optional) - Bypass saving cookies to storage_state.json",
-  "extractionScript": "string (Optional) - Custom JS routine executed in sandbox",
-  "extractionFormat": "'json' | 'csv' (Optional) - Determines data parse mode",
-  "headers": "object (Optional) - Custom key-value pairs for HTTP headers",
-  "variables": "object (Optional) - Templating keys for mapping inputs"
-}
-```
-
-**Variables Expansion:**
-You can use `{$variableName}` inside `url`, `selector`, or `extractionScript` to dynamically inject mapping variables provided in the `variables` block.
-
-**Success Response (200 OK):**
-```json
-{
-  "title": "Page Document Title",
-  "url": "https://resolved-url-after-redirects.com",
-  "html": "<Cleaned DOM string>",
-  "data": "Result of the extractionScript evaluation (JSON Array, Object, or CSV String)",
-  "is_partial": true, // False if the selector matched and returning partial HTML
-  "selector_used": "body (default)",
-  "links": ["https://found.link.com/1", "https://found.link.com/2"],
-  "screenshot_url": "/captures/run_01_scrape_88291.png"
-}
-```
-
----
-
-### 2.2. POST `/agent`
-Executes an interactive, step-by-step workflow capable of clicking, typing, conditional logic, and looping.
-
-**Endpoint:** `POST http://127.0.0.1:11345/agent`
-
-**Request Body Schema:**
-```json
-{
-  "url": "string (Optional) - Initial starting URL",
-  "actions": "array (Required) - Linear list of Action objects (see Section 7)",
-  "stealth": "object (Optional) - Human interaction modifiers",
-  "rotateUserAgents": "boolean (Optional)",
-  "rotateProxies": "boolean (Optional)",
-  "rotateViewport": "boolean (Optional)",
-  "humanTyping": "boolean (Optional)",
-  "includeShadowDom": "boolean (Optional)",
-  "disableRecording": "boolean (Optional)",
-  "statelessExecution": "boolean (Optional)",
-  "extractionScript": "string (Optional)",
-  "extractionFormat": "'json' | 'csv' (Optional)",
-  "variables": "object (Optional)",
-  "runId": "string (Optional) - Client-side UUID to trace execution"
-}
-```
-
-**Stealth Configuration Object:**
-```json
-{
-  "allowTypos": false, // Simulates human mistakes via backspacing
-  "idleMovements": false, // Creates random cursor movement when doing nothing
-  "overscroll": false, // Rapid bounce-backs when scrolling
-  "deadClicks": false, // Meaningless clicks on non-interactive regions
-  "fatigue": false, // Progressively slows down action timing
-  "naturalTyping": false // Varies character delays for bursts
-}
-```
-
-**Success Response (200 OK):**
-```json
-{
-  "final_url": "https://app.com/dashboard",
-  "downloads": [
-    {
-      "name": "report.pdf",
-      "url": "blob:https://app.com/uuid",
-      "path": "/captures/run_dl_xxxx.pdf"
-    }
-  ],
-  "logs": [
-    "Navigating to: https://app.com",
-    "Typing into input[name='user']: admin",
-    "Clicking: #submit"
-  ],
-  "html": "<Cleaned DOM Context>",
-  "data": "Result of extractionScript (JSON or CSV)",
-  "screenshot_url": "/captures/run_xxxx.png"
-}
-```
-
----
-
-### 2.3. POST `/headful`
-Spawns a debugging browser window. Uses standard GUI chromium. Returns immediately upon launching the process, unlike `/scrape` and `/agent` which are synchronous blocks. In server/VPS environments, it leverages NoVNC if configured.
-
-**Endpoint:** `POST http://127.0.0.1:11345/headful`
-
-**Request Body Schema:**
-```json
-{
-  "url": "string (Required) - Initial starting URL",
-  "rotateUserAgents": "boolean (Optional)",
-  "rotateProxies": "boolean (Optional)",
-  "variables": "object (Optional)"
-}
-```
-
-**Success Response (200 OK):**
-```json
-{
-  "message": "Headful browser launched",
-  "pid": 48210
-}
-```
-
----
-
-### 2.4. POST `/headful/stop`
-Terminates the currently running headful debugging process.
-
-**Endpoint:** `POST http://127.0.0.1:11345/headful/stop`
-
-**Request Body Schema:**
-Empty Body.
-
-**Success Response (200 OK):**
-```json
-{
-  "message": "Headful browser stopped"
-}
-```
-
----
-
-## 3. Task Management API
+## 2. Task Management API
 
 Tasks represent saved automation profiles representing a specific scrape or agent routine. OpenClaw can create them permanently to re-run later.
 
-### 3.1. GET `/api/tasks`
+### 2.1. GET `/api/tasks`
 Lists all known tasks persisted on disk (`data/tasks.json`).
 
 **Success Response (200 OK):**
@@ -229,7 +90,7 @@ Lists all known tasks persisted on disk (`data/tasks.json`).
 
 ---
 
-### 3.2. POST `/api/tasks`
+### 2.2. POST `/api/tasks`
 Creates a newly persisted task.
 
 **Request Body Schema:**
@@ -242,7 +103,7 @@ Requires the full `Task` schema (See Section 7 for details).
 
 ---
 
-### 3.3. PUT `/api/tasks/:id`
+### 2.3. PUT `/api/tasks/:id`
 Updates an existing task profile. Will overwrite previous variants natively unless autosave is used carefully.
 
 **Request Body Schema:**
@@ -255,8 +116,8 @@ Full `Task` schema.
 
 ---
 
-### 3.4. POST `/api/tasks/:id/api`
-Executes a task explicitly by its recorded ID. Acts identical to calling `/agent` or `/scrape` directly, but loads the parameters from the DB matching the provided ID.
+### 2.4. POST `/api/tasks/:id/api`
+Executes a task explicitly by its recorded ID. Acts identical to calling `/api/tasks/:id/api` directly, but loads the parameters from the DB matching the provided ID.
 
 **Request Body Schema:**
 ```json
@@ -266,15 +127,15 @@ Executes a task explicitly by its recorded ID. Acts identical to calling `/agent
 ```
 
 **Success Response (200 OK):**
-Returns the same standard response schema as `/scrape` or `/agent` depending on the `mode` defined within the task profile.
+Returns the same standard response schema detailing execution properties.
 
 ---
 
-## 4. Execution & Logging API
+## 3. Execution & Logging API
 
 Tracks historical runs and metadata for both API triggered instances and UI triggered instances.
 
-### 4.1. GET `/api/executions`
+### 3.1. GET `/api/executions`
 Retrieves the paginated list of all execution logs.
 
 **Query Parameters:**
@@ -309,7 +170,7 @@ Retrieves the paginated list of all execution logs.
 
 ---
 
-### 4.2. GET `/api/executions/:id`
+### 3.2. GET `/api/executions/:id`
 Retrieves strictly the full details of a specific execution, including the final JSON result payload snapshot and the task snapshot configuration used at execution time.
 
 **Success Response (200 OK):**
@@ -334,11 +195,11 @@ Retrieves strictly the full details of a specific execution, including the final
 
 ---
 
-## 5. Data Management API
+## 4. Data Management API
 
 Endpoints used to query the underlying disk captures created by executions.
 
-### 5.1. GET `/api/data/captures`
+### 4.1. GET `/api/data/captures`
 Lists all images, videos, and downloads stored within the `public/captures` directory.
 
 **Success Response (200 OK):**
@@ -365,7 +226,7 @@ Lists all images, videos, and downloads stored within the `public/captures` dire
 
 ---
 
-### 5.2. DELETE `/api/data/captures/:name`
+### 4.2. DELETE `/api/data/captures/:name`
 Deletes a specific capture file from the disk.
 
 **Success Response (200 OK):**
@@ -380,11 +241,11 @@ Deletes a specific capture file from the disk.
 
 ---
 
-## 6. Settings API
+## 5. Settings API
 
 Global server settings overrides. Includes user agent definitions, proxies, and runtime configurations.
 
-### 6.1. GET `/api/settings/proxies`
+### 5.1. GET `/api/settings/proxies`
 Retrieves all configured proxy rotational profiles available to the system.
 
 **Success Response (200 OK):**
@@ -414,9 +275,9 @@ Retrieves all configured proxy rotational profiles available to the system.
 
 ---
 
-## 7. Payload Type Schemas Reference
+## 6. Payload Type Schemas Reference
 
-Reference objects primarily focused on the `/agent` endpoint definitions, as these map direct sequential instructions to Playwright contexts. OpenClaw must strictly adhere to these interfaces when forging JSON definitions.
+Reference objects primarily focused on the `/api/tasks/:id/api` endpoint definitions, as these map direct sequential instructions to Playwright contexts. OpenClaw must strictly adhere to these interfaces when forging JSON definitions.
 
 ### `Action` Object Schema Structure
 Every item within the `actions: []` array must include a specific `type` string defining its core operation.

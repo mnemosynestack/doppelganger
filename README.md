@@ -196,12 +196,6 @@ Doppelganger exposes a comprehensive REST API for integration with agents (like 
 **Authentication:** 
 If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For internal network use, this may be optional depending on your settings.
 
-### Core Execution Endpoints
-*   **`POST /scrape`**: Executes a single-pass extraction workflow (renders DOM, parses variables, extracts data via JS).
-    *   **Body:** `{"url": "...", "extractionFormat": "json", "extractionScript": "return document.title;"}`
-*   **`POST /agent`**: Executes a step-by-step interactive workflow.
-    *   **Body:** `{"url": "...", "actions": [{"type": "click", "selector": "#btn"}], "stealth": {"humanTyping": true}}`
-*   **`POST /headful`** & **`POST /headful/stop`**: Launches or stops a visible chromium instance for live debugging.
 
 ### Task Management API
 *   **`GET /api/tasks`**: List all saved automation profiles.
@@ -218,13 +212,6 @@ If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For
 *   **`DELETE /api/data/captures/:name`**: Delete a specific capture.
 *   **`POST /api/clear-screenshots`**: Removes all files in `public/captures`.
 *   **`POST /api/clear-cookies`**: Deletes `storage_state.json`.
-
-### Settings API
-*   **`GET /api/settings/proxies`**: Retrieve proxy rotation configurations. Use standard `POST`/`PUT`/`DELETE` for managing the pool.
-*   **`GET /api/settings/api-key`**: Retrieve the current key (or `POST` to regenerate).
-*   **`POST /api/settings/user-agent`**: Toggle UA configurations.
-
-Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/auth/me`); read `server.js` to see the guard/middleware logic.
 
 # Task Scripting Tips
 
@@ -254,7 +241,7 @@ Authentication enforces sessions (`/api/auth/login`, `/api/auth/logout`, `/api/a
 
 - **“Session expired”** in the UI: confirm `SESSION_SECRET` is consistent and cookies aren’t blocked by your browser.
 - **Proxy import fails**: inspect `data/proxies.json` for valid URLs; the backend validates `server` as a string.
-- **API key lost**: regenerate from Settings → System tab; the UI copies it automatically.
+- **API key lost**: copy from Settings → System tab.
 
 # Data Lifecycle
 
