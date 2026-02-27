@@ -98,16 +98,7 @@ interface ActionItemProps {
     onOpenPalette: (id?: string) => void;
     onOpenContextMenu: (e: React.MouseEvent, id: string) => void;
     onPointerDown: (e: React.PointerEvent, id: string, index: number) => void;
-    dragHeight?: number;
-    dragState?: {
-        id: string;
-        startY: number;
-        currentY: number;
-        height: number;
-        index: number;
-        originTop: number;
-        pointerOffset: number;
-    } | null;
+    dragTransformY?: number;
 }
 
 const ActionItem: React.FC<ActionItemProps> = memo(({
@@ -126,7 +117,7 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
     onOpenPalette,
     onOpenContextMenu,
     onPointerDown,
-    dragState
+    dragTransformY
 }) => {
     const statusClass = status === 'running'
         ? 'border-yellow-400/60'
@@ -168,6 +159,15 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
         return !!target.closest('input, textarea, select, button, a, [contenteditable="true"], [data-no-drag="true"]');
     };
 
+    // Calculate transform based on isDragging state and passed dragTransformY
+    // If dragging, use the exact Y offset calculated by parent.
+    // If not dragging, rely on translateY (for displacement by other dragged items).
+    const transformStyle = isDragging
+        ? `translateY(${dragTransformY || 0}px)`
+        : translateY
+            ? `translateY(${translateY}px)`
+            : undefined;
+
     return (
         <div
             id={`action-${action.id}`}
@@ -180,11 +180,7 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
             onContextMenu={(e) => onOpenContextMenu(e, action.id)}
             className={`glass-card p-5 rounded-2xl space-y-4 group/item relative transition-[transform,box-shadow,opacity,filter,background-color,border-color] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform select-none touch-none ${statusClass} ${isDragging ? 'ring-2 ring-white/40 scale-[1.02] -translate-y-0.5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] opacity-85 z-20' : ''} ${isDragOver && !isDragging ? 'ring-2 ring-blue-400/60 bg-blue-500/5' : ''} ${action.disabled ? 'opacity-40 grayscale' : ''}`}
             style={{
-                transform: isDragging
-                    ? `translateY(${(dragState?.currentY || 0) - (dragState?.pointerOffset || 0) - (dragState?.originTop || 0)}px)`
-                    : translateY
-                        ? `translateY(${translateY}px)`
-                        : undefined,
+                transform: transformStyle,
                 marginLeft: depth ? depth * 12 : undefined
             }}
         >
