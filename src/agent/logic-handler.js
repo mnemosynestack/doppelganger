@@ -1,4 +1,5 @@
 const { parseValue } = require('../../common-utils');
+const vm = require('vm');
 
 const normalizeVarRef = (raw) => {
     if (!raw) return '';
@@ -70,8 +71,11 @@ const evalStructuredCondition = (act, runtimeVars, resolveTemplate) => {
     if (op === 'ends_with') return leftText.endsWith(rightText);
     if (op === 'matches') {
         try {
-            const regex = new RegExp(rightText);
-            return regex.test(leftText);
+            // Use vm to execute regex with timeout (100ms) to prevent ReDoS
+            const code = `new RegExp(${JSON.stringify(rightText)}).test(${JSON.stringify(leftText)})`;
+            const script = new vm.Script(code);
+            const context = vm.createContext(Object.create(null));
+            return script.runInContext(context, { timeout: 100 });
         } catch {
             return false;
         }
