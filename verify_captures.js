@@ -1,7 +1,6 @@
 
 const { chromium } = require('playwright');
 const path = require('path');
-const fs = require('fs');
 
 (async () => {
     // 1. Start the mock server (assuming it's running separately or started here)
