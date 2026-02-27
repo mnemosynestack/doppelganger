@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import MaterialIcon from '../MaterialIcon';
 
 interface CookieEntry {
@@ -17,50 +17,50 @@ interface CookiesPanelProps {
     onDelete: (cookie: { name: string; domain?: string; path?: string }) => void;
 }
 
+const cookieKey = (cookie: CookieEntry) => {
+    return `${cookie.name}|${cookie.domain || ''}|${cookie.path || ''}|${cookie.expires || ''}`;
+};
+
+const isMostlyPrintable = (value: string) => {
+    if (!value) return false;
+    let printable = 0;
+    for (let i = 0; i < value.length; i += 1) {
+        const code = value.charCodeAt(i);
+        if (code === 9 || code === 10 || code === 13 || (code >= 32 && code <= 126)) {
+            printable += 1;
+        }
+    }
+    return printable / value.length >= 0.85;
+};
+
+const decodeCookieValue = (value: string) => {
+    if (!value) return null;
+    if (/%[0-9A-Fa-f]{2}/.test(value)) {
+        try {
+            const decoded = decodeURIComponent(value);
+            if (decoded !== value && isMostlyPrintable(decoded)) {
+                return { value: decoded, kind: 'URL' as const };
+            }
+        } catch {
+            // Ignore invalid URI sequences
+        }
+    }
+    if (/^[A-Za-z0-9+/=]+$/.test(value) && value.length >= 12 && value.length % 4 === 0) {
+        try {
+            const decoded = atob(value);
+            if (decoded && isMostlyPrintable(decoded)) {
+                return { value: decoded, kind: 'Base64' as const };
+            }
+        } catch {
+            // Ignore invalid base64
+        }
+    }
+    return null;
+};
+
 const CookiesPanel: React.FC<CookiesPanelProps> = ({ cookies, originsCount, loading, onClear, onDelete }) => {
     const [expandedCookies, setExpandedCookies] = useState<Record<string, boolean>>({});
     const [decodedCookies, setDecodedCookies] = useState<Record<string, boolean>>({});
-
-    const cookieKey = (cookie: CookieEntry) => {
-        return `${cookie.name}|${cookie.domain || ''}|${cookie.path || ''}|${cookie.expires || ''}`;
-    };
-
-    const isMostlyPrintable = (value: string) => {
-        if (!value) return false;
-        let printable = 0;
-        for (let i = 0; i < value.length; i += 1) {
-            const code = value.charCodeAt(i);
-            if (code === 9 || code === 10 || code === 13 || (code >= 32 && code <= 126)) {
-                printable += 1;
-            }
-        }
-        return printable / value.length >= 0.85;
-    };
-
-    const decodeCookieValue = (value: string) => {
-        if (!value) return null;
-        if (/%[0-9A-Fa-f]{2}/.test(value)) {
-            try {
-                const decoded = decodeURIComponent(value);
-                if (decoded !== value && isMostlyPrintable(decoded)) {
-                    return { value: decoded, kind: 'URL' as const };
-                }
-            } catch {
-                // Ignore invalid URI sequences
-            }
-        }
-        if (/^[A-Za-z0-9+/=]+$/.test(value) && value.length >= 12 && value.length % 4 === 0) {
-            try {
-                const decoded = atob(value);
-                if (decoded && isMostlyPrintable(decoded)) {
-                    return { value: decoded, kind: 'Base64' as const };
-                }
-            } catch {
-                // Ignore invalid base64
-            }
-        }
-        return null;
-    };
 
     const toggleCookie = (cookie: CookieEntry) => {
         const key = cookieKey(cookie);
@@ -71,6 +71,23 @@ const CookiesPanel: React.FC<CookiesPanelProps> = ({ cookies, originsCount, load
         const key = cookieKey(cookie);
         setDecodedCookies((prev) => ({ ...prev, [key]: !prev[key] }));
     };
+
+    // ⚡ Bolt: Memoize expensive cookie decoding operations.
+    // decodeCookieValue runs multiple regex checks and decoding attempts (decodeURIComponent, atob).
+    // Previously, this ran for every cookie on every re-render (e.g., when expanding/collapsing a single cookie).
+    // Now it only runs when the cookies array actually changes.
+    const processedCookies = useMemo(() => {
+        return cookies.map(cookie => {
+            const key = cookieKey(cookie);
+            const value = cookie.value || '';
+            return {
+                cookie,
+                key,
+                value,
+                decodedCandidate: decodeCookieValue(value)
+            };
+        });
+    }, [cookies]);
 
     return (
         <div className="glass-card p-8 rounded-[40px] space-y-6">
@@ -94,11 +111,8 @@ const CookiesPanel: React.FC<CookiesPanelProps> = ({ cookies, originsCount, load
                 <div className="text-[9px] text-gray-600 uppercase tracking-widest">No cookies found.</div>
             )}
             <div className="space-y-3">
-                {cookies.map((cookie) => {
-                    const key = cookieKey(cookie);
+                {processedCookies.map(({ cookie, key, value, decodedCandidate }) => {
                     const isExpanded = !!expandedCookies[key];
-                    const value = cookie.value || '';
-                    const decodedCandidate = decodeCookieValue(value);
                     const showDecoded = !!decodedCandidate && !!decodedCookies[key];
                     const fullValue = showDecoded && decodedCandidate ? decodedCandidate.value : value;
                     const displayValue = isExpanded || fullValue.length <= 120
