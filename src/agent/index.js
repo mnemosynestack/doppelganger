@@ -47,9 +47,35 @@ async function handleAgent(req, res) {
     const data = (req.method === 'POST') ? req.body : req.query;
     let { url, actions, wait: globalWait, rotateUserAgents, rotateProxies, humanTyping, stealth = {} } = data;
 
+    const runtimeVars = { ...(data.taskVariables || data.variables || {}) };
+    let lastBlockOutput = null;
+    runtimeVars['block.output'] = lastBlockOutput;
+
+    const setBlockOutput = (value) => {
+        lastBlockOutput = value;
+        runtimeVars['block.output'] = value;
+    };
+
+    const resolveTemplate = (input) => {
+        if (typeof input !== 'string') return input;
+        return input.replace(/\{\$([\w.]+)\}/g, (_match, name) => {
+            if (name === 'now') return new Date().toISOString();
+            const value = runtimeVars[name];
+            if (value === undefined || value === null) return '';
+            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                return String(value);
+            }
+            try {
+                return JSON.stringify(value);
+            } catch {
+                return String(value);
+            }
+        });
+    };
+
     if (url) {
         try {
-            await validateUrl(url);
+            await validateUrl(resolveTemplate(url));
         } catch (e) {
             return res.status(400).json({ error: 'INVALID_URL', details: e.message });
         }
@@ -93,31 +119,6 @@ async function handleAgent(req, res) {
     const configuredPort = process.env.PORT || process.env.VITE_BACKEND_PORT;
     const basePort = localPort || configuredPort || '11345';
     const baseUrl = `${req.protocol || 'http'}://127.0.0.1:${basePort}`;
-    const runtimeVars = { ...(data.taskVariables || data.variables || {}) };
-    let lastBlockOutput = null;
-    runtimeVars['block.output'] = lastBlockOutput;
-
-    const setBlockOutput = (value) => {
-        lastBlockOutput = value;
-        runtimeVars['block.output'] = value;
-    };
-
-    const resolveTemplate = (input) => {
-        if (typeof input !== 'string') return input;
-        return input.replace(/\{\$([\w.]+)\}/g, (_match, name) => {
-            if (name === 'now') return new Date().toISOString();
-            const value = runtimeVars[name];
-            if (value === undefined || value === null) return '';
-            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-                return String(value);
-            }
-            try {
-                return JSON.stringify(value);
-            } catch {
-                return String(value);
-            }
-        });
-    };
 
     const resolveMaybe = (value) => {
         if (typeof value !== 'string') return value;
