@@ -814,6 +814,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                     ((dragState.index < dragOverIndex && idx > dragState.index && idx <= dragOverIndex) ||
                                                         (dragState.index > dragOverIndex && idx < dragState.index && idx >= dragOverIndex));
                                                 const translateY = isBetween ? (dragState?.height || 0) * (dragState.index < (dragOverIndex ?? 0) ? -1 : 1) : 0;
+                                                // Calculate transform for the dragged item here to prevent passing the changing dragState object to all children.
+                                                // This allows ActionItem to be memoized effectively.
+                                                const dragTransformY = (isDragging && dragState) ? (dragState.currentY - dragState.pointerOffset - dragState.originTop) : undefined;
                                                 const depth = blockDepths[idx] || 0;
                                                 const status = action.disabled ? 'skipped' : actionStatusById[action.id]; return (
                                                     <ActionItem
@@ -832,7 +835,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                         onOpenPalette={openActionPalette}
                                                         onOpenContextMenu={openContextMenu}
                                                         onPointerDown={handlePointerDown}
-                                                        dragState={dragState}
+                                                        dragTransformY={dragTransformY}
                                                     />
 
                                                 );
