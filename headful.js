@@ -59,127 +59,157 @@ async function handleHeadful(req, res) {
         }
 
         const rotateProxiesRaw = req.body.rotateProxies ?? req.query.rotateProxies;
-    const rotateProxies = String(rotateProxiesRaw).toLowerCase() === 'true' || rotateProxiesRaw === true;
-    const statelessExecutionRaw = req.body.statelessExecution ?? req.query.statelessExecution;
-    const statelessExecution = parseBooleanFlag(statelessExecutionRaw);
+        const rotateProxies = String(rotateProxiesRaw).toLowerCase() === 'true' || rotateProxiesRaw === true;
+        const statelessExecutionRaw = req.body.statelessExecution ?? req.query.statelessExecution;
+        const statelessExecution = parseBooleanFlag(statelessExecutionRaw);
 
-    activeSession = { status: 'starting', startedAt: Date.now(), stateless: statelessExecution };
+        activeSession = { status: 'starting', startedAt: Date.now(), stateless: statelessExecution };
 
-    const selectedUA = await selectUserAgent(false);
+        const selectedUA = await selectUserAgent(false);
 
-    console.log(`Opening headful browser for: ${url}`);
+        console.log(`Opening headful browser for: ${url}`);
 
-    let browser;
-    try {
-        const launchOptions = {
-            headless: false,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--window-size=1920,1080',
-                '--window-position=0,0'
-            ]
-        };
-        const selection = getProxySelection(rotateProxies);
-        if (selection.proxy) {
-            launchOptions.proxy = selection.proxy;
-        }
-        console.log(`[PROXY] Mode: ${selection.mode}; Target: ${selection.proxy ? selection.proxy.server : 'host_ip'}`);
-        browser = await chromium.launch(launchOptions);
+        let browser;
+        try {
+            const launchOptions = {
+                headless: false,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--window-size=1920,1080',
+                    '--window-position=0,0'
+                ]
+            };
+            const selection = getProxySelection(rotateProxies);
+            if (selection.proxy) {
+                launchOptions.proxy = selection.proxy;
+            }
+            console.log(`[PROXY] Mode: ${selection.mode}; Target: ${selection.proxy ? selection.proxy.server : 'host_ip'}`);
+            browser = await chromium.launch(launchOptions);
 
-        const contextOptions = {
-            viewport: null,
-            userAgent: selectedUA,
-            locale: 'en-US',
-            timezoneId: 'America/New_York'
-        };
+            const contextOptions = {
+                viewport: null,
+                userAgent: selectedUA,
+                locale: 'en-US',
+                timezoneId: 'America/New_York'
+            };
 
-        if (!statelessExecution && fs.existsSync(STORAGE_STATE_FILE)) {
-            console.log('Loading existing storage state...');
-            contextOptions.storageState = STORAGE_STATE_FILE;
-        }
+            if (!statelessExecution && fs.existsSync(STORAGE_STATE_FILE)) {
+                console.log('Loading existing storage state (filtered to target domain)...');
+                try {
+                    const rawState = JSON.parse(fs.readFileSync(STORAGE_STATE_FILE, 'utf8'));
+                    const targetHost = new URL(url).hostname; // e.g. "www.example.com"
+                    const targetDomain = targetHost.replace(/^www\./, ''); // e.g. "example.com"
 
-        const context = await browser.newContext(contextOptions);
-        await context.addInitScript(() => {
-            Object.defineProperty(window, 'open', { writable: true, configurable: true, value: () => null });
+                    // Filter cookies: keep only those whose domain matches or is a subdomain of the target
+                    if (rawState.cookies) {
+                        rawState.cookies = rawState.cookies.filter(c => {
+                            const cookieDomain = (c.domain || '').replace(/^\./, '');
+                            return cookieDomain === targetDomain ||
+                                cookieDomain.endsWith('.' + targetDomain) ||
+                                targetDomain.endsWith('.' + cookieDomain);
+                        });
+                    }
 
-            const handleLinkClick = (event) => {
-                const path = event.composedPath ? event.composedPath() : [];
-                const anchor = path.find(el => el.tagName === 'A');
-                if (anchor && anchor.target === '_blank') {
-                    event.preventDefault();
-                    return;
+                    // Filter origins: keep only those whose origin matches the target domain
+                    if (rawState.origins) {
+                        rawState.origins = rawState.origins.filter(o => {
+                            try {
+                                const originHost = new URL(o.origin).hostname.replace(/^www\./, '');
+                                return originHost === targetDomain || originHost.endsWith('.' + targetDomain);
+                            } catch { return false; }
+                        });
+                    }
+
+                    console.log(`[STORAGE] Filtered: ${rawState.cookies?.length || 0} cookies, ${rawState.origins?.length || 0} origins for ${targetDomain}`);
+                    contextOptions.storageState = rawState;
+                } catch (e) {
+                    console.warn('[STORAGE] Failed to filter storage state, loading unfiltered:', e.message);
+                    contextOptions.storageState = STORAGE_STATE_FILE;
                 }
-                if (event.type === 'auxclick' && event.button === 1 && anchor) {
-                    event.preventDefault();
+            }
+
+            const context = await browser.newContext(contextOptions);
+            await context.addInitScript(() => {
+                Object.defineProperty(window, 'open', { writable: true, configurable: true, value: () => null });
+
+                const handleLinkClick = (event) => {
+                    const path = event.composedPath ? event.composedPath() : [];
+                    const anchor = path.find(el => el.tagName === 'A');
+                    if (anchor && anchor.target === '_blank') {
+                        event.preventDefault();
+                        return;
+                    }
+                    if (event.type === 'auxclick' && event.button === 1 && anchor) {
+                        event.preventDefault();
+                    }
+                };
+
+                document.addEventListener('click', handleLinkClick, true);
+                document.addEventListener('auxclick', handleLinkClick, true);
+            });
+            await context.addInitScript(installMouseHelper);
+
+            const page = await context.newPage();
+
+            const closeIfExtra = async (extraPage) => {
+                if (!extraPage || extraPage === page) return;
+                try {
+                    await extraPage.close();
+                } catch { }
+            };
+
+            context.on('page', closeIfExtra);
+            page.on('popup', async (popup) => {
+                try {
+                    popup.close().catch(() => { });
+                } catch { }
+                await closeIfExtra(popup);
+            });
+
+            await page.goto(url);
+
+            console.log('Browser is open. Please log in manually.');
+            console.log('IMPORTANT: Close the page/tab or wait for saves.');
+
+            // Function to save state
+            const saveState = async () => {
+                if (statelessExecution) return;
+                try {
+                    await context.storageState({ path: STORAGE_STATE_FILE });
+                    console.log('Storage state saved successfully.');
+                } catch (e) {
+                    // If context is closed, this will fail, which is expected during shutdown
                 }
             };
 
-            document.addEventListener('click', handleLinkClick, true);
-            document.addEventListener('auxclick', handleLinkClick, true);
-        });
-        await context.addInitScript(installMouseHelper);
+            // Auto-save every 10 seconds while the window is open
+            const interval = setInterval(saveState, 10000);
 
-        const page = await context.newPage();
+            activeSession = { browser, context, interval, status: 'running', startedAt: activeSession.startedAt, stateless: statelessExecution };
 
-        const closeIfExtra = async (extraPage) => {
-            if (!extraPage || extraPage === page) return;
-            try {
-                await extraPage.close();
-            } catch { }
-        };
+            // Save when the page is closed
+            page.on('close', async () => {
+                clearInterval(interval);
+                await saveState();
+            });
 
-        context.on('page', closeIfExtra);
-        page.on('popup', async (popup) => {
-            try {
-                popup.close().catch(() => {});
-            } catch { }
-            await closeIfExtra(popup);
-        });
+            // Respond immediately; cleanup runs after disconnect
+            res.json({
+                message: 'Headful session started. Close the browser window or call /headful/stop to end.',
+                userAgentUsed: selectedUA,
+                path: statelessExecution ? null : STORAGE_STATE_FILE
+            });
 
-        await page.goto(url);
+            // Wait for the browser to disconnect (user closes the last window)
+            await new Promise((resolve) => browser.on('disconnected', resolve));
 
-        console.log('Browser is open. Please log in manually.');
-        console.log('IMPORTANT: Close the page/tab or wait for saves.');
-
-        // Function to save state
-        const saveState = async () => {
-            if (statelessExecution) return;
-            try {
-                await context.storageState({ path: STORAGE_STATE_FILE });
-                console.log('Storage state saved successfully.');
-            } catch (e) {
-                // If context is closed, this will fail, which is expected during shutdown
-            }
-        };
-
-        // Auto-save every 10 seconds while the window is open
-        const interval = setInterval(saveState, 10000);
-
-        activeSession = { browser, context, interval, status: 'running', startedAt: activeSession.startedAt, stateless: statelessExecution };
-
-        // Save when the page is closed
-        page.on('close', async () => {
             clearInterval(interval);
+
+            // Final attempt to save if context is alive
             await saveState();
-        });
-
-        // Respond immediately; cleanup runs after disconnect
-        res.json({
-            message: 'Headful session started. Close the browser window or call /headful/stop to end.',
-            userAgentUsed: selectedUA,
-            path: statelessExecution ? null : STORAGE_STATE_FILE
-        });
-
-        // Wait for the browser to disconnect (user closes the last window)
-        await new Promise((resolve) => browser.on('disconnected', resolve));
-
-        clearInterval(interval);
-
-        // Final attempt to save if context is alive
-        await saveState();
-        activeSession = null;
+            activeSession = null;
         } catch (error) {
             console.error('Headful Error:', error);
             if (browser) await browser.close();
