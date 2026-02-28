@@ -116,12 +116,24 @@ setStopChecker((runId) => {
 app.use(requireIpAllowlist);
 app.use(express.json({ limit: '50mb' }));
 
+const sessionStore = new FileStore({
+    path: SESSIONS_DIR,
+    ttl: SESSION_TTL_SECONDS,
+    retries: 5,
+    retryDelay: 100,
+    reapInterval: 3600,
+    logFn: () => { }
+});
+
+// Suppress session file store EPERM errors on Windows (antivirus/indexer file locking)
+sessionStore.on('error', (err) => {
+    if (err && err.code === 'EPERM') return; // Silently ignore
+    if (err && err.code === 'ENOENT') return; // Session file deleted between read attempts
+    console.error('[SESSION] Store error:', err);
+});
+
 app.use(session({
-    store: new FileStore({
-        path: SESSIONS_DIR,
-        ttl: SESSION_TTL_SECONDS,
-        retries: 0
-    }),
+    store: sessionStore,
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
