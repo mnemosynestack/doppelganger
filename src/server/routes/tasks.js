@@ -1,8 +1,9 @@
 const express = require('express');
 const { requireAuth, requireApiKey } = require('../middleware');
-const { loadTasks, saveTasks } = require('../storage');
+const { loadTasks, saveTasks, loadGeminiApiKey } = require('../storage');
 const { taskMutex } = require('../state');
 const { appendTaskVersion, cloneTaskForVersion } = require('../utils');
+const { handleAgent } = require('../../agent/index');
 
 const router = express.Router();
 
@@ -133,6 +134,111 @@ router.post('/:id/rollback', requireAuth, async (req, res) => {
         res.json(restored);
     } finally {
         taskMutex.unlock();
+    }
+});
+
+router.post('/generate-selector', requireAuth, async (req, res) => {
+    const { task, actionIndex, prompt } = req.body;
+
+    if (!task || !task.actions || typeof actionIndex !== 'number' || !prompt) {
+        return res.status(400).json({ error: 'Missing task, actionIndex, or prompt.' });
+    }
+
+    // Copy task and slice actions up to actionIndex
+    const mockTask = { ...task };
+    mockTask.actions = mockTask.actions.slice(0, actionIndex);
+    mockTask.wait = 0; // minimize wait
+
+    const mockReq = {
+        method: 'POST',
+        body: mockTask,
+        query: {},
+        protocol: req.protocol,
+        socket: req.socket
+    };
+
+    let agentResult = null;
+    let statusCode = 200;
+
+    const mockRes = {
+        status: (code) => { statusCode = code; return mockRes; },
+        json: (data) => { agentResult = data; }
+    };
+
+    try {
+        await handleAgent(mockReq, mockRes);
+
+        if (statusCode !== 200 || !agentResult || !agentResult.html) {
+            return res.status(statusCode !== 200 ? statusCode : 500).json({ error: 'Failed to extract DOM.' });
+        }
+
+        const configuredKeys = await loadGeminiApiKey();
+        let apiKeys = [];
+        if (Array.isArray(configuredKeys) && configuredKeys.length > 0) {
+            apiKeys = configuredKeys;
+        } else if (typeof configuredKeys === 'string' && configuredKeys) {
+            apiKeys = [configuredKeys];
+        } else if (process.env.GEMINI_API_KEY) {
+            apiKeys = [process.env.GEMINI_API_KEY];
+        }
+
+        if (apiKeys.length === 0) {
+            return res.status(400).json({ error: 'Gemini API key is not configured.' });
+        }
+
+        // Use primary key (index 0) first; fall back to backup keys on failure
+        let apiKey = apiKeys[0];
+
+        let geminiResponse = null;
+        let lastError = null;
+        for (let ki = 0; ki < apiKeys.length; ki++) {
+            apiKey = apiKeys[ki];
+            try {
+                geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `Given this HTML:\n${agentResult.html}\n\nFind a reliable CSS selector for: "${prompt}"\n\nCRITICAL RULES:\n- NEVER use dynamic or random-looking IDs (e.g., #APjFqb).\n- Avoid long, fragile element chains (e.g., body > div > div > span).\n- Prefer specific, semantic classes or attributes unless absolutely necessary.\n\nOnly reply with the exact CSS selector, nothing else. Do not include markdown formatting or backticks.`
+                            }]
+                        }]
+                    })
+                });
+
+                if (geminiResponse.ok) break; // Success, stop trying
+
+                // If rate limited or auth error, try next key
+                const errBody = await geminiResponse.text();
+                lastError = errBody;
+                console.warn(`[GEMINI] Key ${ki + 1}/${apiKeys.length} failed (${geminiResponse.status}), ${ki + 1 < apiKeys.length ? 'trying backup...' : 'no more keys'}`);
+                geminiResponse = null; // Mark as failed so next iteration tries
+            } catch (fetchErr) {
+                lastError = fetchErr.message;
+                console.warn(`[GEMINI] Key ${ki + 1}/${apiKeys.length} fetch error: ${fetchErr.message}, ${ki + 1 < apiKeys.length ? 'trying backup...' : 'no more keys'}`);
+                geminiResponse = null;
+            }
+        }
+
+        if (!geminiResponse || !geminiResponse.ok) {
+            console.error('Gemini error (all keys exhausted):', lastError);
+            return res.status(500).json({ error: 'Failed to contact Gemini API.' });
+        }
+
+        const data = await geminiResponse.json();
+        let selector = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        selector = selector.trim();
+        // Remove markdown formatting if the model still includes it
+        if (selector.startsWith('```') && selector.endsWith('```')) {
+            selector = selector.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
+        } else if (selector.startsWith('`') && selector.endsWith('`')) {
+            selector = selector.replace(/^`+|`+$/g, '').trim();
+        }
+
+        res.json({ selector });
+    } catch (e) {
+        console.error('Generate selector error:', e);
+        res.status(500).json({ error: e.message });
     }
 });
 
