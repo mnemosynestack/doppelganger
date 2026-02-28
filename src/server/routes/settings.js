@@ -1,7 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const { authRateLimiter, requireAuthForSettings, csrfProtection } = require('../middleware');
-const { loadApiKey, saveApiKey } = require('../storage');
+const { loadApiKey, saveApiKey, loadGeminiApiKey, saveGeminiApiKey } = require('../storage');
 const { getUserAgentConfig, setUserAgentSelection } = require('../../../user-agent-settings');
 const { listProxies, addProxy, addProxies, updateProxy, deleteProxy, deleteProxies, setDefaultProxy, setIncludeDefaultInRotation, setRotationMode } = require('../../../proxy-rotation');
 
@@ -35,6 +35,7 @@ router.post('/api-key', requireAuthForSettings, (req, res) => {
 });
 
 // User Agent
+// User Agent
 router.get('/user-agent', authRateLimiter, requireAuthForSettings, async (_req, res) => {
     try {
         res.json(await getUserAgentConfig());
@@ -53,6 +54,34 @@ router.post('/user-agent', authRateLimiter, csrfProtection, requireAuthForSettin
     } catch (e) {
         console.error('[USER_AGENT] Save failed:', e);
         res.status(500).json({ error: 'USER_AGENT_SAVE_FAILED' });
+    }
+});
+
+// Gemini API Key
+router.get('/gemini-api-key', authRateLimiter, requireAuthForSettings, async (req, res) => {
+    try {
+        const keys = await loadGeminiApiKey();
+        res.json({ geminiApiKeys: keys || [] });
+    } catch (e) {
+        console.error('[GEMINI_API_KEY] Load failed:', e);
+        res.status(500).json({ error: 'GEMINI_API_KEY_LOAD_FAILED' });
+    }
+});
+
+router.post('/gemini-api-key', requireAuthForSettings, async (req, res) => {
+    try {
+        let keys = [];
+        if (req.body && Array.isArray(req.body.geminiApiKeys)) {
+            keys = req.body.geminiApiKeys.map(k => typeof k === 'string' ? k.trim() : '').filter(k => k);
+        } else if (req.body && typeof req.body.geminiApiKey === 'string') {
+            const bodyKey = req.body.geminiApiKey.trim();
+            if (bodyKey) keys.push(bodyKey);
+        }
+        await saveGeminiApiKey(keys);
+        res.json({ geminiApiKeys: keys });
+    } catch (e) {
+        console.error('[GEMINI_API_KEY] Save failed:', e);
+        res.status(500).json({ error: 'GEMINI_API_KEY_SAVE_FAILED', message: e.message });
     }
 });
 

@@ -68,6 +68,12 @@ async function initDB() {
                     key VARCHAR(255) NOT NULL
                 );
             `);
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS gemini_api_key (
+                    id INT PRIMARY KEY DEFAULT 1,
+                    key VARCHAR(255) NOT NULL
+                );
+            `);
         } finally {
             client.release();
         }
