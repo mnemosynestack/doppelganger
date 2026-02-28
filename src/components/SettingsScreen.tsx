@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import GithubStarPill from './GithubStarPill';
 import { ConfirmRequest } from '../types';
-import ApiKeyPanel from './settings/ApiKeyPanel';
+import ApiKeysPanel, { ApiKeyConfig, ProviderConfig } from './settings/ApiKeysPanel';
 import StoragePanel from './settings/StoragePanel';
 import CapturesPanel from './settings/CapturesPanel';
 import CookiesPanel from './settings/CookiesPanel';
@@ -24,13 +24,17 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     onNotify
 }) => {
     const [tab, setTab] = useState<'system' | 'data' | 'proxies'>('system');
+    const [addedProviders, setAddedProviders] = useState<string[]>([]);
     const [captures, setCaptures] = useState<{ name: string; url: string; size: number; modified: number; type: 'screenshot' | 'recording' }[]>([]);
     const [cookies, setCookies] = useState<{ name: string; value: string; domain?: string; path?: string; expires?: number }[]>([]);
     const [cookieOrigins, setCookieOrigins] = useState<any[]>([]);
     const [dataLoading, setDataLoading] = useState(false);
     const [apiKey, setApiKey] = useState<string | null>(null);
-    const [apiKeyLoading, setApiKeyLoading] = useState(false);
+    const [apiKeyLoading, setApiKeyLoading] = useState(true);
     const [apiKeySaving, setApiKeySaving] = useState(false);
+    const [geminiApiKeys, setGeminiApiKeys] = useState<string[]>([]);
+    const [geminiApiKeyLoading, setGeminiApiKeyLoading] = useState(true);
+    const [geminiApiKeySaving, setGeminiApiKeySaving] = useState(false);
     const [layoutSplitPercent, setLayoutSplitPercent] = useState(30);
     const [proxies, setProxies] = useState<{ id: string; server: string; username?: string; password?: string; label?: string; isRotatingPool?: boolean; estimatedPoolSize?: number }[]>([]);
     const [defaultProxyId, setDefaultProxyId] = useState<string | null>(null);
@@ -121,6 +125,26 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             setApiKey(null);
         } finally {
             setApiKeyLoading(false);
+        }
+    };
+
+    const loadGeminiApiKeys = async () => {
+        setGeminiApiKeyLoading(true);
+        try {
+            const res = await fetch('/api/settings/gemini-api-key', { credentials: 'include' });
+            if (!res.ok) {
+                if (res.status === 401) {
+                    onNotify('Session expired. Please log in again.', 'error');
+                }
+                setGeminiApiKeys([]);
+                return;
+            }
+            const data = await res.json();
+            setGeminiApiKeys(Array.isArray(data.geminiApiKeys) ? data.geminiApiKeys : []);
+        } catch {
+            setGeminiApiKeys([]);
+        } finally {
+            setGeminiApiKeyLoading(false);
         }
     };
 
@@ -470,18 +494,51 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
     };
 
-    const copyApiKey = () => {
-        onNotify('API key copied.', 'success');
+    const saveGeminiApiKeys = async (newKeys: string[]) => {
+        setGeminiApiKeySaving(true);
+        try {
+            const res = await fetch('/api/settings/gemini-api-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ geminiApiKeys: newKeys })
+            });
+            if (!res.ok) {
+                if (res.status === 401) {
+                    onNotify('Session expired. Please log in again.', 'error');
+                } else {
+                    onNotify('Failed to save Gemini API keys.', 'error');
+                }
+                return;
+            }
+            const data = await res.json();
+            setGeminiApiKeys(Array.isArray(data.geminiApiKeys) ? data.geminiApiKeys : []);
+            onNotify('Gemini API keys saved.', 'success');
+        } catch {
+            onNotify('Failed to save Gemini API keys.', 'error');
+        } finally {
+            setGeminiApiKeySaving(false);
+        }
     };
 
+    // Load system data on mount and when tab changes to system
     useEffect(() => {
         if (tab === 'data') loadData();
         if (tab === 'system') {
             loadApiKey();
+            loadGeminiApiKeys();
             loadUserAgent();
         }
         if (tab === 'proxies') loadProxies();
-    }, [tab, loadData]);
+    }, [tab]);
+
+    // Also load system keys on initial mount in case tab is already 'system'
+    useEffect(() => {
+        if (tab === 'system') {
+            loadApiKey();
+            loadGeminiApiKeys();
+        }
+    }, []);
 
     useEffect(() => {
         try {
@@ -491,6 +548,110 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
     }, [layoutSplitPercent]);
 
+    const availableProviders: ProviderConfig[] = [
+        {
+            id: 'gemini_api_key',
+            name: 'Gemini API Key',
+            iconUrl: 'https://www.google.com/s2/favicons?domain=gemini.google.com&sz=128',
+            disabled: false
+        },
+        {
+            id: 'anthropic_api_key',
+            name: 'Anthropic API Key',
+            iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/claude.svg',
+            disabled: true
+        },
+        {
+            id: 'openai_api_key',
+            name: 'OpenAI API Key',
+            iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/openai.svg',
+            disabled: true
+        },
+        {
+            id: 'ollama_api_key',
+            name: 'Ollama API Key',
+            iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/ollama.svg',
+            disabled: true
+        }
+    ];
+
+    const apiKeysConfig: ApiKeyConfig[] = [
+        {
+            id: 'doppelganger_api_key',
+            name: 'Tasks API',
+            description: 'Manage task API access via `x-api-key` header',
+            icon: 'database',
+            value: apiKey,
+            saving: apiKeySaving,
+            loading: apiKeyLoading,
+            showCopyButton: true,
+            readOnly: true,
+            onSave: async () => { }, // Not used directly for save, we use regenerate
+            onRegenerate: async () => { await regenerateApiKey(); }
+        }
+    ];
+
+    const validGeminiKeys = geminiApiKeys.filter(k => k && k.trim());
+    validGeminiKeys.forEach((keyVal, idx) => {
+        apiKeysConfig.push({
+            id: `gemini_api_key_${idx}`,
+            name: `Gemini API Key`,
+            description: 'Provide an API Key from Google AI Studio for AI features',
+            iconUrl: 'https://www.google.com/s2/favicons?domain=gemini.google.com&sz=128',
+            value: keyVal,
+            saving: geminiApiKeySaving,
+            loading: geminiApiKeyLoading,
+            badge: idx === 0 ? 'Primary' : 'Backup',
+            onSave: async (val) => {
+                const newKeys = [...geminiApiKeys];
+                newKeys[idx] = val;
+                await saveGeminiApiKeys(newKeys);
+            },
+            onDelete: async () => {
+                const newKeys = geminiApiKeys.filter((_, i) => i !== idx);
+                await saveGeminiApiKeys(newKeys);
+            }
+        });
+    });
+
+    const numUnsaved = addedProviders.filter(p => p === 'gemini_api_key').length;
+    for (let i = 0; i < numUnsaved; i++) {
+        apiKeysConfig.push({
+            id: `gemini_api_key_unsaved_${i}`,
+            name: `Gemini API Key`,
+            description: 'Provide an API Key from Google AI Studio for AI features',
+            iconUrl: 'https://www.google.com/s2/favicons?domain=gemini.google.com&sz=128',
+            value: null,
+            saving: geminiApiKeySaving,
+            loading: geminiApiKeyLoading,
+            startEditing: true,
+            onSave: async (val) => {
+                const newKeys = [...geminiApiKeys, val];
+                await saveGeminiApiKeys(newKeys);
+                setAddedProviders(prev => {
+                    const idx = prev.indexOf('gemini_api_key');
+                    if (idx !== -1) {
+                        const next = [...prev];
+                        next.splice(idx, 1);
+                        return next;
+                    }
+                    return prev;
+                });
+            },
+            onDelete: async () => {
+                setAddedProviders(prev => {
+                    const idx = prev.indexOf('gemini_api_key');
+                    if (idx !== -1) {
+                        const next = [...prev];
+                        next.splice(idx, 1);
+                        return next;
+                    }
+                    return prev;
+                });
+            }
+        });
+    }
+
     return (
         <main className="flex-1 p-12 overflow-y-auto custom-scrollbar animate-in fade-in duration-500">
             <div className="max-w-3xl mx-auto space-y-8">
@@ -498,12 +659,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
                 {tab === 'system' && (
                     <>
-                        <ApiKeyPanel
-                            apiKey={apiKey}
-                            loading={apiKeyLoading}
-                            saving={apiKeySaving}
-                            onRegenerate={regenerateApiKey}
-                            onCopy={copyApiKey}
+                        <ApiKeysPanel
+                            keys={apiKeysConfig}
+                            availableProviders={availableProviders}
+                            onAddProvider={(id) => setAddedProviders(prev => [...prev, id])}
+                            onConfirm={onConfirm}
                         />
                         <UserAgentPanel
                             selection={userAgentSelection}
