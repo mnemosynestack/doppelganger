@@ -1144,7 +1144,7 @@ return JSON.stringify(links, null, 2);`}
                                         }}
                                         className="w-4 h-4 rounded border-white/20 bg-transparent"
                                     />
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Stateless execution (no shared cookies)</span>
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Stateless execution</span>
                                 </label>
                             </div>
                         </div>
