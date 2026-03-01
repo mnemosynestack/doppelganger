@@ -231,7 +231,16 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
                     <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1 block">Selector</label>
                     {aiPromptOpen && (
                         <div ref={aiPopupRef} className="absolute right-0 top-6 z-30 w-64 bg-[#111] border border-white/10 rounded-xl shadow-2xl p-3 space-y-2">
-                            <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block">Describe Element</label>
+                            <div className="flex items-center justify-between">
+                                <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block">Describe Element</label>
+                                <button
+                                    onClick={() => setAiPromptOpen(false)}
+                                    className="text-gray-500 hover:text-white transition-colors p-1 -mr-1"
+                                    title="Close"
+                                >
+                                    <MaterialIcon name="close" className="text-[12px]" />
+                                </button>
+                            </div>
                             <input
                                 autoFocus
                                 value={aiPrompt}
