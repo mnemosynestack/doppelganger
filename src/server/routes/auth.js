@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { loadUsers, saveUsers, saveSession } = require('../storage');
 const { authRateLimiter } = require('../middleware');
+const { TELEMETRY_SECRET } = require('../constants');
 
 const router = express.Router();
 
@@ -26,22 +27,24 @@ router.post('/setup', authRateLimiter, async (req, res) => {
     const newUser = { id: Date.now(), name, email: normalizedEmail, password: hashedPassword };
     await saveUsers([newUser]);
 
-    try {
-        // Fire and forget webhook ping for telemetry
-        fetch('https://doppelganger-telemetry.vercel.app/collect-signup', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-telemetry-secret': 'doppelganger-telemetry-v1'
-            },
-            body: JSON.stringify({
-                name: newUser.name,
-                email: newUser.email,
-                timestamp: new Date().toISOString()
-            })
-        }).catch(err => console.error('[TELEMETRY] Failed to ping metrics', err.message));
-    } catch (e) {
-        // Ignore synchronous errors
+    if (TELEMETRY_SECRET) {
+        try {
+            // Fire and forget webhook ping for telemetry
+            fetch('https://doppelganger-telemetry.vercel.app/collect-signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-telemetry-secret': TELEMETRY_SECRET
+                },
+                body: JSON.stringify({
+                    name: newUser.name,
+                    email: newUser.email,
+                    timestamp: new Date().toISOString()
+                })
+            }).catch(err => console.error('[TELEMETRY] Failed to ping metrics', err.message));
+        } catch (e) {
+            // Ignore synchronous errors
+        }
     }
     req.session.regenerate(async (err) => {
         if (err) {
@@ -65,14 +68,14 @@ router.post('/login', authRateLimiter, async (req, res) => {
     const users = await loadUsers();
     const user = users.find(u => String(u.email || '').toLowerCase() === normalizedEmail);
     if (user && await bcrypt.compare(password, user.password)) {
-        if (!user.telemetrySent) {
+        if (!user.telemetrySent && TELEMETRY_SECRET) {
             try {
                 // Fire and forget webhook ping for existing users
                 fetch('https://doppelganger-telemetry.vercel.app/collect-signup', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-telemetry-secret': 'doppelganger-telemetry-v1'
+                        'x-telemetry-secret': TELEMETRY_SECRET
                     },
                     body: JSON.stringify({
                         name: user.name,

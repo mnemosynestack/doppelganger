@@ -22,6 +22,7 @@ const NOVNC_PORT = Number(process.env.NOVNC_PORT) || 54311;
 const WEBSOCKIFY_PATH = '/websockify';
 
 const ALLOW_PRIVATE_NETWORKS = !['0', 'false', 'no'].includes(String(process.env.ALLOW_PRIVATE_NETWORKS || '').toLowerCase());
+const TELEMETRY_SECRET = process.env.TELEMETRY_SECRET;
 
 module.exports = {
     DEFAULT_PORT,
@@ -44,5 +45,6 @@ module.exports = {
     SESSION_TTL_SECONDS,
     NOVNC_PORT,
     WEBSOCKIFY_PATH,
-    ALLOW_PRIVATE_NETWORKS
+    ALLOW_PRIVATE_NETWORKS,
+    TELEMETRY_SECRET
 };
