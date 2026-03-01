@@ -200,7 +200,7 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
                     body: JSON.stringify({
                         contents: [{
                             parts: [{
-                                text: `Given this HTML:\n${agentResult.html}\n\nFind a reliable CSS selector for: "${prompt}"\n\nCRITICAL RULES:\n- NEVER use dynamic or random-looking IDs (e.g., #APjFqb).\n- Avoid long, fragile element chains (e.g., body > div > div > span).\n- Prefer specific, semantic classes or attributes unless absolutely necessary.\n\nOnly reply with the exact CSS selector, nothing else. Do not include markdown formatting or backticks.`
+                                text: `Given this HTML:\n${agentResult.html}\n\nFind a reliable CSS selector for: "${prompt}"\n\nCRITICAL RULES:\n- NEVER use dynamic, numeric, or random-looking IDs (e.g., #APjFqb, #popup-170970, #id-9812).\n- NEVER use auto-generated utility classes that look like hashes (e.g., .css-1h2p).\n- Avoid long, fragile element chains (e.g., body > div > div > span).\n- Prefer specific, semantic, human-readable classes or data attributes (\`[data-testid="xyz"]\`, \`[aria-label="xyz"]\`).\n- If no good class/id exists, prefer structural pseudo-classes (e.g., \`button:nth-of-type(2)\`) or nearby stable anchors.\n\nOnly reply with the exact CSS selector, nothing else. Do not include markdown formatting or backticks.`
                             }]
                         }]
                     })

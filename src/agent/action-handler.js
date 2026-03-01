@@ -53,6 +53,30 @@ const mergeSources = (sources) => {
     return merged;
 };
 
+const getLocationalCoords = async (page, selectorValue, lastMouse) => {
+    const handle = await page.$(selectorValue);
+    if (!handle) return null;
+    await handle.scrollIntoViewIfNeeded();
+    const box = await handle.boundingBox();
+    if (!box) return null;
+
+    if (!lastMouse) {
+        const viewport = page.viewportSize() || { width: 1280, height: 720 };
+        lastMouse = { x: viewport.width / 2, y: viewport.height / 2 };
+    }
+
+    const closestX = Math.max(box.x + 5, Math.min(box.x + box.width - 5, lastMouse.x));
+    const closestY = Math.max(box.y + 5, Math.min(box.y + box.height - 5, lastMouse.y));
+
+    let targetX = closestX + (Math.random() - 0.5) * Math.min(40, box.width * 0.4);
+    let targetY = closestY + (Math.random() - 0.5) * Math.min(40, box.height * 0.4);
+
+    targetX = Math.max(box.x + 2, Math.min(box.x + box.width - 2, targetX));
+    targetY = Math.max(box.y + 2, Math.min(box.y + box.height - 2, targetY));
+
+    return { x: targetX, y: targetY, box };
+};
+
 const executeAction = async (act, context) => {
     const {
         page,
@@ -105,41 +129,50 @@ const executeAction = async (act, context) => {
             logs.push(`Clicking: ${selectorValue}`);
             if (coords) {
                 await page.mouse.click(coords.x, coords.y, { delay: baseDelay(50) });
+                context.lastMouse = { x: coords.x, y: coords.y };
                 result = true;
                 break;
             }
             await page.waitForSelector(selectorValue, { timeout: actionTimeout });
 
+            if (!context.lastMouse) {
+                const viewport = page.viewportSize() || { width: 1280, height: 720 };
+                context.lastMouse = { x: viewport.width / 2, y: viewport.height / 2 };
+            }
+
             // Neutral Dead Click
             if (deadClicks && Math.random() < 0.4) {
                 logs.push('Performing neutral dead-click...');
                 const viewport = page.viewportSize() || { width: 1280, height: 720 };
-                await page.mouse.click(
-                    10 + Math.random() * (viewport.width * 0.2),
-                    10 + Math.random() * (viewport.height * 0.2)
-                );
+                const dcX = 10 + Math.random() * (viewport.width * 0.2);
+                const dcY = 10 + Math.random() * (viewport.height * 0.2);
+                await page.mouse.click(dcX, dcY);
+                context.lastMouse = { x: dcX, y: dcY };
                 await page.waitForTimeout(baseDelay(200));
             }
 
             // Get element point for human-like movement
-            const handle = await page.$(selectorValue);
-            const box = await handle.boundingBox();
-            if (box) {
-                const centerX = box.x + box.width / 2 + (Math.random() - 0.5) * 5;
-                const centerY = box.y + box.height / 2 + (Math.random() - 0.5) * 5;
-                await moveMouseHumanlike(page, centerX, centerY);
+            const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
+            if (loc) {
+                const { x: clickX, y: clickY, box } = loc;
+
+                await moveMouseHumanlike(page, clickX, clickY);
+                context.lastMouse = { x: clickX, y: clickY };
+
                 if (deadClicks && Math.random() < 0.25) {
                     const offsetX = (Math.random() - 0.5) * Math.min(20, box.width / 3);
                     const offsetY = (Math.random() - 0.5) * Math.min(20, box.height / 3);
-                    await page.mouse.click(centerX + offsetX, centerY + offsetY, { delay: baseDelay(30) });
+                    await page.mouse.click(clickX + offsetX, clickY + offsetY, { delay: baseDelay(30) });
                     await page.waitForTimeout(baseDelay(120));
                 }
+
+                await page.waitForTimeout(baseDelay(50));
+                await page.mouse.click(clickX, clickY, { delay: baseDelay(50) });
+            } else {
+                await page.waitForTimeout(baseDelay(50));
+                await page.click(selectorValue, { delay: baseDelay(50) });
             }
 
-            await page.waitForTimeout(baseDelay(50));
-            await page.click(selectorValue, {
-                delay: baseDelay(50)
-            });
             result = true;
             break;
         }
@@ -151,19 +184,28 @@ const executeAction = async (act, context) => {
 
             const typeIntoSelector = async () => {
                 if (!selectorValue) return;
-                if (typeMode === 'replace') {
-                    if (humanTyping) {
-                        await page.fill(selectorValue, '');
-                        await humanType(page, selectorValue, valueText, humanOptions);
-                    } else {
-                        await page.fill(selectorValue, valueText);
-                    }
-                    return;
-                }
-                if (humanTyping) {
-                    await humanType(page, selectorValue, valueText, humanOptions);
+
+                const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
+                if (loc) {
+                    const { x: clickX, y: clickY } = loc;
+                    await moveMouseHumanlike(page, clickX, clickY);
+                    context.lastMouse = { x: clickX, y: clickY };
+                    await page.mouse.click(clickX, clickY, { delay: baseDelay(50) });
                 } else {
-                    await page.type(selectorValue, valueText, { delay: baseDelay(50) });
+                    await page.click(selectorValue, { delay: baseDelay(50) });
+                }
+
+                if (typeMode === 'replace') {
+                    // Try to clear the input field manually so we don't use page.fill() centering
+                    await page.keyboard.press('Control+A');
+                    await page.keyboard.press('Meta+A');
+                    await page.keyboard.press('Backspace');
+                }
+
+                if (humanTyping) {
+                    await humanType(page, null, valueText, humanOptions); // Uses null to type unconditionally where focused
+                } else {
+                    await page.keyboard.insertText(valueText);
                 }
             };
 
@@ -172,6 +214,7 @@ const executeAction = async (act, context) => {
                 logs.push(`Typing into ${selectorValue}: ${valueText}`);
                 if (coords) {
                     await page.mouse.click(coords.x, coords.y, { delay: baseDelay(50) });
+                    context.lastMouse = { x: coords.x, y: coords.y };
                     await typeIntoSelector();
                     result = valueText;
                     break;
@@ -195,17 +238,23 @@ const executeAction = async (act, context) => {
             logs.push(`Hovering: ${selectorValue}`);
             if (coords) {
                 await moveMouseHumanlike(page, coords.x, coords.y);
+                context.lastMouse = { x: coords.x, y: coords.y };
                 result = true;
                 break;
             }
             await page.waitForSelector(selectorValue, { timeout: actionTimeout });
+
+            if (!context.lastMouse) {
+                const viewport = page.viewportSize() || { width: 1280, height: 720 };
+                context.lastMouse = { x: viewport.width / 2, y: viewport.height / 2 };
+            }
+
             {
-                const handle = await page.$(selectorValue);
-                const box = handle && await handle.boundingBox();
-                if (box) {
-                    const centerX = box.x + box.width / 2 + (Math.random() - 0.5) * 5;
-                    const centerY = box.y + box.height / 2 + (Math.random() - 0.5) * 5;
-                    await moveMouseHumanlike(page, centerX, centerY);
+                const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
+                if (loc) {
+                    const { x: hoverX, y: hoverY } = loc;
+                    await moveMouseHumanlike(page, hoverX, hoverY);
+                    context.lastMouse = { x: hoverX, y: hoverY };
                 }
             }
             await page.waitForTimeout(baseDelay(150));
