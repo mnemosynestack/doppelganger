@@ -65,9 +65,10 @@ const getLocationalCoords = async (page, selectorValue, lastMouse) => {
         lastMouse = { x: viewport.width / 2, y: viewport.height / 2 };
     }
 
-    // Ensure padding is at least 4 pixels, but up to 20% of the box width/height to avoid edges
-    const padX = Math.max(4, box.width * 0.2);
-    const padY = Math.max(4, box.height * 0.2);
+    // Ensure we never click the absolute edge. Padding is 20% of the element, but at least 2 pixels,
+    // and strictly capped at 40% of the element (so we never pad past the center).
+    const padX = Math.min(Math.max(2, box.width * 0.2), box.width * 0.4);
+    const padY = Math.min(Math.max(2, box.height * 0.2), box.height * 0.4);
 
     const minX = box.x + padX;
     const maxX = box.x + box.width - padX;
