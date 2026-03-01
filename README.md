@@ -284,6 +284,7 @@ If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For
 - [ ] **Database Tab / Local CRM** — add a built-in spreadsheet-like interface for viewing and managing extracted data (CRM-style) entirely within the app, without requiring external tools.
 - [ ] **iframe interaction support** — add the ability to target and interact with elements inside iframes in the task editor.
 - [x] **Autosave** — automatically persist task changes and editor state at regular intervals so operators don't lose work on long-running or complex workflow designs.
+- [ ] **Highlight tool** — add a feature to highlight elements on the page (similar to a browser's inspect tool) to easily pick selectors and build workflows.
 
 # Security Considerations
 
@@ -297,7 +298,7 @@ If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For
 - Report issues or request features via the GitHub repo issue tracker.
 - Follow the authors on `https://github.com/mnemosynestack` for releases.
 - Share automation recipes with other self-hosted users in your org, but respect the license for sharing infrastructure.
-- Join the community on [Discord](https://discord.gg/rYJU882J).
+- Join the community on [Discord](https://discord.gg/kPmfbgu9Xn).
 
 # Support the Project
 

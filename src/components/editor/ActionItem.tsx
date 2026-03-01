@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState, useRef, useEffect } from 'react';
 import { Action, Task, Variable, VarType } from '../../types';
 import MaterialIcon from '../MaterialIcon';
 import RichInput from '../RichInput';
@@ -99,6 +99,7 @@ interface ActionItemProps {
     onOpenContextMenu: (e: React.MouseEvent, id: string) => void;
     onPointerDown: (e: React.PointerEvent, id: string, index: number) => void;
     dragTransformY?: number;
+    onGenerateSelector?: (id: string, prompt: string) => Promise<void>;
 }
 
 const ActionItem: React.FC<ActionItemProps> = memo(({
@@ -117,8 +118,25 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
     onOpenPalette,
     onOpenContextMenu,
     onPointerDown,
-    dragTransformY
+    dragTransformY,
+    onGenerateSelector
 }) => {
+    const [aiPromptOpen, setAiPromptOpen] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [aiGenerating, setAiGenerating] = useState(false);
+    const aiPopupRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (aiPopupRef.current && !aiPopupRef.current.contains(e.target as Node)) {
+                setAiPromptOpen(false);
+            }
+        };
+        if (aiPromptOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [aiPromptOpen]);
     const statusClass = status === 'running'
         ? 'border-yellow-400/60'
         : status === 'success'
@@ -209,8 +227,65 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
                 </button>
             </div>
             {(action.type === 'click' || action.type === 'type' || action.type === 'hover' || action.type === 'wait_selector') && (
-                <div className="space-y-1.5">
-                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Selector</label>
+                <div className="space-y-1.5 relative">
+                    <div className="flex items-center justify-between pl-1">
+                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest">Selector</label>
+                        {onGenerateSelector && (
+                            <button
+                                onClick={() => setAiPromptOpen(!aiPromptOpen)}
+                                className="text-purple-400 hover:text-purple-300 transition-colors focus:outline-none flex items-center gap-1 opacity-50 hover:opacity-100"
+                                title="AI Selector Finder"
+                            >
+                                <MaterialIcon name="auto_awesome" className="text-[12px]" />
+                            </button>
+                        )}
+                    </div>
+                    {aiPromptOpen && (
+                        <div ref={aiPopupRef} className="absolute right-0 top-6 z-30 w-64 bg-[#111] border border-white/10 rounded-xl shadow-2xl p-3 space-y-2">
+                            <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block">Describe Element</label>
+                            <input
+                                autoFocus
+                                value={aiPrompt}
+                                onChange={e => setAiPrompt(e.target.value)}
+                                onKeyDown={async (e) => {
+                                    if (e.key === 'Enter' && aiPrompt.trim() && !aiGenerating && onGenerateSelector) {
+                                        setAiGenerating(true);
+                                        try {
+                                            await onGenerateSelector(action.id, aiPrompt);
+                                            setAiPromptOpen(false);
+                                            setAiPrompt('');
+                                        } finally {
+                                            setAiGenerating(false);
+                                        }
+                                    }
+                                }}
+                                disabled={aiGenerating}
+                                placeholder="e.g. The green submit button"
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors disabled:opacity-50"
+                            />
+                            <div className="flex justify-end pt-1">
+                                <button
+                                    onClick={async () => {
+                                        if (aiPrompt.trim() && !aiGenerating && onGenerateSelector) {
+                                            setAiGenerating(true);
+                                            try {
+                                                await onGenerateSelector(action.id, aiPrompt);
+                                                setAiPromptOpen(false);
+                                                setAiPrompt('');
+                                            } finally {
+                                                setAiGenerating(false);
+                                            }
+                                        }
+                                    }}
+                                    disabled={aiGenerating || !aiPrompt.trim()}
+                                    className="bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 px-3 py-1 rounded border border-purple-500/30 text-[9px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 flex items-center gap-1"
+                                >
+                                    {aiGenerating ? <div className="w-2.5 h-2.5 border border-purple-300/30 border-t-purple-300 rounded-full animate-spin" /> : <MaterialIcon name="search" className="text-[10px]" />}
+                                    Find
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
                         <RichInput
                             value={action.selector || ''}

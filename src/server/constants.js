@@ -9,6 +9,7 @@ const ALLOWED_IPS_FILE = path.join(DATA_DIR, 'allowed_ips.json');
 const SESSION_SECRET_FILE = path.join(DATA_DIR, 'session_secret.txt');
 const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
 const API_KEY_FILE = path.join(DATA_DIR, 'api_key.json');
+const GEMINI_API_KEY_FILE = path.join(DATA_DIR, 'gemini_api_key.json');
 const STORAGE_STATE_PATH = path.join(__dirname, '../../storage_state.json');
 const EXECUTIONS_FILE = path.join(DATA_DIR, 'executions.json');
 const MAX_TASK_VERSIONS = 30;
@@ -33,6 +34,7 @@ module.exports = {
     SESSION_SECRET_FILE,
     TASKS_FILE,
     API_KEY_FILE,
+    GEMINI_API_KEY_FILE,
     STORAGE_STATE_PATH,
     EXECUTIONS_FILE,
     MAX_TASK_VERSIONS,

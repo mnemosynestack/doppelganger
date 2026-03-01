@@ -64,16 +64,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onNewTask, onLogout, curr
                 </button>
             </div>
 
-            <a
-                href="https://github.com/mnemosynestack/doppelganger"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-yellow-500 hover:bg-yellow-500/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/50 mb-2"
-                title="Star on GitHub"
-                aria-label="Star on GitHub"
-            >
-                <MaterialIcon name="star" className="text-2xl" />
-            </a>
             <button
                 onClick={onLogout}
                 className="w-12 h-12 rounded-2xl flex items-center justify-center text-gray-500 hover:bg-red-500/10 hover:text-red-500 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
