@@ -157,71 +157,52 @@ const executeAction = async (act, context) => {
                 await page.waitForTimeout(baseDelay(200));
             }
 
-            const MAX_CLICK_RETRIES = 3;
-            let clickLanded = false;
+            const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
+            if (loc) {
+                const { x: clickX, y: clickY, box } = loc;
 
-            for (let attempt = 0; attempt < MAX_CLICK_RETRIES; attempt++) {
-                const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
-                if (loc) {
-                    const { x: clickX, y: clickY, box } = loc;
+                await moveMouseHumanlike(page, clickX, clickY, { cursorGlide, startX: context.lastMouse?.x, startY: context.lastMouse?.y });
+                context.lastMouse = { x: clickX, y: clickY };
 
-                    if (attempt === 0) {
-                        await moveMouseHumanlike(page, clickX, clickY, { cursorGlide, startX: context.lastMouse?.x, startY: context.lastMouse?.y });
-                    } else {
-                        // On retries, move directly to the refreshed position
-                        await moveMouseHumanlike(page, clickX, clickY, { cursorGlide: false, startX: context.lastMouse?.x, startY: context.lastMouse?.y });
-                    }
-                    context.lastMouse = { x: clickX, y: clickY };
+                if (deadClicks && Math.random() < 0.25) {
+                    const offsetX = (Math.random() - 0.5) * Math.min(20, box.width / 3);
+                    const offsetY = (Math.random() - 0.5) * Math.min(20, box.height / 3);
+                    await page.mouse.click(clickX + offsetX, clickY + offsetY, { delay: baseDelay(30) });
+                    await page.waitForTimeout(baseDelay(120));
+                }
 
-                    if (attempt === 0 && deadClicks && Math.random() < 0.25) {
-                        const offsetX = (Math.random() - 0.5) * Math.min(20, box.width / 3);
-                        const offsetY = (Math.random() - 0.5) * Math.min(20, box.height / 3);
-                        await page.mouse.click(clickX + offsetX, clickY + offsetY, { delay: baseDelay(30) });
-                        await page.waitForTimeout(baseDelay(120));
-                    }
+                await page.waitForTimeout(baseDelay(50));
+                await page.mouse.click(clickX, clickY, { delay: baseDelay(50) });
 
-                    await page.waitForTimeout(baseDelay(50));
-                    await page.mouse.click(clickX, clickY, { delay: baseDelay(50) });
-
-                    // Verify the click landed on the target element
-                    await page.waitForTimeout(80);
+                // Verify the click landed on the target element
+                await page.waitForTimeout(80);
+                let clickMissed = false;
+                try {
                     const hitTarget = await page.evaluate(({ x, y, selector }) => {
                         const el = document.elementFromPoint(x, y);
-                        if (!el) return true; // element gone (navigated/removed) = click landed
-                        // Check if the hit element matches or is inside the target
+                        if (!el) return true;
                         try {
                             return el.matches(selector) || !!el.closest(selector);
                         } catch {
-                            return true; // invalid selector for matches(), assume landed
+                            return true;
                         }
                     }, { x: clickX, y: clickY, selector: selectorValue });
 
-                    if (hitTarget) {
-                        clickLanded = true;
-                        break;
+                    if (!hitTarget) {
+                        const stillThere = await page.$(selectorValue);
+                        clickMissed = !!stillThere;
                     }
-
-                    // Also check if element no longer exists (click caused navigation/removal)
-                    const stillThere = await page.$(selectorValue);
-                    if (!stillThere) {
-                        clickLanded = true;
-                        break;
-                    }
-
-                    logs.push(`Click may have missed (attempt ${attempt + 1}/${MAX_CLICK_RETRIES}), retrying...`);
-                    await page.waitForTimeout(baseDelay(100));
-                } else {
-                    // Fallback: can't resolve coords, use Playwright's built-in click
-                    await page.waitForTimeout(baseDelay(50));
-                    await page.click(selectorValue, { delay: baseDelay(50) });
-                    clickLanded = true;
-                    break;
+                } catch {
+                    // evaluation failed (e.g. navigation), assume click landed
                 }
-            }
 
-            if (!clickLanded) {
-                logs.push('Click retries exhausted, falling back to Playwright click.');
-                await page.click(selectorValue, { delay: baseDelay(50), force: true });
+                if (clickMissed) {
+                    logs.push('Click may have missed, falling back to Playwright click.');
+                    await page.click(selectorValue, { delay: baseDelay(50) });
+                }
+            } else {
+                await page.waitForTimeout(baseDelay(50));
+                await page.click(selectorValue, { delay: baseDelay(50) });
             }
 
             result = true;
