@@ -228,18 +228,7 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
             </div>
             {(action.type === 'click' || action.type === 'type' || action.type === 'hover' || action.type === 'wait_selector') && (
                 <div className="space-y-1.5 relative">
-                    <div className="flex items-center justify-between pl-1">
-                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest">Selector</label>
-                        {onGenerateSelector && (
-                            <button
-                                onClick={() => setAiPromptOpen(!aiPromptOpen)}
-                                className="text-purple-400 hover:text-purple-300 transition-colors focus:outline-none flex items-center gap-1 opacity-50 hover:opacity-100"
-                                title="AI Selector Finder"
-                            >
-                                <MaterialIcon name="auto_awesome" className="text-[12px]" />
-                            </button>
-                        )}
-                    </div>
+                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1 block">Selector</label>
                     {aiPromptOpen && (
                         <div ref={aiPopupRef} className="absolute right-0 top-6 z-30 w-64 bg-[#111] border border-white/10 rounded-xl shadow-2xl p-3 space-y-2">
                             <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block">Describe Element</label>
@@ -286,14 +275,25 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
                             </div>
                         </div>
                     )}
-                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                        <RichInput
-                            value={action.selector || ''}
-                            onChange={(v) => onUpdate(action.id, { selector: v })}
-                            onBlur={() => onAutoSave()}
-                            variables={variables}
-                            placeholder=".btn-primary"
-                        />
+                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all flex items-center gap-2 relative">
+                        <div className="flex-1 min-w-0">
+                            <RichInput
+                                value={action.selector || ''}
+                                onChange={(v) => onUpdate(action.id, { selector: v })}
+                                onBlur={() => onAutoSave()}
+                                variables={variables}
+                                placeholder=".btn-primary"
+                            />
+                        </div>
+                        {onGenerateSelector && (
+                            <button
+                                onClick={() => setAiPromptOpen(!aiPromptOpen)}
+                                className="text-purple-400 hover:text-purple-300 transition-colors focus:outline-none flex items-center justify-center opacity-50 hover:opacity-100 shrink-0"
+                                title="AI Selector Finder"
+                            >
+                                <MaterialIcon name="auto_awesome" className="text-lg" />
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
