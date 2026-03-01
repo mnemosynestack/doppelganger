@@ -146,6 +146,7 @@ const ApiKeyRow: React.FC<{
                             disabled={config.loading || config.saving}
                             className="p-3 rounded-2xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Delete Key"
+                            aria-label="Delete Key"
                         >
                             <MaterialIcon name="delete" className="text-base" />
                         </button>
@@ -168,6 +169,7 @@ const ApiKeyRow: React.FC<{
                             type="button"
                             className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-all"
                             title={showPlaintext ? 'Hide value' : 'Show value'}
+                            aria-label={showPlaintext ? 'Hide value' : 'Show value'}
                         >
                             <MaterialIcon name={showPlaintext ? 'visibility_off' : 'visibility'} className="text-base" />
                         </button>
@@ -238,6 +240,7 @@ const ApiKeysPanel: React.FC<ApiKeysPanelProps> = ({ keys, availableProviders, o
                                     <button
                                         onClick={() => setShowAddMenu(false)}
                                         className="absolute top-6 right-6 p-3 rounded-2xl text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                                        aria-label="Close"
                                     >
                                         <MaterialIcon name="close" className="text-2xl" />
                                     </button>
