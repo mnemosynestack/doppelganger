@@ -12,18 +12,17 @@ async function moveMouseHumanlike(page, targetX, targetY, options = {}) {
 
     let steps = 8 + Math.floor(Math.random() * 6);
     if (cursorGlide) {
-        steps = Math.max(15, Math.min(60, Math.floor(distance / 15)));
+        // More steps = smaller per-step distance = lower peak speed
+        steps = Math.max(25, Math.min(80, Math.floor(distance / 8))) + Math.floor(Math.random() * 8);
     }
 
-    const ctrlX = (startX + targetX) / 2 + (Math.random() - 0.5) * Math.min(80, distance * 0.2);
-    const ctrlY = (startY + targetY) / 2 + (Math.random() - 0.5) * Math.min(80, distance * 0.2);
+    const ctrlX = (startX + targetX) / 2 + (Math.random() - 0.5) * Math.min(60, distance * 0.15);
+    const ctrlY = (startY + targetY) / 2 + (Math.random() - 0.5) * Math.min(60, distance * 0.15);
 
     // Sync the actual browser mouse position to the tracked start before
-    // beginning the curve. Without this, the CDP mouse may have drifted
-    // (e.g. after scrollIntoViewIfNeeded or page.evaluate between actions)
-    // causing a visible jump to wherever Playwright thinks the cursor is.
+    // beginning the curve. Use multiple micro-steps to avoid a visible spike.
     if (cursorGlide) {
-        await page.mouse.move(startX, startY, { steps: 1 });
+        await page.mouse.move(startX, startY, { steps: 5 });
     }
 
     for (let i = 1; i <= steps; i++) {
@@ -35,13 +34,13 @@ async function moveMouseHumanlike(page, targetX, targetY, options = {}) {
 
         const curveX = inv * inv * startX + 2 * inv * easeT * ctrlX + easeT * easeT * targetX;
         const curveY = inv * inv * startY + 2 * inv * easeT * ctrlY + easeT * easeT * targetY;
-        const jitterX = (Math.random() - 0.5) * (cursorGlide ? 1 : 2);
-        const jitterY = (Math.random() - 0.5) * (cursorGlide ? 1 : 2);
+        const jitterX = (Math.random() - 0.5) * (cursorGlide ? 0.6 : 2);
+        const jitterY = (Math.random() - 0.5) * (cursorGlide ? 0.6 : 2);
 
         await page.mouse.move(curveX + jitterX, curveY + jitterY, { steps: 1 });
 
         if (cursorGlide) {
-            await page.waitForTimeout(Math.random() * 15 + 10);
+            await page.waitForTimeout(Math.random() * 18 + 14);
         }
     }
 }
