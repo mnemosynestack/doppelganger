@@ -15,6 +15,7 @@ import NotFoundScreen from './components/NotFoundScreen';
 import CenterAlert from './components/app/CenterAlert';
 import CenterConfirm from './components/app/CenterConfirm';
 import EditorLoader from './components/app/EditorLoader';
+import ReleaseNotesModal from './components/app/ReleaseNotesModal';
 
 import { useAuth } from './hooks/useAuth';
 import { useTasks } from './hooks/useTasks';
@@ -204,6 +205,7 @@ export default function App() {
     } else {
         content = (
             <div className="h-full flex flex-row overflow-hidden bg-[#020202]">
+                <ReleaseNotesModal />
                 <Sidebar
                     onNavigate={handleNavigate}
                     onNewTask={handleNewTask}
