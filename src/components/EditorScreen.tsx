@@ -1325,23 +1325,6 @@ return JSON.stringify(links, null, 2);`}
                                 {isExecuting ? 'Running...' : 'Run Task'}
                             </span>
                         </button>
-                        <button
-                            onClick={() => {
-                                if (isHeadfulOpen) {
-                                    onStopHeadful?.();
-                                } else {
-                                    onOpenHeadful?.(currentTask.url || 'https://www.google.com');
-                                }
-                            }}
-                            className={`px-4 h-12 rounded-2xl border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${isHeadfulOpen
-                                ? 'border-blue-500/30 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                                : 'border-white/10 text-white/80 hover:text-white hover:bg-white/10'
-                                }`}
-                            title={isHeadfulOpen ? 'Stop headful browser' : 'Open browser to log in'}
-                        >
-                            <MaterialIcon name={isHeadfulOpen ? 'stop' : 'open_in_browser'} className="text-base" />
-                            {isHeadfulOpen ? 'Close Browser' : 'Open Browser'}
-                        </button>
                         {isExecuting && (
                             <button
                                 onClick={() => onStop?.()}
@@ -1351,6 +1334,24 @@ return JSON.stringify(links, null, 2);`}
                                 <MaterialIcon name="stop" className="text-base" />
                             </button>
                         )}
+                        <button
+                            onClick={() => {
+                                if (isHeadfulOpen) {
+                                    onStopHeadful?.();
+                                } else {
+                                    onOpenHeadful?.(currentTask.url || 'https://www.google.com');
+                                }
+                            }}
+                            disabled={isExecuting}
+                            className={`px-4 h-12 rounded-2xl border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed ${isHeadfulOpen
+                                ? 'border-blue-500/30 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                                : 'border-white/10 text-white/80 hover:text-white hover:bg-white/10'
+                                }`}
+                            title={isHeadfulOpen ? 'Stop headful browser' : 'Open browser to log in'}
+                        >
+                            <MaterialIcon name={isHeadfulOpen ? 'stop' : 'open_in_browser'} className="text-base" />
+                            {isHeadfulOpen ? 'Close Browser' : 'Open Browser'}
+                        </button>
                     </div>
                 </div>
             </aside >

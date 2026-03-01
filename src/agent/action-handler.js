@@ -65,14 +65,18 @@ const getLocationalCoords = async (page, selectorValue, lastMouse) => {
         lastMouse = { x: viewport.width / 2, y: viewport.height / 2 };
     }
 
-    const closestX = Math.max(box.x + 5, Math.min(box.x + box.width - 5, lastMouse.x));
-    const closestY = Math.max(box.y + 5, Math.min(box.y + box.height - 5, lastMouse.y));
+    // Ensure padding is at least 4 pixels, but up to 20% of the box width/height to avoid edges
+    const padX = Math.max(4, box.width * 0.2);
+    const padY = Math.max(4, box.height * 0.2);
 
-    let targetX = closestX + (Math.random() - 0.5) * Math.min(40, box.width * 0.4);
-    let targetY = closestY + (Math.random() - 0.5) * Math.min(40, box.height * 0.4);
+    const minX = box.x + padX;
+    const maxX = box.x + box.width - padX;
+    const minY = box.y + padY;
+    const maxY = box.y + box.height - padY;
 
-    targetX = Math.max(box.x + 2, Math.min(box.x + box.width - 2, targetX));
-    targetY = Math.max(box.y + 2, Math.min(box.y + box.height - 2, targetY));
+    // Pick a uniformly random point within the padded box boundaries
+    const targetX = minX + Math.random() * Math.max(0, maxX - minX);
+    const targetY = minY + Math.random() * Math.max(0, maxY - minY);
 
     return { x: targetX, y: targetY, box };
 };

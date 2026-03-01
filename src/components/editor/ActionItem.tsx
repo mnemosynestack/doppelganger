@@ -199,7 +199,8 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
             className={`glass-card p-5 rounded-2xl space-y-4 group/item relative transition-[transform,box-shadow,opacity,filter,background-color,border-color] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform select-none touch-none ${statusClass} ${isDragging ? 'ring-2 ring-white/40 scale-[1.02] -translate-y-0.5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] opacity-85 z-20' : ''} ${isDragOver && !isDragging ? 'ring-2 ring-blue-400/60 bg-blue-500/5' : ''} ${action.disabled ? 'opacity-40 grayscale' : ''}`}
             style={{
                 transform: transformStyle,
-                marginLeft: depth ? depth * 12 : undefined
+                marginLeft: depth ? depth * 12 : undefined,
+                zIndex: aiPromptOpen ? 40 : undefined
             }}
         >
             <div className="flex items-center justify-between">
@@ -297,7 +298,8 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
                         {onGenerateSelector && (
                             <button
                                 onClick={() => setAiPromptOpen(!aiPromptOpen)}
-                                className="text-purple-400 hover:text-purple-300 transition-colors focus:outline-none flex items-center justify-center opacity-50 hover:opacity-100 shrink-0"
+                                disabled={action.disabled}
+                                className="text-purple-400 hover:text-purple-300 transition-colors focus:outline-none flex items-center justify-center opacity-50 hover:opacity-100 shrink-0 disabled:opacity-20 disabled:hover:opacity-20 disabled:cursor-not-allowed"
                                 title="AI Selector Finder"
                             >
                                 <MaterialIcon name="auto_awesome" className="text-lg" />
