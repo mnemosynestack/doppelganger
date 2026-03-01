@@ -151,11 +151,13 @@ const ExecutionsScreen: React.FC<ExecutionsScreenProps> = ({ onConfirm, onNotify
                         </div>
                         <button
                             onClick={loadExecutions}
-                            className="w-10 h-10 rounded-2xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                            disabled={loading}
+                            aria-busy={loading}
+                            className="w-10 h-10 rounded-2xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Refresh"
                             aria-label="Refresh executions"
                         >
-                            <MaterialIcon name="sync" className="text-xl" />
+                            <MaterialIcon name="sync" className={`text-xl ${loading ? 'animate-spin' : ''}`} />
                         </button>
                         <button
                             onClick={clearExecutions}
