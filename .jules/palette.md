@@ -1,3 +1,0 @@
-## 2024-05-24 - Added loading state to Executions refresh button
-**Learning:** Discovered inconsistent application of loading states on refresh buttons across similar screens (`CapturesScreen` correctly implemented loading spinners and disabled attributes, while `ExecutionsScreen` did not).
-**Action:** Always ensure async "Refresh" actions provide visual feedback (e.g., spin animation) and disable the button to communicate state and prevent duplicate requests.
