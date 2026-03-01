@@ -18,7 +18,7 @@ const JsonEditorPane: React.FC<JsonEditorPaneProps> = ({ task, onChange, onCopy,
         const base = task;
         const merged: Task = { ...base, ...(raw && typeof raw === 'object' ? raw : {}) } as Task;
         if (!merged.name || typeof merged.name !== 'string') merged.name = base.name || 'Task';
-        if (!merged.mode || !['scrape', 'agent', 'headful'].includes(merged.mode)) merged.mode = base.mode || 'agent';
+        if (!merged.mode || !['scrape', 'agent'].includes(merged.mode)) merged.mode = base.mode || 'agent';
         if (typeof merged.wait !== 'number') merged.wait = typeof base.wait === 'number' ? base.wait : 3;
         if (!merged.stealth) merged.stealth = base.stealth;
         if (!merged.variables || Array.isArray(merged.variables)) merged.variables = base.variables || {};

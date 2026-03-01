@@ -5,6 +5,7 @@ import { ensureActionIds } from '../utils/taskUtils';
 
 export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error') => void) {
     const [isExecuting, setIsExecuting] = useState(false);
+    const [isHeadfulOpen, setIsHeadfulOpen] = useState(false);
     const [results, setResults] = useState<Results | null>(null);
     const [activeRunId, setActiveRunId] = useState<string | null>(null);
     const executeAbortRef = useRef<AbortController | null>(null);
@@ -15,15 +16,35 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
         } catch (e) {
             console.error('Failed to stop headful session', e);
         } finally {
-            setIsExecuting(false);
+            setIsHeadfulOpen(false);
         }
     };
 
-    const stopTask = async (currentTask: Task | null) => {
-        if (currentTask?.mode === 'headful') {
+    const openHeadful = async (url: string) => {
+        if (isHeadfulOpen) {
             await stopHeadful();
             return;
         }
+        setIsHeadfulOpen(true);
+        try {
+            const res = await fetch('/headful', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url })
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                const msg = data?.details || data?.error || 'Failed to start headful session';
+                showAlert(msg, 'error');
+                setIsHeadfulOpen(false);
+            }
+        } catch (e: any) {
+            showAlert('Failed to start headful session', 'error');
+            setIsHeadfulOpen(false);
+        }
+    };
+
+    const stopTask = async () => {
         if (activeRunId) {
             try {
                 await fetch('/api/executions/stop', {
@@ -51,10 +72,7 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
         const runId = `run_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
         setActiveRunId(runId);
 
-        if (isExecuting && taskToRun.mode === 'headful') {
-            await stopHeadful();
-            return;
-        }
+        if (isExecuting) return;
 
         setIsExecuting(true);
         setResults({
@@ -111,7 +129,7 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
                 runId
             };
 
-            const executeTask = async (mode: 'scrape' | 'agent' | 'headful') => {
+            const executeTask = async (mode: 'scrape' | 'agent') => {
                 const controller = new AbortController();
                 executeAbortRef.current = controller;
                 const res = await fetch(`/${mode}`, {
@@ -136,7 +154,8 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
                 return res.json();
             };
 
-            const data = await executeTask(taskToRun.mode);
+            const effectiveMode = taskToRun.mode === 'headful' ? 'scrape' : taskToRun.mode;
+            const data = await executeTask(effectiveMode);
 
             setResults({
                 url: taskToRun.url,
@@ -202,18 +221,19 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
             }
         } finally {
             executeAbortRef.current = null;
-            if (taskToRun.mode !== 'headful') {
-                setIsExecuting(false);
-            }
+            setIsExecuting(false);
         }
     };
 
     return {
         isExecuting,
+        isHeadfulOpen,
         results,
         setResults,
         activeRunId,
         runTaskWithSnapshot,
-        stopTask
+        stopTask,
+        openHeadful,
+        stopHeadful
     };
 }

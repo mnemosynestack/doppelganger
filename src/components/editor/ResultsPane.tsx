@@ -440,9 +440,12 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
         };
         if (headfulViewer === 'native') {
             return (
-                <div className="glass-card rounded-[32px] overflow-hidden h-[80vh] w-full relative flex items-center justify-center">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                        Headful session running in a native browser window.
+                <div className="glass-card rounded-[32px] overflow-hidden h-[80vh] w-full relative flex flex-col items-center justify-center p-8 text-center gap-4">
+                    <div className="text-[12px] font-bold uppercase tracking-widest text-white">
+                        Headful Session Active
+                    </div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80 max-w-lg leading-relaxed">
+                        Doppelganger is not optimized for native browser windows. Please install the proper tools for stability (Xvfb, x11vnc, websockify) or simply use the Docker version.
                     </div>
                 </div>
             );

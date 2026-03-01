@@ -26,6 +26,9 @@ interface EditorScreenProps {
     onRunSnapshot?: (task: Task) => void;
     runId?: string | null;
     onStop?: () => void;
+    isHeadfulOpen?: boolean;
+    onOpenHeadful?: (url: string) => void;
+    onStopHeadful?: () => void;
 }
 
 const VariableRow: React.FC<{
@@ -112,6 +115,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     onRunSnapshot,
     runId,
     onStop,
+    isHeadfulOpen,
+    onOpenHeadful,
+    onStopHeadful,
 }) => {
     const [copied, setCopied] = useState<string | null>(null);
     const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -146,6 +152,17 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const currentTaskRef = useRef(currentTask);
     useEffect(() => { currentTaskRef.current = currentTask; }, [currentTask]);
+
+    const isHeadfulOpenRef = useRef(isHeadfulOpen);
+    useEffect(() => { isHeadfulOpenRef.current = isHeadfulOpen; }, [isHeadfulOpen]);
+
+    useEffect(() => {
+        return () => {
+            if (isHeadfulOpenRef.current) {
+                onStopHeadful?.();
+            }
+        };
+    }, [onStopHeadful]);
 
     const handleAutoSave = useCallback((task?: Task) => {
         onSave(task || currentTaskRef.current, false);
@@ -763,7 +780,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                     </div>
 
                     <div className="bg-white/5 p-1 rounded-xl flex gap-1 border border-white/5">
-                        {(['scrape', 'agent', 'headful'] as TaskMode[]).map(m => (
+                        {(['scrape', 'agent'] as TaskMode[]).map(m => (
                             <button
                                 key={m}
                                 onClick={() => {
@@ -774,7 +791,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                 className={`flex-1 py-2 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${currentTask.mode === m ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
                                 aria-pressed={currentTask.mode === m}
                             >
-                                {m === 'scrape' ? 'Scraper' : m === 'agent' ? 'Agent' : 'Headful'}
+                                {m === 'scrape' ? 'Scraper' : 'Agent'}
                             </button>
                         ))}
                     </div>
@@ -1298,15 +1315,32 @@ return JSON.stringify(links, null, 2);`}
                     <div className="flex items-center gap-3">
                         <button
                             onClick={onRun}
-                            disabled={isExecuting && currentTask.mode !== 'headful'}
-                            className="shine-effect flex-1 bg-white text-black py-4 rounded-2xl font-bold text-[10px] tracking-[0.3em] uppercase transition-all shadow-xl shadow-white/5 flex items-center justify-center gap-3 disabled:opacity-50"
+                            disabled={isExecuting || isHeadfulOpen}
+                            className="shine-effect flex-1 bg-white text-black py-4 rounded-2xl font-bold text-[10px] tracking-[0.3em] uppercase transition-all shadow-xl shadow-white/5 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isExecuting && currentTask.mode !== 'headful' ? (
+                            {isExecuting ? (
                                 <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                             ) : <MaterialIcon name="play_arrow" className="text-sm text-black" />}
                             <span>
-                                {isExecuting && currentTask.mode === 'headful' ? 'Stop Headful' : isExecuting ? 'Running...' : 'Run Task'}
+                                {isExecuting ? 'Running...' : 'Run Task'}
                             </span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (isHeadfulOpen) {
+                                    onStopHeadful?.();
+                                } else {
+                                    onOpenHeadful?.(currentTask.url || 'https://www.google.com');
+                                }
+                            }}
+                            className={`px-4 h-12 rounded-2xl border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${isHeadfulOpen
+                                ? 'border-blue-500/30 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                                : 'border-white/10 text-white/80 hover:text-white hover:bg-white/10'
+                                }`}
+                            title={isHeadfulOpen ? 'Stop headful browser' : 'Open browser to log in'}
+                        >
+                            <MaterialIcon name={isHeadfulOpen ? 'stop' : 'open_in_browser'} className="text-base" />
+                            {isHeadfulOpen ? 'Close Browser' : 'Open Browser'}
                         </button>
                         {isExecuting && (
                             <button
@@ -1338,13 +1372,13 @@ return JSON.stringify(links, null, 2);`}
                     results={results}
                     pinnedResults={pinnedResults}
                     isExecuting={isExecuting}
-                    isHeadful={currentTask.mode === 'headful'}
+                    isHeadful={isHeadfulOpen}
                     runId={runId}
                     onConfirm={onConfirm}
                     onNotify={onNotify}
                     onPin={onPinResults}
                     onUnpin={onUnpinResults}
-                    fullWidth={currentTask.mode === 'headful'}
+                    fullWidth={isHeadfulOpen}
                 />
                 {versionPreview && (
                     <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 backdrop-blur-sm px-6">

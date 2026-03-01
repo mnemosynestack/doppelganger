@@ -26,6 +26,9 @@ interface EditorLoaderProps {
     runId?: string | null;
     onStop?: () => void;
     onTaskLoaded?: (task: Task) => void;
+    isHeadfulOpen?: boolean;
+    onOpenHeadful?: (url: string) => void;
+    onStopHeadful?: () => void;
 }
 
 const EditorLoader: React.FC<EditorLoaderProps> = ({

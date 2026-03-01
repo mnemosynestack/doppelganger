@@ -50,11 +50,14 @@ export default function App() {
     // Execution Hook
     const {
         isExecuting,
+        isHeadfulOpen,
         results,
         setResults,
         activeRunId,
         runTaskWithSnapshot,
-        stopTask
+        stopTask,
+        openHeadful,
+        stopHeadful
     } = useExecution(showAlert);
 
     // Reload tasks when auth is confirmed (fixes race condition on restart)
@@ -230,7 +233,10 @@ export default function App() {
                                 onPinResults={pinResults}
                                 onUnpinResults={unpinResults}
                                 runId={activeRunId}
-                                onStop={() => stopTask(currentTask)}
+                                onStop={() => stopTask()}
+                                isHeadfulOpen={isHeadfulOpen}
+                                onOpenHeadful={(url) => openHeadful(url)}
+                                onStopHeadful={stopHeadful}
                             />
                         ) : <LoadingScreen title="Initializing" subtitle="Preparing task workspace" />
                     } />
@@ -256,8 +262,11 @@ export default function App() {
                                 onPinResults={pinResults}
                                 onUnpinResults={unpinResults}
                                 runId={activeRunId}
-                                onStop={() => stopTask(currentTask)}
+                                onStop={() => stopTask()}
                                 onTaskLoaded={markTaskAsSaved}
+                                isHeadfulOpen={isHeadfulOpen}
+                                onOpenHeadful={(url) => openHeadful(url)}
+                                onStopHeadful={stopHeadful}
                             />
                         }
                     />
