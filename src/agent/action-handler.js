@@ -106,7 +106,8 @@ const executeAction = async (act, context) => {
         fatigue,
         idleMovements,
         overscroll,
-        cursorGlide
+        cursorGlide,
+        randomizeClicks
     } = options;
 
     const humanOptions = { allowTypos, naturalTyping, fatigue };
@@ -159,52 +160,58 @@ const executeAction = async (act, context) => {
                 await page.waitForTimeout(baseDelay(200));
             }
 
-            const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
-            if (loc) {
-                const { x: clickX, y: clickY, box } = loc;
+            if (randomizeClicks) {
+                const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
+                if (loc) {
+                    const { x: clickX, y: clickY, box } = loc;
 
-                await moveMouseHumanlike(page, clickX, clickY, { cursorGlide, startX: context.lastMouse?.x, startY: context.lastMouse?.y });
-                context.lastMouse = { x: clickX, y: clickY };
+                    await moveMouseHumanlike(page, clickX, clickY, { cursorGlide, startX: context.lastMouse?.x, startY: context.lastMouse?.y });
+                    context.lastMouse = { x: clickX, y: clickY };
 
-                if (deadClicks && Math.random() < 0.25) {
-                    const offsetX = (Math.random() - 0.5) * Math.min(20, box.width / 3);
-                    const offsetY = (Math.random() - 0.5) * Math.min(20, box.height / 3);
-                    if (cursorGlide) await moveMouseHumanlike(page, clickX + offsetX, clickY + offsetY, { cursorGlide, startX: clickX, startY: clickY });
-                    await page.mouse.click(clickX + offsetX, clickY + offsetY, { delay: baseDelay(30) });
-                    context.lastMouse = { x: clickX + offsetX, y: clickY + offsetY };
-                    await page.waitForTimeout(baseDelay(120));
-                }
-
-                await page.waitForTimeout(baseDelay(50));
-                await page.mouse.click(clickX, clickY, { delay: baseDelay(50) });
-
-                // Verify the click landed on the target element
-                await page.waitForTimeout(80);
-                let clickMissed = false;
-                try {
-                    const hitTarget = await page.evaluate(({ x, y, selector }) => {
-                        const el = document.elementFromPoint(x, y);
-                        if (!el) return true;
-                        try {
-                            return el.matches(selector) || !!el.closest(selector);
-                        } catch {
-                            return true;
-                        }
-                    }, { x: clickX, y: clickY, selector: selectorValue });
-
-                    if (!hitTarget) {
-                        const stillThere = await page.$(selectorValue);
-                        clickMissed = !!stillThere;
+                    if (deadClicks && Math.random() < 0.25) {
+                        const offsetX = (Math.random() - 0.5) * Math.min(20, box.width / 3);
+                        const offsetY = (Math.random() - 0.5) * Math.min(20, box.height / 3);
+                        if (cursorGlide) await moveMouseHumanlike(page, clickX + offsetX, clickY + offsetY, { cursorGlide, startX: clickX, startY: clickY });
+                        await page.mouse.click(clickX + offsetX, clickY + offsetY, { delay: baseDelay(30) });
+                        context.lastMouse = { x: clickX + offsetX, y: clickY + offsetY };
+                        await page.waitForTimeout(baseDelay(120));
                     }
-                } catch {
-                    // evaluation failed (e.g. navigation), assume click landed
-                }
 
-                if (clickMissed) {
-                    logs.push('Click may have missed, falling back to Playwright click.');
+                    await page.waitForTimeout(baseDelay(50));
+                    await page.mouse.click(clickX, clickY, { delay: baseDelay(50) });
+
+                    // Verify the click landed on the target element
+                    await page.waitForTimeout(80);
+                    let clickMissed = false;
+                    try {
+                        const hitTarget = await page.evaluate(({ x, y, selector }) => {
+                            const el = document.elementFromPoint(x, y);
+                            if (!el) return true;
+                            try {
+                                return el.matches(selector) || !!el.closest(selector);
+                            } catch {
+                                return true;
+                            }
+                        }, { x: clickX, y: clickY, selector: selectorValue });
+
+                        if (!hitTarget) {
+                            const stillThere = await page.$(selectorValue);
+                            clickMissed = !!stillThere;
+                        }
+                    } catch {
+                        // evaluation failed (e.g. navigation), assume click landed
+                    }
+
+                    if (clickMissed) {
+                        logs.push('Click may have missed, falling back to Playwright click.');
+                        await page.click(selectorValue, { delay: baseDelay(50) });
+                    }
+                } else {
+                    await page.waitForTimeout(baseDelay(50));
                     await page.click(selectorValue, { delay: baseDelay(50) });
                 }
             } else {
+                // Default: use Playwright's built-in click (centers on element)
                 await page.waitForTimeout(baseDelay(50));
                 await page.click(selectorValue, { delay: baseDelay(50) });
             }
@@ -221,12 +228,16 @@ const executeAction = async (act, context) => {
             const typeIntoSelector = async () => {
                 if (!selectorValue) return;
 
-                const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
-                if (loc) {
-                    const { x: clickX, y: clickY } = loc;
-                    await moveMouseHumanlike(page, clickX, clickY, { cursorGlide, startX: context.lastMouse?.x, startY: context.lastMouse?.y });
-                    context.lastMouse = { x: clickX, y: clickY };
-                    await page.mouse.click(clickX, clickY, { delay: baseDelay(50) });
+                if (randomizeClicks) {
+                    const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
+                    if (loc) {
+                        const { x: clickX, y: clickY } = loc;
+                        await moveMouseHumanlike(page, clickX, clickY, { cursorGlide, startX: context.lastMouse?.x, startY: context.lastMouse?.y });
+                        context.lastMouse = { x: clickX, y: clickY };
+                        await page.mouse.click(clickX, clickY, { delay: baseDelay(50) });
+                    } else {
+                        await page.click(selectorValue, { delay: baseDelay(50) });
+                    }
                 } else {
                     await page.click(selectorValue, { delay: baseDelay(50) });
                 }
@@ -287,11 +298,17 @@ const executeAction = async (act, context) => {
             }
 
             {
-                const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
-                if (loc) {
-                    const { x: hoverX, y: hoverY } = loc;
-                    await moveMouseHumanlike(page, hoverX, hoverY, { cursorGlide, startX: context.lastMouse?.x, startY: context.lastMouse?.y });
-                    context.lastMouse = { x: hoverX, y: hoverY };
+                if (randomizeClicks) {
+                    const loc = await getLocationalCoords(page, selectorValue, context.lastMouse);
+                    if (loc) {
+                        const { x: hoverX, y: hoverY } = loc;
+                        await moveMouseHumanlike(page, hoverX, hoverY, { cursorGlide, startX: context.lastMouse?.x, startY: context.lastMouse?.y });
+                        context.lastMouse = { x: hoverX, y: hoverY };
+                    } else {
+                        await page.hover(selectorValue);
+                    }
+                } else {
+                    await page.hover(selectorValue);
                 }
             }
             await page.waitForTimeout(baseDelay(150));

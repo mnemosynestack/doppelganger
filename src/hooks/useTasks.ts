@@ -56,11 +56,13 @@ export function useTasks(
                 deadClicks: false,
                 fatigue: false,
                 naturalTyping: false,
-                cursorGlide: false
+                cursorGlide: false,
+                randomizeClicks: false
             };
         }
         if (migratedTask.stealth.cursorGlide === undefined) migratedTask.stealth.cursorGlide = (migratedTask.stealth as any).humanCursor ?? false;
         delete (migratedTask.stealth as any).humanCursor;
+        if (migratedTask.stealth.randomizeClicks === undefined) migratedTask.stealth.randomizeClicks = false;
         if (migratedTask.rotateProxies === undefined) migratedTask.rotateProxies = false;
         if (migratedTask.rotateViewport === undefined) migratedTask.rotateViewport = false;
         if (!migratedTask.extractionFormat) migratedTask.extractionFormat = 'json';

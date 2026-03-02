@@ -44,7 +44,8 @@ export const makeDefaultTask = (): Task => ({
         deadClicks: false,
         fatigue: false,
         naturalTyping: false,
-        cursorGlide: false
+        cursorGlide: false,
+        randomizeClicks: false
     },
     actions: [],
     variables: {},
@@ -95,7 +96,8 @@ export const buildNewTask = (): Task => {
             deadClicks: false,
             fatigue: false,
             naturalTyping: false,
-            cursorGlide: false
+            cursorGlide: false,
+            randomizeClicks: false
         },
         actions: [],
         variables: {},

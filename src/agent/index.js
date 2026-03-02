@@ -98,7 +98,8 @@ async function handleAgent(req, res) {
         deadClicks = false,
         fatigue = false,
         naturalTyping = false,
-        cursorGlide = false
+        cursorGlide = false,
+        randomizeClicks = false
     } = stealth;
 
     if (typeof actions === 'string') {
@@ -461,7 +462,8 @@ async function handleAgent(req, res) {
                         fatigue,
                         idleMovements,
                         overscroll,
-                        cursorGlide
+                        cursorGlide,
+                        randomizeClicks
                     },
                     baseUrl,
                     lastBlockOutput,
