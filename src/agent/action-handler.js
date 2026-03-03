@@ -206,16 +206,13 @@ const executeAction = async (act, context) => {
                         logs.push('Click may have missed, falling back to Playwright click.');
                         await page.click(selectorValue, { delay: baseDelay(50) });
                     }
-                } else {
-                    await page.waitForTimeout(baseDelay(50));
-                    await page.click(selectorValue, { delay: baseDelay(50) });
+                    // Update lastMouse after center click
+                    const clickBox = await (await page.$(selectorValue))?.boundingBox();
+                    if (clickBox) {
+                        context.lastMouse = { x: clickBox.x + clickBox.width / 2, y: clickBox.y + clickBox.height / 2 };
+                    }
                 }
-            } else {
-                // Default: use Playwright's built-in click (centers on element)
-                await page.waitForTimeout(baseDelay(50));
-                await page.click(selectorValue, { delay: baseDelay(50) });
             }
-
             result = true;
             break;
         }
@@ -237,9 +234,17 @@ const executeAction = async (act, context) => {
                         await page.mouse.click(clickX, clickY, { delay: baseDelay(50) });
                     } else {
                         await page.click(selectorValue, { delay: baseDelay(50) });
+                        const typeBox = await (await page.$(selectorValue))?.boundingBox();
+                        if (typeBox) {
+                            context.lastMouse = { x: typeBox.x + typeBox.width / 2, y: typeBox.y + typeBox.height / 2 };
+                        }
                     }
                 } else {
                     await page.click(selectorValue, { delay: baseDelay(50) });
+                    const typeBoxDefault = await (await page.$(selectorValue))?.boundingBox();
+                    if (typeBoxDefault) {
+                        context.lastMouse = { x: typeBoxDefault.x + typeBoxDefault.width / 2, y: typeBoxDefault.y + typeBoxDefault.height / 2 };
+                    }
                 }
 
                 if (typeMode === 'replace') {
@@ -306,9 +311,17 @@ const executeAction = async (act, context) => {
                         context.lastMouse = { x: hoverX, y: hoverY };
                     } else {
                         await page.hover(selectorValue);
+                        const box = await (await page.$(selectorValue))?.boundingBox();
+                        if (box) {
+                            context.lastMouse = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+                        }
                     }
                 } else {
                     await page.hover(selectorValue);
+                    const box = await (await page.$(selectorValue))?.boundingBox();
+                    if (box) {
+                        context.lastMouse = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+                    }
                 }
             }
             await page.waitForTimeout(baseDelay(150));
@@ -326,10 +339,9 @@ const executeAction = async (act, context) => {
 
             if (idleMovements) {
                 logs.push('Simulating cursor restlessness...');
-                await Promise.race([
-                    idleMouse(page),
-                    page.waitForTimeout(ms)
-                ]);
+                // NEW: Use idleMouse with a timeout instead of Promise.race to ensure it cleans up
+                const finalPos = await idleMouse(page, ms);
+                if (finalPos) context.lastMouse = finalPos;
             } else {
                 await page.waitForTimeout(ms);
             }

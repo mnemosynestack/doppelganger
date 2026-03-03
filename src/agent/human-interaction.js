@@ -10,6 +10,19 @@ async function moveMouseHumanlike(page, targetX, targetY, options = {}) {
 
     const distance = Math.sqrt(Math.pow(targetX - startX, 2) + Math.pow(targetY - startY, 2));
 
+    // Sync the actual browser mouse position to the tracked start before
+    // beginning the curve. Use multiple micro-steps to avoid a visible spike.
+    if (cursorGlide) {
+        // If the sync distance is large, it's likely we fell out of sync.
+        // Perform a human-like move to the "start" position instead of a jump.
+        if (distance > 30) {
+            const syncSteps = Math.min(15, Math.max(5, Math.floor(distance / 12)));
+            await page.mouse.move(startX, startY, { steps: syncSteps });
+        } else {
+            await page.mouse.move(startX, startY, { steps: 5 });
+        }
+    }
+
     let steps = 8 + Math.floor(Math.random() * 6);
     if (cursorGlide) {
         // More steps = smaller per-step distance = lower peak speed
@@ -18,12 +31,6 @@ async function moveMouseHumanlike(page, targetX, targetY, options = {}) {
 
     const ctrlX = (startX + targetX) / 2 + (Math.random() - 0.5) * Math.min(60, distance * 0.15);
     const ctrlY = (startY + targetY) / 2 + (Math.random() - 0.5) * Math.min(60, distance * 0.15);
-
-    // Sync the actual browser mouse position to the tracked start before
-    // beginning the curve. Use multiple micro-steps to avoid a visible spike.
-    if (cursorGlide) {
-        await page.mouse.move(startX, startY, { steps: 5 });
-    }
 
     for (let i = 1; i <= steps; i++) {
         const t = i / steps;
@@ -45,24 +52,32 @@ async function moveMouseHumanlike(page, targetX, targetY, options = {}) {
     }
 }
 
-async function idleMouse(page) {
+async function idleMouse(page, maxDuration = 5000) {
     const viewport = page.viewportSize() || { width: 1280, height: 720 };
+    const startTime = Date.now();
     const drifts = 3 + Math.floor(Math.random() * 3);
-    let x = Math.random() * viewport.width;
-    let y = Math.random() * viewport.height;
+    let x = (viewport.width / 2) + (Math.random() - 0.5) * 200;
+    let y = (viewport.height / 2) + (Math.random() - 0.5) * 200;
+
     for (let i = 0; i < drifts; i++) {
+        if (Date.now() - startTime >= maxDuration) break;
+
         const targetX = Math.random() * viewport.width;
         const targetY = Math.random() * viewport.height;
         const steps = 20 + Math.floor(Math.random() * 20);
         for (let s = 0; s < steps; s++) {
+            if (Date.now() - startTime >= maxDuration) break;
             x += (targetX - x) / (steps - s);
             y += (targetY - y) / (steps - s);
             await page.mouse.move(x, y, { steps: 1 });
+            // Small pause between steps to keep it backgroundish
+            await page.waitForTimeout(Math.random() * 10 + 5);
         }
-        if (Math.random() < 0.4) {
-            await page.waitForTimeout(200 + Math.random() * 600);
+        if (Math.random() < 0.4 && (Date.now() - startTime < maxDuration)) {
+            await page.waitForTimeout(Math.min(maxDuration - (Date.now() - startTime), 200 + Math.random() * 600));
         }
     }
+    return { x, y };
 }
 
 async function overshootScroll(page, targetY) {
