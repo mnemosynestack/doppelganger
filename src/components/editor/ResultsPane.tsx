@@ -817,6 +817,7 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                                                     download={file.name}
                                                     className="shrink-0 p-3 rounded-lg border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white transition-all flex items-center justify-center"
                                                     title="Download file"
+                                                    aria-label="Download file"
                                                 >
                                                     <MaterialIcon name="download" className="text-[18px]" />
                                                 </a>

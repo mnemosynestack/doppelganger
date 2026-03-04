@@ -304,6 +304,7 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
                                 disabled={action.disabled}
                                 className="text-purple-400 hover:text-purple-300 transition-colors focus:outline-none flex items-center justify-center opacity-50 hover:opacity-100 shrink-0 disabled:opacity-20 disabled:hover:opacity-20 disabled:cursor-not-allowed"
                                 title="AI Selector Finder"
+                                aria-label="AI Selector Finder"
                             >
                                 <MaterialIcon name="auto_awesome" className="text-lg" />
                             </button>
