@@ -280,6 +280,7 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
                                         }
                                     }}
                                     disabled={aiGenerating || !aiPrompt.trim()}
+                                    aria-busy={aiGenerating}
                                     className="bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 px-3 py-1 rounded border border-purple-500/30 text-[9px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 flex items-center gap-1"
                                 >
                                     {aiGenerating ? <div className="w-2.5 h-2.5 border border-purple-300/30 border-t-purple-300 rounded-full animate-spin" /> : <MaterialIcon name="search" className="text-[10px]" />}
