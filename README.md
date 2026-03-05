@@ -264,6 +264,7 @@ If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For
 - [x] **IP rotation tooling** — build a settings workflow for importing proxies and automatically rotating them.
 - [x] **API key workflow** — the API key panel already supports regenerating and copying keys via `/api/settings/api-key`, so secure API access is ready without extra setup.
 - [x] **Task proxy rotation toggle** — the “Rotate Proxies” option in each task ties into the Settings rotation controls, enabling rotation per execution.
+- [ ] **Spatial editor transition** — transition to a spatial editor like that of activepieces (top priority).
 - [ ] **Action key combos** — add modifier shortcuts (e.g., Ctrl+Click, Shift+Scroll) so tasks can more closely mirror real user interactions.
 - [ ] **Click-and-drag block** — add an action that does drag gestures (selecting text, moving items) so tasks can simulate click-and-drag flows.
 - [x] **Recording controls** — Task editor now exposes a “Disable automated recording” switch in the general settings panel so workflows can skip video capture on a per-task basis.
