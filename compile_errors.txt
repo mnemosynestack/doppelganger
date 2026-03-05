@@ -1,0 +1,8 @@
+﻿src/components/EditorScreen.tsx(34,7): error TS6133: '_VariableRow' is declared but its value is never read.
+src/components/EditorScreen.tsx(209,11): error TS6133: '_handleCopy' is declared but its value is never read.
+src/components/EditorScreen.tsx(502,11): error TS6133: '_addVariable' is declared but its value is never read.
+src/components/EditorScreen.tsx(655,11): error TS6133: '_removeVariable' is declared but its value is never read.
+src/components/EditorScreen.tsx(663,11): error TS6133: '_updateVariable' is declared but its value is never read.
+src/components/EditorScreen.tsx(690,11): error TS6133: '_rollbackToVersion' is declared but its value is never read.
+src/components/EditorScreen.tsx(710,11): error TS6133: '_openVersionPreview' is declared but its value is never read.
+src/components/EditorScreen.tsx(852,47): error TS6133: '_blockDepths' is declared but its value is never read.

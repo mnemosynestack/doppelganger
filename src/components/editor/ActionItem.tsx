@@ -85,7 +85,6 @@ const conditionOps: Record<VarType, { value: string; label: string }[]> = {
 interface ActionItemProps {
     action: Action;
     index: number;
-    depth: number;
     status: 'running' | 'success' | 'error' | 'skipped' | undefined;
     isDragging: boolean;
     isDragOver: boolean;
@@ -105,7 +104,6 @@ interface ActionItemProps {
 const ActionItem: React.FC<ActionItemProps> = memo(({
     action,
     index,
-    depth,
     status,
     isDragging,
     isDragOver,
@@ -125,6 +123,7 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
     const [aiPrompt, setAiPrompt] = useState('');
     const [aiGenerating, setAiGenerating] = useState(false);
     const aiPopupRef = useRef<HTMLDivElement>(null);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -149,26 +148,26 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
 
     const renderBlockMarker = (type: Action['type']) => {
         const iconClass = "text-[12px]";
-        if (type === 'if' || type === 'else') return <MaterialIcon name="call_split" className={`${iconClass} text-blue-400`} />;
+        if (type === 'if' || type === 'else') return <MaterialIcon name="call_split" className={`${iconClass} text-white`} />;
         if (type === 'end') return <MaterialIcon name="subdirectory_arrow_right" className={`${iconClass} text-gray-500`} />;
-        if (type === 'while' || type === 'repeat') return <MaterialIcon name="repeat" className={`${iconClass} text-amber-400`} />;
-        if (type === 'foreach') return <MaterialIcon name="list" className={`${iconClass} text-amber-300`} />;
+        if (type === 'while' || type === 'repeat') return <MaterialIcon name="repeat" className={`${iconClass} text-white`} />;
+        if (type === 'foreach') return <MaterialIcon name="list" className={`${iconClass} text-white`} />;
         if (type === 'on_error') return <MaterialIcon name="warning" className={`${iconClass} text-red-400`} />;
-        if (type === 'set') return <MaterialIcon name="data_object" className={`${iconClass} text-green-400`} />;
-        if (type === 'stop') return <MaterialIcon name="stop" className={`${iconClass} text-red-400`} />;
-        if (type === 'click') return <MaterialIcon name="ads_click" className={`${iconClass} text-blue-300`} />;
-        if (type === 'type') return <MaterialIcon name="text_format" className={`${iconClass} text-green-300`} />;
-        if (type === 'hover') return <MaterialIcon name="my_location" className={`${iconClass} text-purple-300`} />;
-        if (type === 'press') return <MaterialIcon name="keyboard" className={`${iconClass} text-amber-300`} />;
-        if (type === 'wait') return <MaterialIcon name="schedule" className={`${iconClass} text-slate-300`} />;
-        if (type === 'wait_selector') return <MaterialIcon name="schedule" className={`${iconClass} text-orange-300`} />;
-        if (type === 'scroll') return <MaterialIcon name="swap_vert" className={`${iconClass} text-cyan-300`} />;
-        if (type === 'javascript') return <MaterialIcon name="code" className={`${iconClass} text-yellow-300`} />;
-        if (type === 'csv') return <MaterialIcon name="table_chart" className={`${iconClass} text-emerald-300`} />;
-        if (type === 'merge') return <MaterialIcon name="layers" className={`${iconClass} text-emerald-200`} />;
-        if (type === 'screenshot') return <MaterialIcon name="photo_camera" className={`${iconClass} text-emerald-300`} />;
-        if (type === 'start') return <MaterialIcon name="play_circle" className={`${iconClass} text-emerald-300`} />;
-        if (type === 'navigate') return <MaterialIcon name="navigation" className={`${iconClass} text-blue-400`} />;
+        if (type === 'set') return <MaterialIcon name="data_object" className={`${iconClass} text-white`} />;
+        if (type === 'stop') return <MaterialIcon name="stop" className={`${iconClass} text-white`} />;
+        if (type === 'click') return <MaterialIcon name="ads_click" className={`${iconClass} text-white`} />;
+        if (type === 'type') return <MaterialIcon name="text_format" className={`${iconClass} text-white`} />;
+        if (type === 'hover') return <MaterialIcon name="my_location" className={`${iconClass} text-white`} />;
+        if (type === 'press') return <MaterialIcon name="keyboard" className={`${iconClass} text-white`} />;
+        if (type === 'wait') return <MaterialIcon name="schedule" className={`${iconClass} text-white`} />;
+        if (type === 'wait_selector') return <MaterialIcon name="schedule" className={`${iconClass} text-white`} />;
+        if (type === 'scroll') return <MaterialIcon name="swap_vert" className={`${iconClass} text-white`} />;
+        if (type === 'javascript') return <MaterialIcon name="code" className={`${iconClass} text-white`} />;
+        if (type === 'csv') return <MaterialIcon name="table_chart" className={`${iconClass} text-white`} />;
+        if (type === 'merge') return <MaterialIcon name="layers" className={`${iconClass} text-white`} />;
+        if (type === 'screenshot') return <MaterialIcon name="photo_camera" className={`${iconClass} text-white`} />;
+        if (type === 'start') return <MaterialIcon name="play_circle" className={`${iconClass} text-white`} />;
+        if (type === 'navigate') return <MaterialIcon name="navigation" className={`${iconClass} text-white`} />;
         return <span className="text-[9px] text-white/20">|</span>;
     };
 
@@ -196,79 +195,64 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
                 onPointerDown(e, action.id, index);
             }}
             onContextMenu={(e) => onOpenContextMenu(e, action.id)}
-            className={`glass-card p-5 rounded-2xl space-y-4 group/item relative transition-[transform,box-shadow,opacity,filter,background-color,border-color] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform select-none touch-none ${statusClass} ${isDragging ? 'ring-2 ring-white/40 scale-[1.02] -translate-y-0.5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] opacity-85 z-20' : ''} ${isDragOver && !isDragging ? 'ring-2 ring-blue-400/60 bg-blue-500/5' : ''} ${action.disabled ? 'opacity-40 grayscale' : ''}`}
+            className={`bg-black min-w-[280px] w-full max-w-sm mx-auto border border-white/20 p-5 rounded-2xl space-y-4 group/item relative transition-[transform,box-shadow,opacity,filter,background-color,border-color] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform select-none touch-none ${statusClass} ${isDragging ? 'ring-2 ring-white/40 scale-[1.02] shadow-[0_30px_80px_rgba(0,0,0,0.45)] opacity-85 z-20 mx-auto' : ''} ${isDragOver && !isDragging ? 'ring-2 ring-blue-400/60 bg-blue-500/5' : ''} ${action.disabled ? 'opacity-40 grayscale' : ''}`}
             style={{
                 transform: transformStyle,
-                marginLeft: depth ? depth * 12 : undefined,
                 zIndex: aiPromptOpen ? 40 : undefined
             }}
         >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
                 <div className="flex items-center gap-3">
                     <div className="text-[8px] font-bold text-white/20 font-mono tracking-tighter">{(index + 1).toString().padStart(2, '0')}</div>
                     <div className="w-4 h-4 flex items-center justify-center">
                         {renderBlockMarker(action.type)}
                     </div>
                     <button
-                        onClick={() => onOpenPalette(action.id)}
-                        className="action-type-select text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 focus:outline-none cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-blue-400/50"
+                        onClick={(e) => { e.stopPropagation(); onOpenPalette(action.id); }}
+                        className="action-type-select text-[10px] font-bold uppercase tracking-[0.2em] text-white focus:outline-none cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-white/50"
                         aria-label={`Change action type: ${action.type}`}
                     >
                         {ACTION_CATALOG.find((item) => item.type === action.type)?.label || action.type}
                     </button>
                 </div>
-                <button
-                    data-no-drag="true"
-                    onClick={() => onRemove(action.id)}
-                    className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover/item:opacity-100 focus:opacity-100 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
-                    aria-label="Delete action"
-                    title="Delete action"
-                >
-                    <MaterialIcon name="close" className="text-base" />
-                </button>
+                <div className="flex items-center gap-2">
+                    <MaterialIcon name={isExpanded ? 'expand_less' : 'expand_more'} className="text-base text-gray-600" />
+                    <button
+                        data-no-drag="true"
+                        onClick={(e) => { e.stopPropagation(); onRemove(action.id); }}
+                        className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover/item:opacity-100 focus:opacity-100 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                        aria-label="Delete action"
+                        title="Delete action"
+                    >
+                        <MaterialIcon name="close" className="text-base" />
+                    </button>
+                </div>
             </div>
-            {(action.type === 'click' || action.type === 'type' || action.type === 'hover' || action.type === 'wait_selector' || action.type === 'scroll') && (
-                <div className="space-y-1.5 relative">
-                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1 block">
-                        {action.type === 'scroll' ? 'Selector (Optional)' : 'Selector'}
-                    </label>
-                    {aiPromptOpen && (
-                        <div ref={aiPopupRef} className="absolute right-0 top-6 z-30 w-64 bg-[#111] border border-white/10 rounded-xl shadow-2xl p-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block">Describe Element</label>
-                                <button
-                                    onClick={() => setAiPromptOpen(false)}
-                                    className="text-gray-500 hover:text-white transition-colors p-1 -mr-1"
-                                    title="Close"
-                                    aria-label="Close"
-                                >
-                                    <MaterialIcon name="close" className="text-[12px]" />
-                                </button>
-                            </div>
-                            <input
-                                autoFocus
-                                value={aiPrompt}
-                                onChange={e => setAiPrompt(e.target.value)}
-                                onKeyDown={async (e) => {
-                                    if (e.key === 'Enter' && aiPrompt.trim() && !aiGenerating && onGenerateSelector) {
-                                        setAiGenerating(true);
-                                        try {
-                                            await onGenerateSelector(action.id, aiPrompt);
-                                            setAiPromptOpen(false);
-                                            setAiPrompt('');
-                                        } finally {
-                                            setAiGenerating(false);
-                                        }
-                                    }
-                                }}
-                                disabled={aiGenerating}
-                                placeholder="e.g. The green submit button"
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors disabled:opacity-50"
-                            />
-                            <div className="flex justify-end pt-1">
-                                <button
-                                    onClick={async () => {
-                                        if (aiPrompt.trim() && !aiGenerating && onGenerateSelector) {
+            {isExpanded && (<>
+                {(action.type === 'click' || action.type === 'type' || action.type === 'hover' || action.type === 'wait_selector' || action.type === 'scroll') && (
+                    <div className="space-y-1.5 relative">
+                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1 block">
+                            {action.type === 'scroll' ? 'Selector (Optional)' : 'Selector'}
+                        </label>
+                        {aiPromptOpen && (
+                            <div ref={aiPopupRef} className="absolute right-0 top-6 z-30 w-64 bg-[#111] border border-white/10 rounded-xl shadow-2xl p-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block">Describe Element</label>
+                                    <button
+                                        onClick={() => setAiPromptOpen(false)}
+                                        className="text-gray-500 hover:text-white transition-colors p-1 -mr-1"
+                                        title="Close"
+                                        aria-label="Close"
+                                    >
+                                        <MaterialIcon name="close" className="text-[12px]" />
+                                    </button>
+                                </div>
+                                <input
+                                    autoFocus
+                                    value={aiPrompt}
+                                    onChange={e => setAiPrompt(e.target.value)}
+                                    onKeyDown={async (e) => {
+                                        if (e.key === 'Enter' && aiPrompt.trim() && !aiGenerating && onGenerateSelector) {
                                             setAiGenerating(true);
                                             try {
                                                 await onGenerateSelector(action.id, aiPrompt);
@@ -279,479 +263,498 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
                                             }
                                         }
                                     }}
-                                    disabled={aiGenerating || !aiPrompt.trim()}
-                                    className="bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 px-3 py-1 rounded border border-purple-500/30 text-[9px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 flex items-center gap-1"
-                                >
-                                    {aiGenerating ? <div className="w-2.5 h-2.5 border border-purple-300/30 border-t-purple-300 rounded-full animate-spin" /> : <MaterialIcon name="search" className="text-[10px]" />}
-                                    Find
-                                </button>
+                                    disabled={aiGenerating}
+                                    placeholder="e.g. The green submit button"
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors disabled:opacity-50"
+                                />
+                                <div className="flex justify-end pt-1">
+                                    <button
+                                        onClick={async () => {
+                                            if (aiPrompt.trim() && !aiGenerating && onGenerateSelector) {
+                                                setAiGenerating(true);
+                                                try {
+                                                    await onGenerateSelector(action.id, aiPrompt);
+                                                    setAiPromptOpen(false);
+                                                    setAiPrompt('');
+                                                } finally {
+                                                    setAiGenerating(false);
+                                                }
+                                            }
+                                        }}
+                                        disabled={aiGenerating || !aiPrompt.trim()}
+                                        className="bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 px-3 py-1 rounded border border-purple-500/30 text-[9px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 flex items-center gap-1"
+                                    >
+                                        {aiGenerating ? <div className="w-2.5 h-2.5 border border-purple-300/30 border-t-purple-300 rounded-full animate-spin" /> : <MaterialIcon name="search" className="text-[10px]" />}
+                                        Find
+                                    </button>
+                                </div>
                             </div>
+                        )}
+                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all flex items-center gap-2 relative">
+                            <div className="flex-1 min-w-0">
+                                <RichInput
+                                    value={action.selector || ''}
+                                    onChange={(v) => onUpdate(action.id, { selector: v })}
+                                    onBlur={() => onAutoSave()}
+                                    variables={variables}
+                                    placeholder={action.type === 'scroll' ? ".scroll-container or leave empty" : ".btn-primary"}
+                                />
+                            </div>
+                            {onGenerateSelector && (
+                                <button
+                                    onClick={() => setAiPromptOpen(!aiPromptOpen)}
+                                    disabled={action.disabled}
+                                    className="text-purple-400 hover:text-purple-300 transition-colors focus:outline-none flex items-center justify-center opacity-50 hover:opacity-100 shrink-0 disabled:opacity-20 disabled:hover:opacity-20 disabled:cursor-not-allowed"
+                                    title="AI Selector Finder"
+                                >
+                                    <MaterialIcon name="auto_awesome" className="text-lg" />
+                                </button>
+                            )}
                         </div>
-                    )}
-                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all flex items-center gap-2 relative">
-                        <div className="flex-1 min-w-0">
+                    </div>
+                )}
+
+
+                {action.type === 'scroll' && (
+                    <div className="space-y-1.5">
+                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Scroll Speed (ms)</label>
+                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
                             <RichInput
-                                value={action.selector || ''}
-                                onChange={(v) => onUpdate(action.id, { selector: v })}
+                                value={action.key || ''}
+                                onChange={(v) => onUpdate(action.id, { key: v })}
                                 onBlur={() => onAutoSave()}
                                 variables={variables}
-                                placeholder={action.type === 'scroll' ? ".scroll-container or leave empty" : ".btn-primary"}
+                                placeholder="500"
                             />
                         </div>
-                        {onGenerateSelector && (
-                            <button
-                                onClick={() => setAiPromptOpen(!aiPromptOpen)}
-                                disabled={action.disabled}
-                                className="text-purple-400 hover:text-purple-300 transition-colors focus:outline-none flex items-center justify-center opacity-50 hover:opacity-100 shrink-0 disabled:opacity-20 disabled:hover:opacity-20 disabled:cursor-not-allowed"
-                                title="AI Selector Finder"
-                            >
-                                <MaterialIcon name="auto_awesome" className="text-lg" />
-                            </button>
+                    </div>
+                )}
+
+                {(action.type === 'navigate' || action.type === 'type' || action.type === 'wait' || action.type === 'wait_selector' || action.type === 'scroll' || action.type === 'javascript' || action.type === 'csv') && (
+                    <div className="space-y-1.5">
+                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">
+                            {action.type === 'navigate'
+                                ? 'URL'
+                                : action.type === 'type'
+                                    ? 'Content'
+                                    : action.type === 'wait'
+                                        ? 'Seconds'
+                                        : action.type === 'wait_selector'
+                                            ? 'Timeout (Sec)'
+                                            : action.type === 'scroll'
+                                                ? 'Pixels'
+                                                : action.type === 'csv'
+                                                    ? 'CSV Input'
+                                                    : 'Script'}
+                        </label>
+                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                            {action.type === 'javascript' ? (
+                                <CodeEditor
+                                    value={action.value || ''}
+                                    onChange={(v) => onUpdate(action.id, { value: v })}
+                                    onBlur={() => onAutoSave()}
+                                    language="javascript"
+                                    variables={variables}
+                                    className="min-h-[120px]"
+                                    placeholder="return document.title"
+                                />
+                            ) : action.type === 'csv' ? (
+                                <CodeEditor
+                                    value={action.value || ''}
+                                    onChange={(v) => onUpdate(action.id, { value: v })}
+                                    onBlur={() => onAutoSave()}
+                                    language="plain"
+                                    variables={variables}
+                                    className="min-h-[120px]"
+                                    placeholder="name,age\nAda,31"
+                                />
+                            ) : (
+                                <RichInput
+                                    value={action.value || ''}
+                                    onChange={(v) => onUpdate(action.id, { value: v })}
+                                    onBlur={() => onAutoSave()}
+                                    variables={variables}
+                                    placeholder={action.type === 'navigate' ? 'https://example.com' : action.type === 'type' ? 'Search keywords' : action.type === 'wait' ? '3' : action.type === 'wait_selector' ? '10' : '400'}
+                                />
+                            )}
+                        </div>
+                        {action.type === 'type' && (
+                            <div className="space-y-1.5">
+                                <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Mode</label>
+                                <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                    <select
+                                        value={action.typeMode || 'replace'}
+                                        onChange={(e) => {
+                                            onUpdate(action.id, { typeMode: e.target.value as 'append' | 'replace' }, true);
+                                        }}
+                                        className="custom-select w-full bg-transparent border-none px-0 py-0 text-[11px] text-white"
+                                    >
+                                        {TYPE_MODE_OPTIONS.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
                         )}
                     </div>
-                </div>
-            )}
+                )}
 
-
-            {action.type === 'scroll' && (
-                <div className="space-y-1.5">
-                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Scroll Speed (ms)</label>
-                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                        <RichInput
-                            value={action.key || ''}
-                            onChange={(v) => onUpdate(action.id, { key: v })}
-                            onBlur={() => onAutoSave()}
-                            variables={variables}
-                            placeholder="500"
-                        />
-                    </div>
-                </div>
-            )}
-
-            {(action.type === 'navigate' || action.type === 'type' || action.type === 'wait' || action.type === 'wait_selector' || action.type === 'scroll' || action.type === 'javascript' || action.type === 'csv') && (
-                <div className="space-y-1.5">
-                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">
-                        {action.type === 'navigate'
-                            ? 'URL'
-                            : action.type === 'type'
-                                ? 'Content'
-                                : action.type === 'wait'
-                                    ? 'Seconds'
-                                    : action.type === 'wait_selector'
-                                        ? 'Timeout (Sec)'
-                                        : action.type === 'scroll'
-                                            ? 'Pixels'
-                                            : action.type === 'csv'
-                                                ? 'CSV Input'
-                                                : 'Script'}
-                    </label>
-                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                        {action.type === 'javascript' ? (
-                            <CodeEditor
-                                value={action.value || ''}
-                                onChange={(v) => onUpdate(action.id, { value: v })}
-                                onBlur={() => onAutoSave()}
-                                language="javascript"
-                                variables={variables}
-                                className="min-h-[120px]"
-                                placeholder="return document.title"
-                            />
-                        ) : action.type === 'csv' ? (
-                            <CodeEditor
-                                value={action.value || ''}
-                                onChange={(v) => onUpdate(action.id, { value: v })}
-                                onBlur={() => onAutoSave()}
-                                language="plain"
-                                variables={variables}
-                                className="min-h-[120px]"
-                                placeholder="name,age\nAda,31"
-                            />
-                        ) : (
+                {action.type === 'screenshot' && (
+                    <div className="space-y-1.5">
+                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Label (Optional)</label>
+                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
                             <RichInput
                                 value={action.value || ''}
                                 onChange={(v) => onUpdate(action.id, { value: v })}
                                 onBlur={() => onAutoSave()}
                                 variables={variables}
-                                placeholder={action.type === 'navigate' ? 'https://example.com' : action.type === 'type' ? 'Search keywords' : action.type === 'wait' ? '3' : action.type === 'wait_selector' ? '10' : '400'}
+                                placeholder="checkout-step"
                             />
-                        )}
+                        </div>
                     </div>
-                    {action.type === 'type' && (
-                        <div className="space-y-1.5">
-                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Mode</label>
+                )}
+
+                {action.type === 'press' && (() => {
+                    const { modifiers, baseKey } = parsePressKey(action.key);
+                    return (
+                        <div className="space-y-2">
+                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Key</label>
+                            <div className="grid grid-cols-2 gap-1 text-[10px] text-white">
+                                {PRESS_MODIFIERS.map((modifier) => (
+                                    <label key={modifier.value} className="inline-flex items-center space-x-1">
+                                        <input
+                                            type="checkbox"
+                                            checked={modifiers.includes(modifier.value)}
+                                            onChange={(e) => {
+                                                const nextModifiers = e.target.checked
+                                                    ? [...modifiers, modifier.value]
+                                                    : modifiers.filter((m) => m !== modifier.value);
+                                                onUpdate(action.id, {
+                                                    key: buildPressKey(nextModifiers, baseKey)
+                                                }, true);
+                                            }}
+                                            className="h-3 w-3 rounded border border-white/30 bg-black/80"
+                                        />
+                                        <span className="uppercase text-[9px] text-white/70">{modifier.label}</span>
+                                    </label>
+                                ))}
+                            </div>
                             <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
                                 <select
-                                    value={action.typeMode || 'replace'}
-                                    onChange={(e) => {
-                                        onUpdate(action.id, { typeMode: e.target.value as 'append' | 'replace' }, true);
-                                    }}
+                                    value={baseKey}
+                                    onChange={(e) => onUpdate(action.id, { key: buildPressKey(modifiers, e.target.value) }, true)}
                                     className="custom-select w-full bg-transparent border-none px-0 py-0 text-[11px] text-white"
                                 >
-                                    {TYPE_MODE_OPTIONS.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
+                                    <option value="">Select key</option>
+                                    {PRESS_BASE_KEYS.map((keyOption) => (
+                                        <option key={keyOption} value={keyOption}>
+                                            {keyOption}
                                         </option>
                                     ))}
                                 </select>
                             </div>
                         </div>
-                    )}
-                </div>
-            )}
+                    );
+                })()}
 
-            {action.type === 'screenshot' && (
-                <div className="space-y-1.5">
-                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Label (Optional)</label>
-                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                        <RichInput
-                            value={action.value || ''}
-                            onChange={(v) => onUpdate(action.id, { value: v })}
-                            onBlur={() => onAutoSave()}
-                            variables={variables}
-                            placeholder="checkout-step"
-                        />
-                    </div>
-                </div>
-            )}
-
-            {action.type === 'press' && (() => {
-                const { modifiers, baseKey } = parsePressKey(action.key);
-                return (
-                    <div className="space-y-2">
-                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Key</label>
-                        <div className="grid grid-cols-2 gap-1 text-[10px] text-white">
-                            {PRESS_MODIFIERS.map((modifier) => (
-                                <label key={modifier.value} className="inline-flex items-center space-x-1">
+                {action.type === 'if' && (() => {
+                    const varKeys = Object.keys(variables || {});
+                    const normalizedVar = normalizeVarName(action.conditionVar || '');
+                    const inferredType = normalizedVar && variables?.[normalizedVar]?.type;
+                    const varType = action.conditionVarType || inferredType || 'string';
+                    const ops = conditionOps[varType as VarType] || conditionOps.string;
+                    const opValue = action.conditionOp || ops[0].value;
+                    return (
+                        <div className="space-y-2">
+                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Condition</label>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <div className="space-y-1">
+                                    <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Variable</span>
                                     <input
-                                        type="checkbox"
-                                        checked={modifiers.includes(modifier.value)}
+                                        type="text"
+                                        list={`if-var-${action.id}`}
+                                        value={action.conditionVar || ''}
+                                        onChange={(e) => onUpdate(action.id, { conditionVar: e.target.value })}
+                                        onBlur={() => onAutoSave()}
+                                        placeholder="variable name"
+                                        className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
+                                    />
+                                    {varKeys.length > 0 && (
+                                        <datalist id={`if-var-${action.id}`}>
+                                            {varKeys.map((key) => (
+                                                <option key={key} value={key} />
+                                            ))}
+                                        </datalist>
+                                    )}
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Type</span>
+                                    <select
+                                        value={varType}
                                         onChange={(e) => {
-                                            const nextModifiers = e.target.checked
-                                                ? [...modifiers, modifier.value]
-                                                : modifiers.filter((m) => m !== modifier.value);
+                                            const nextType = e.target.value as VarType;
+                                            const nextOps = conditionOps[nextType] || conditionOps.string;
                                             onUpdate(action.id, {
-                                                key: buildPressKey(nextModifiers, baseKey)
+                                                conditionVarType: nextType,
+                                                conditionOp: nextOps[0].value,
+                                                conditionValue: nextType === 'boolean' ? '' : action.conditionValue || ''
                                             }, true);
                                         }}
-                                        className="h-3 w-3 rounded border border-white/30 bg-black/80"
+                                        className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
+                                    >
+                                        <option value="string">String</option>
+                                        <option value="number">Number</option>
+                                        <option value="boolean">Boolean</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Relation</span>
+                                    <select
+                                        value={opValue}
+                                        onChange={(e) => onUpdate(action.id, { conditionOp: e.target.value }, true)}
+                                        className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
+                                    >
+                                        {ops.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            {varType !== 'boolean' && (
+                                <div className="space-y-1">
+                                    <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Value</span>
+                                    <input
+                                        type={varType === 'number' ? 'number' : 'text'}
+                                        value={action.conditionValue || ''}
+                                        onChange={(e) => onUpdate(action.id, { conditionValue: e.target.value })}
+                                        onBlur={() => onAutoSave()}
+                                        placeholder={varType === 'number' ? '0' : 'value'}
+                                        className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
                                     />
-                                    <span className="uppercase text-[9px] text-white/70">{modifier.label}</span>
-                                </label>
-                            ))}
+                                </div>
+                            )}
                         </div>
+                    );
+                })()}
+
+                {action.type === 'while' && (() => {
+                    const varKeys = Object.keys(variables || {});
+                    const normalizedVar = normalizeVarName(action.conditionVar || '');
+                    const inferredType = normalizedVar && variables?.[normalizedVar]?.type;
+                    const varType = action.conditionVarType || inferredType || 'string';
+                    const ops = conditionOps[varType as VarType] || conditionOps.string;
+                    const opValue = action.conditionOp || ops[0].value;
+                    return (
+                        <div className="space-y-2">
+                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Condition</label>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <div className="space-y-1">
+                                    <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Variable</span>
+                                    <input
+                                        type="text"
+                                        list={`while-var-${action.id}`}
+                                        value={action.conditionVar || ''}
+                                        onChange={(e) => onUpdate(action.id, { conditionVar: e.target.value })}
+                                        onBlur={() => onAutoSave()}
+                                        placeholder="variable name"
+                                        className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
+                                    />
+                                    {varKeys.length > 0 && (
+                                        <datalist id={`while-var-${action.id}`}>
+                                            {varKeys.map((key) => (
+                                                <option key={key} value={key} />
+                                            ))}
+                                        </datalist>
+                                    )}
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Type</span>
+                                    <select
+                                        value={varType}
+                                        onChange={(e) => {
+                                            const nextType = e.target.value as VarType;
+                                            const nextOps = conditionOps[nextType] || conditionOps.string;
+                                            onUpdate(action.id, {
+                                                conditionVarType: nextType,
+                                                conditionOp: nextOps[0].value,
+                                                conditionValue: nextType === 'boolean' ? '' : action.conditionValue || ''
+                                            }, true);
+                                        }}
+                                        className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
+                                    >
+                                        <option value="string">String</option>
+                                        <option value="number">Number</option>
+                                        <option value="boolean">Boolean</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Relation</span>
+                                    <select
+                                        value={opValue}
+                                        onChange={(e) => onUpdate(action.id, { conditionOp: e.target.value }, true)}
+                                        className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
+                                    >
+                                        {ops.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            {varType !== 'boolean' && (
+                                <div className="space-y-1">
+                                    <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Value</span>
+                                    <input
+                                        type={varType === 'number' ? 'number' : 'text'}
+                                        value={action.conditionValue || ''}
+                                        onChange={(e) => onUpdate(action.id, { conditionValue: e.target.value })}
+                                        onBlur={() => onAutoSave()}
+                                        placeholder={varType === 'number' ? '0' : 'value'}
+                                        className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
+
+                {action.type === 'repeat' && (
+                    <div className="space-y-1.5">
+                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Times</label>
                         <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                            <select
-                                value={baseKey}
-                                onChange={(e) => onUpdate(action.id, { key: buildPressKey(modifiers, e.target.value) }, true)}
-                                className="custom-select w-full bg-transparent border-none px-0 py-0 text-[11px] text-white"
-                            >
-                                <option value="">Select key</option>
-                                {PRESS_BASE_KEYS.map((keyOption) => (
-                                    <option key={keyOption} value={keyOption}>
-                                        {keyOption}
-                                    </option>
-                                ))}
-                            </select>
+                            <RichInput
+                                value={action.value || ''}
+                                onChange={(v) => onUpdate(action.id, { value: v })}
+                                variables={variables}
+                                placeholder="3"
+                            />
                         </div>
                     </div>
-                );
-            })()}
+                )}
 
-            {action.type === 'if' && (() => {
-                const varKeys = Object.keys(variables || {});
-                const normalizedVar = normalizeVarName(action.conditionVar || '');
-                const inferredType = normalizedVar && variables?.[normalizedVar]?.type;
-                const varType = action.conditionVarType || inferredType || 'string';
-                const ops = conditionOps[varType as VarType] || conditionOps.string;
-                const opValue = action.conditionOp || ops[0].value;
-                return (
-                    <div className="space-y-2">
-                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Condition</label>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                            <div className="space-y-1">
-                                <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Variable</span>
-                                <input
-                                    type="text"
-                                    list={`if-var-${action.id}`}
-                                    value={action.conditionVar || ''}
-                                    onChange={(e) => onUpdate(action.id, { conditionVar: e.target.value })}
-                                    onBlur={() => onAutoSave()}
-                                    placeholder="variable name"
-                                    className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
+                {action.type === 'foreach' && (
+                    <div className="space-y-3">
+                        <div className="space-y-1.5">
+                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Selector (Optional)</label>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                <RichInput
+                                    value={action.selector || ''}
+                                    onChange={(v) => onUpdate(action.id, { selector: v })}
+                                    variables={variables}
+                                    placeholder=".list-item"
                                 />
-                                {varKeys.length > 0 && (
-                                    <datalist id={`if-var-${action.id}`}>
-                                        {varKeys.map((key) => (
-                                            <option key={key} value={key} />
-                                        ))}
-                                    </datalist>
-                                )}
-                            </div>
-                            <div className="space-y-1">
-                                <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Type</span>
-                                <select
-                                    value={varType}
-                                    onChange={(e) => {
-                                        const nextType = e.target.value as VarType;
-                                        const nextOps = conditionOps[nextType] || conditionOps.string;
-                                        onUpdate(action.id, {
-                                            conditionVarType: nextType,
-                                            conditionOp: nextOps[0].value,
-                                            conditionValue: nextType === 'boolean' ? '' : action.conditionValue || ''
-                                        }, true);
-                                    }}
-                                    className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
-                                >
-                                    <option value="string">String</option>
-                                    <option value="number">Number</option>
-                                    <option value="boolean">Boolean</option>
-                                </select>
-                            </div>
-                            <div className="space-y-1">
-                                <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Relation</span>
-                                <select
-                                    value={opValue}
-                                    onChange={(e) => onUpdate(action.id, { conditionOp: e.target.value }, true)}
-                                    className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
-                                >
-                                    {ops.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
                             </div>
                         </div>
-                        {varType !== 'boolean' && (
-                            <div className="space-y-1">
-                                <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Value</span>
-                                <input
-                                    type={varType === 'number' ? 'number' : 'text'}
-                                    value={action.conditionValue || ''}
-                                    onChange={(e) => onUpdate(action.id, { conditionValue: e.target.value })}
-                                    onBlur={() => onAutoSave()}
-                                    placeholder={varType === 'number' ? '0' : 'value'}
-                                    className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
+                        <div className="space-y-1.5">
+                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Variable (Array Name)</label>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                <RichInput
+                                    value={action.varName || ''}
+                                    onChange={(v) => onUpdate(action.id, { varName: v })}
+                                    variables={variables}
+                                    placeholder="items"
                                 />
-                            </div>
-                        )}
-                    </div>
-                );
-            })()}
-
-            {action.type === 'while' && (() => {
-                const varKeys = Object.keys(variables || {});
-                const normalizedVar = normalizeVarName(action.conditionVar || '');
-                const inferredType = normalizedVar && variables?.[normalizedVar]?.type;
-                const varType = action.conditionVarType || inferredType || 'string';
-                const ops = conditionOps[varType as VarType] || conditionOps.string;
-                const opValue = action.conditionOp || ops[0].value;
-                return (
-                    <div className="space-y-2">
-                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Condition</label>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                            <div className="space-y-1">
-                                <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Variable</span>
-                                <input
-                                    type="text"
-                                    list={`while-var-${action.id}`}
-                                    value={action.conditionVar || ''}
-                                    onChange={(e) => onUpdate(action.id, { conditionVar: e.target.value })}
-                                    onBlur={() => onAutoSave()}
-                                    placeholder="variable name"
-                                    className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
-                                />
-                                {varKeys.length > 0 && (
-                                    <datalist id={`while-var-${action.id}`}>
-                                        {varKeys.map((key) => (
-                                            <option key={key} value={key} />
-                                        ))}
-                                    </datalist>
-                                )}
-                            </div>
-                            <div className="space-y-1">
-                                <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Type</span>
-                                <select
-                                    value={varType}
-                                    onChange={(e) => {
-                                        const nextType = e.target.value as VarType;
-                                        const nextOps = conditionOps[nextType] || conditionOps.string;
-                                        onUpdate(action.id, {
-                                            conditionVarType: nextType,
-                                            conditionOp: nextOps[0].value,
-                                            conditionValue: nextType === 'boolean' ? '' : action.conditionValue || ''
-                                        }, true);
-                                    }}
-                                    className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
-                                >
-                                    <option value="string">String</option>
-                                    <option value="number">Number</option>
-                                    <option value="boolean">Boolean</option>
-                                </select>
-                            </div>
-                            <div className="space-y-1">
-                                <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Relation</span>
-                                <select
-                                    value={opValue}
-                                    onChange={(e) => onUpdate(action.id, { conditionOp: e.target.value }, true)}
-                                    className="custom-select w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
-                                >
-                                    {ops.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
                             </div>
                         </div>
-                        {varType !== 'boolean' && (
-                            <div className="space-y-1">
-                                <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest pl-1">Value</span>
-                                <input
-                                    type={varType === 'number' ? 'number' : 'text'}
-                                    value={action.conditionValue || ''}
-                                    onChange={(e) => onUpdate(action.id, { conditionValue: e.target.value })}
-                                    onBlur={() => onAutoSave()}
-                                    placeholder={varType === 'number' ? '0' : 'value'}
-                                    className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white"
+                    </div>
+                )}
+
+                {action.type === 'set' && (
+                    <div className="space-y-3">
+                        <div className="space-y-1.5">
+                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Variable Name</label>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                <RichInput
+                                    value={action.varName || ''}
+                                    onChange={(v) => onUpdate(action.id, { varName: v })}
+                                    variables={variables}
+                                    placeholder="status"
                                 />
                             </div>
-                        )}
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Value</label>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                <RichInput
+                                    value={action.value || ''}
+                                    onChange={(v) => onUpdate(action.id, { value: v })}
+                                    variables={variables}
+                                    placeholder="ready"
+                                />
+                            </div>
+                        </div>
                     </div>
-                );
-            })()}
+                )}
 
-            {action.type === 'repeat' && (
-                <div className="space-y-1.5">
-                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Times</label>
-                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                        <RichInput
+                {action.type === 'merge' && (
+                    <div className="space-y-3">
+                        <div className="space-y-1.5">
+                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Sources</label>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                <RichInput
+                                    value={action.value || ''}
+                                    onChange={(v) => onUpdate(action.id, { value: v })}
+                                    variables={variables}
+                                    placeholder="items, extraItems, {$block.output}"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Target Variable (Optional)</label>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                <RichInput
+                                    value={action.varName || ''}
+                                    onChange={(v) => onUpdate(action.id, { varName: v })}
+                                    variables={variables}
+                                    placeholder="allItems"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {action.type === 'stop' && (
+                    <div className="space-y-1.5">
+                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Outcome</label>
+                        <select
+                            value={action.value || 'success'}
+                            onChange={(e) => onUpdate(action.id, { value: e.target.value }, true)}
+                            className="custom-select w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/70 focus:outline-none"
+                        >
+                            <option value="success">Success</option>
+                            <option value="error">Error</option>
+                        </select>
+                    </div>
+                )}
+
+                {action.type === 'on_error' && (
+                    <div className="text-[8px] text-gray-600 uppercase tracking-widest">
+                        Runs if any action fails.
+                    </div>
+                )}
+
+                {action.type === 'start' && (
+                    <div className="space-y-1.5">
+                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Task</label>
+                        <select
                             value={action.value || ''}
-                            onChange={(v) => onUpdate(action.id, { value: v })}
-                            variables={variables}
-                            placeholder="3"
-                        />
+                            onChange={(e) => onUpdate(action.id, { value: e.target.value }, true)}
+                            className="custom-select w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/70 focus:outline-none"
+                        >
+                            <option value="" disabled>Select task</option>
+                            {availableTasks.length === 0 && (
+                                <option value="" disabled>No other tasks</option>
+                            )}
+                            {availableTasks.map((task) => (
+                                <option key={task.id} value={task.id}>
+                                    {task.name || task.id}
+                                </option>
+                            ))}
+                        </select>
                     </div>
-                </div>
-            )}
-
-            {action.type === 'foreach' && (
-                <div className="space-y-3">
-                    <div className="space-y-1.5">
-                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Selector (Optional)</label>
-                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                            <RichInput
-                                value={action.selector || ''}
-                                onChange={(v) => onUpdate(action.id, { selector: v })}
-                                variables={variables}
-                                placeholder=".list-item"
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Variable (Array Name)</label>
-                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                            <RichInput
-                                value={action.varName || ''}
-                                onChange={(v) => onUpdate(action.id, { varName: v })}
-                                variables={variables}
-                                placeholder="items"
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {action.type === 'set' && (
-                <div className="space-y-3">
-                    <div className="space-y-1.5">
-                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Variable Name</label>
-                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                            <RichInput
-                                value={action.varName || ''}
-                                onChange={(v) => onUpdate(action.id, { varName: v })}
-                                variables={variables}
-                                placeholder="status"
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Value</label>
-                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                            <RichInput
-                                value={action.value || ''}
-                                onChange={(v) => onUpdate(action.id, { value: v })}
-                                variables={variables}
-                                placeholder="ready"
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {action.type === 'merge' && (
-                <div className="space-y-3">
-                    <div className="space-y-1.5">
-                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Sources</label>
-                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                            <RichInput
-                                value={action.value || ''}
-                                onChange={(v) => onUpdate(action.id, { value: v })}
-                                variables={variables}
-                                placeholder="items, extraItems, {$block.output}"
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Target Variable (Optional)</label>
-                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
-                            <RichInput
-                                value={action.varName || ''}
-                                onChange={(v) => onUpdate(action.id, { varName: v })}
-                                variables={variables}
-                                placeholder="allItems"
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {action.type === 'stop' && (
-                <div className="space-y-1.5">
-                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Outcome</label>
-                    <select
-                        value={action.value || 'success'}
-                        onChange={(e) => onUpdate(action.id, { value: e.target.value }, true)}
-                        className="custom-select w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/70 focus:outline-none"
-                    >
-                        <option value="success">Success</option>
-                        <option value="error">Error</option>
-                    </select>
-                </div>
-            )}
-
-            {action.type === 'on_error' && (
-                <div className="text-[8px] text-gray-600 uppercase tracking-widest">
-                    Runs if any action fails.
-                </div>
-            )}
-
-            {action.type === 'start' && (
-                <div className="space-y-1.5">
-                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Task</label>
-                    <select
-                        value={action.value || ''}
-                        onChange={(e) => onUpdate(action.id, { value: e.target.value }, true)}
-                        className="custom-select w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/70 focus:outline-none"
-                    >
-                        <option value="" disabled>Select task</option>
-                        {availableTasks.length === 0 && (
-                            <option value="" disabled>No other tasks</option>
-                        )}
-                        {availableTasks.map((task) => (
-                            <option key={task.id} value={task.id}>
-                                {task.name || task.id}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            )}
+                )}
+            </>)}
         </div>
     );
 });

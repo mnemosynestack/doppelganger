@@ -4,7 +4,7 @@ import { Task, TaskMode, ViewMode, VarType, Action, Results, ConfirmRequest } fr
 import RichInput from './RichInput';
 import CodeEditor from './CodeEditor';
 import ActionPalette from './editor/ActionPalette';
-import JsonEditorPane from './editor/JsonEditorPane';
+// import JsonEditorPane from './editor/JsonEditorPane';
 import ResultsPane from './editor/ResultsPane';
 import ActionItem from './editor/ActionItem';
 
@@ -31,7 +31,7 @@ interface EditorScreenProps {
     onStopHeadful?: () => void;
 }
 
-const VariableRow: React.FC<{
+const _VariableRow: React.FC<{
     name: string;
     def: any;
     updateVariable: (oldName: string, name: string, type: VarType, value: any) => void;
@@ -102,7 +102,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     setCurrentTask,
     tasks = [],
     editorView,
-    setEditorView,
+    setEditorView: _setEditorView,
     isExecuting,
     onSave,
     onRun,
@@ -119,7 +119,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     onOpenHeadful,
     onStopHeadful,
 }) => {
-    const [copied, setCopied] = useState<string | null>(null);
+    const [_copied, setCopied] = useState<string | null>(null);
     const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
     const dragPointerIdRef = useRef<number | null>(null);
     const actionsListRef = useRef<HTMLDivElement | null>(null);
@@ -134,16 +134,28 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         pointerOffset: number;
     } | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-    const [versions, setVersions] = useState<{ id: string; timestamp: number; name: string; mode: TaskMode }[]>([]);
-    const [versionsLoading, setVersionsLoading] = useState(false);
+    const [_versions, setVersions] = useState<{ id: string; timestamp: number; name: string; mode: TaskMode }[]>([]);
+    const [_versionsLoading, setVersionsLoading] = useState(false);
     const [actionPaletteOpen, setActionPaletteOpen] = useState(false);
     const [actionPaletteQuery, setActionPaletteQuery] = useState('');
     const [actionPaletteTargetId, setActionPaletteTargetId] = useState<string | null>(null);
+    const [actionPaletteInsertIndex, setActionPaletteInsertIndex] = useState<number | null>(null);
     const [versionPreview, setVersionPreview] = useState<{ id: string; timestamp: number; snapshot: Task } | null>(null);
-    const [versionPreviewLoading, setVersionPreviewLoading] = useState(false);
+    const [_versionPreviewLoading, setVersionPreviewLoading] = useState(false);
     const [actionStatusById, setActionStatusById] = useState<Record<string, 'running' | 'success' | 'error' | 'skipped'>>({});
     const [proxyList, setProxyList] = useState<{ id: string }[]>([]);
     const [proxyListLoaded, setProxyListLoaded] = useState(false);
+    const [isResultsOpen, setIsResultsOpen] = useState(false);
+    const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+    const [canvasScale, setCanvasScale] = useState(1);
+    const isPanningRef = useRef(false);
+    const panStartRef = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
+    const spaceHeldRef = useRef(false);
+    const canvasViewportRef = useRef<HTMLDivElement | null>(null);
+    const hasInitializedCanvas = useRef(false);
+    const [triggerExpanded, setTriggerExpanded] = useState(false);
+    const canvasScaleRef = useRef(canvasScale);
+    useEffect(() => { canvasScaleRef.current = canvasScale; }, [canvasScale]);
 
     const historyRef = useRef<Task[]>([]);
     const historyPointerRef = useRef<number>(-1);
@@ -199,7 +211,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const formatSize = (chars: number) => `${(chars / (1024 * 1024)).toFixed(2)} MB`;
 
-    const handleCopy = async (text: string, id: string, options?: { skipSizeConfirm?: boolean; truncatedNotice?: boolean }) => {
+    const _handleCopy = async (text: string, id: string, options?: { skipSizeConfirm?: boolean; truncatedNotice?: boolean }) => {
         if (!text) {
             onNotify('Nothing to copy.', 'error');
             return;
@@ -350,15 +362,24 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             base.conditionValue = '';
         }
         if (type === 'wait_downloads') base.value = '30';
-        const next = { ...currentTask, actions: [...currentTask.actions, base] };
-        setCurrentTask(next);
-        handleAutoSave(next);
+        // Auto-create matching 'end' for if/while blocks
+        if (type === 'if' || type === 'while') {
+            const endAction: Action = { id: 'act_' + Date.now() + '_end', type: 'end', selector: '', value: '' };
+            const next = { ...currentTask, actions: [...currentTask.actions, base, endAction] };
+            setCurrentTask(next);
+            handleAutoSave(next);
+        } else {
+            const next = { ...currentTask, actions: [...currentTask.actions, base] };
+            setCurrentTask(next);
+            handleAutoSave(next);
+        }
     };
 
-    const openActionPalette = useCallback((targetId?: string) => {
+    const openActionPalette = useCallback((targetId?: string, insertIndex?: number) => {
         setActionPaletteOpen(true);
         setActionPaletteQuery('');
         setActionPaletteTargetId(targetId || null);
+        setActionPaletteInsertIndex(insertIndex !== undefined ? insertIndex : null);
     }, []);
 
     const removeAction = useCallback((id: string) => {
@@ -492,7 +513,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         };
     }, [dragState, dragOverIndex, currentTask.actions]);
 
-    const addVariable = () => {
+    const _addVariable = () => {
         const name = "var_" + Date.now().toString().slice(-4);
         const next: Task = { ...currentTask, variables: { ...currentTask.variables, [name]: { type: 'string', value: '' } } };
         setCurrentTask(next);
@@ -645,7 +666,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     }, []);
 
 
-    const removeVariable = (name: string) => {
+    const _removeVariable = (name: string) => {
         const nextVars = { ...currentTask.variables };
         delete nextVars[name];
         const next = { ...currentTask, variables: nextVars };
@@ -653,7 +674,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         handleAutoSave(next);
     };
 
-    const updateVariable = (oldName: string, name: string, type: VarType, value: any) => {
+    const _updateVariable = (oldName: string, name: string, type: VarType, value: any) => {
         const nextVars = { ...currentTask.variables };
         delete nextVars[oldName];
         let processedValue = value;
@@ -680,7 +701,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         }
     };
 
-    const rollbackToVersion = async (versionId: string) => {
+    const _rollbackToVersion = async (versionId: string) => {
         if (!currentTask.id) return;
         const confirmed = await onConfirm('Rollback to this version? Current changes will be saved as a new version.');
         if (!confirmed) return;
@@ -700,7 +721,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         }
     };
 
-    const openVersionPreview = async (versionId: string) => {
+    const _openVersionPreview = async (versionId: string) => {
         if (!currentTask.id) return;
         setVersionPreviewLoading(true);
         try {
@@ -724,6 +745,45 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         if (editorView === 'history') loadVersions();
     }, [editorView, currentTask.id]);
 
+    // Center canvas content in viewport on mount
+    useEffect(() => {
+        if (hasInitializedCanvas.current) return;
+        hasInitializedCanvas.current = true;
+        const vp = canvasViewportRef.current;
+        if (!vp) return;
+        const vpWidth = vp.clientWidth;
+        // Center the node graph (which starts at x=0) in the viewport
+        setCanvasOffset({ x: (vpWidth - 400) / 2, y: 20 });
+    }, []);
+
+    // Native wheel listener for ctrl+scroll zoom (React onWheel is passive and can't preventDefault)
+    useEffect(() => {
+        const vp = canvasViewportRef.current;
+        if (!vp) return;
+        const handleWheel = (e: WheelEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                const rect = vp.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                const curScale = canvasScaleRef.current;
+                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+                const newScale = Math.min(2, Math.max(0.25, curScale * zoomFactor));
+                const scaleRatio = newScale / curScale;
+                setCanvasOffset(prev => ({
+                    x: mouseX - scaleRatio * (mouseX - prev.x),
+                    y: mouseY - scaleRatio * (mouseY - prev.y),
+                }));
+                setCanvasScale(newScale);
+            } else {
+                // Normal scroll → pan
+                setCanvasOffset(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
+            }
+        };
+        vp.addEventListener('wheel', handleWheel, { passive: false });
+        return () => vp.removeEventListener('wheel', handleWheel);
+    }, []);
+
     const handlePointerDown = useCallback((e: React.PointerEvent, id: string, index: number) => {
         const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
         const pointerOffset = e.clientY - rect.top;
@@ -741,699 +801,575 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         setDragOverIndex(index);
     }, []);
 
+    // Suppress unused variable errors for features temporarily removed from canvas
+    void _VariableRow; void _handleCopy; void _addVariable; void _removeVariable;
+    void _updateVariable; void _rollbackToVersion; void _openVersionPreview; void getBlockDepths;
+    void handlePointerDown; void dragState; void dragOverIndex; void finalizeDrag; void getDragIndexFromY;
+
     return (
-        <div className="flex-1 flex overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <aside className="glass border-r border-white/10 flex flex-col shrink-0 overflow-hidden" style={{ width: editorWidth }}>
-                <div className="p-8 border-b border-white/10 space-y-6 shrink-0">
-                    <div className="flex items-center justify-between">
-                        <input
-                            type="text"
-                            value={currentTask.name}
-                            onChange={(e) => setCurrentTask({ ...currentTask, name: e.target.value })}
-                            onBlur={() => handleAutoSave()}
-                            placeholder="Task Name..."
-                            aria-label="Task Name"
-                            className="bg-transparent text-xl font-bold tracking-tight text-white focus:outline-none border-none p-0 w-full placeholder:text-white/10"
-                        />
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => setEditorView('history')}
-                                className="w-8 h-8 rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center"
-                                title="Task History"
-                                aria-label="Task History"
-                            >
-                                <MaterialIcon name="history" className="text-sm" />
-                            </button>
-                            {editorView === 'history' && (
-                                <button
-                                    onClick={async () => {
-                                        await onSave(currentTask, true);
-                                        loadVersions();
-                                    }}
-                                    className="h-8 px-4 bg-white text-black text-[10px] font-bold uppercase tracking-widest rounded-lg hover:bg-white/90 transition-all flex items-center gap-2"
-                                >
-                                    <MaterialIcon name="save" className="text-[12px] text-black" />
-                                    <span>Save Version</span>
-                                </button>
+        <div className="flex-1 flex overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 bg-black relative" data-editor-width={editorWidth}>
+            <div className="absolute inset-0 pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: `${40 * canvasScale}px ${40 * canvasScale}px`, backgroundPosition: `${canvasOffset.x}px ${canvasOffset.y}px` }} />
+
+            {/* Infinite Canvas Viewport */}
+            <div
+                ref={canvasViewportRef}
+                className="flex-1 overflow-hidden relative cursor-grab active:cursor-grabbing select-none"
+                style={{ touchAction: 'none' }}
+                onPointerDown={(e) => {
+                    // Pan on middle-click, or left-click when space is held
+                    if (e.button === 1 || (e.button === 0 && spaceHeldRef.current)) {
+                        e.preventDefault();
+                        isPanningRef.current = true;
+                        panStartRef.current = { x: e.clientX, y: e.clientY, offsetX: canvasOffset.x, offsetY: canvasOffset.y };
+                        (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+                    }
+                }}
+                onPointerMove={(e) => {
+                    if (!isPanningRef.current) return;
+                    const dx = e.clientX - panStartRef.current.x;
+                    const dy = e.clientY - panStartRef.current.y;
+                    setCanvasOffset({ x: panStartRef.current.offsetX + dx, y: panStartRef.current.offsetY + dy });
+                }}
+                onPointerUp={() => { isPanningRef.current = false; }}
+                onPointerCancel={() => { isPanningRef.current = false; }}
+            >
+                {/* Canvas Layer — transforms with pan/zoom */}
+                <div
+                    className="absolute origin-top-left"
+                    style={{
+                        transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`,
+                    }}
+                >
+                    {/* Node graph container */}
+                    <div className="flex flex-col items-center" style={{ paddingTop: '60px', minWidth: '500px' }}>
+                        {/* Trigger Node */}
+                        <div className="w-[360px] bg-[#0a0a0a] border border-white/15 p-5 rounded-2xl shadow-2xl shadow-black/50 select-text cursor-auto">
+                            <div className="flex items-center justify-between cursor-pointer" onClick={() => setTriggerExpanded(!triggerExpanded)}>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
+                                        <MaterialIcon name="bolt" className="text-white text-base" />
+                                    </div>
+                                    <h3 className="text-white font-bold tracking-widest uppercase text-[10px]">Trigger</h3>
+                                </div>
+                                <MaterialIcon name={triggerExpanded ? 'expand_less' : 'expand_more'} className="text-base text-gray-600" />
+                            </div>
+                            {triggerExpanded && (
+                                <div className="space-y-4 mt-4 pt-3 border-t border-white/10">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[8px] font-bold text-gray-500 uppercase tracking-[0.2em]">URL</label>
+                                        <div className="w-full bg-[#111] border border-white/10 rounded-lg px-3 py-2 text-sm focus-within:border-white/30 transition-all">
+                                            <RichInput
+                                                value={currentTask.url}
+                                                onChange={(val) => setCurrentTask({ ...currentTask, url: val })}
+                                                onBlur={() => handleAutoSave()}
+                                                variables={currentTask.variables}
+                                                placeholder="https://..."
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[8px] font-bold text-gray-500 uppercase tracking-[0.2em]">Wait (sec)</label>
+                                        <input
+                                            type="number"
+                                            value={currentTask.wait}
+                                            onChange={(e) => setCurrentTask({ ...currentTask, wait: parseFloat(e.target.value) || 0 })}
+                                            onBlur={() => handleAutoSave()}
+                                            className="w-full bg-[#111] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-white/30 transition-all text-white"
+                                        />
+                                    </div>
+                                </div>
                             )}
                         </div>
-                    </div>
 
-                    <div className="bg-white/5 p-1 rounded-xl flex gap-1 border border-white/5">
-                        {(['scrape', 'agent'] as TaskMode[]).map(m => (
-                            <button
-                                key={m}
-                                onClick={() => {
-                                    const next = { ...currentTask, mode: m };
-                                    setCurrentTask(next);
-                                    handleAutoSave(next);
-                                }}
-                                className={`flex-1 py-2 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${currentTask.mode === m ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
-                                aria-pressed={currentTask.mode === m}
-                            >
-                                {m === 'scrape' ? 'Scraper' : 'Agent'}
-                            </button>
-                        ))}
-                    </div>
+                        {/* Connector line from trigger to actions */}
+                        <div className="w-px h-10 bg-white/25" />
 
-                    <div className="flex items-center justify-between px-2">
-                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Interface Mode</span>
-                        <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/5">
-                            {(['visual', 'json', 'api'] as ViewMode[]).map(v => (
-                                <button
-                                    key={v}
-                                    onClick={() => setEditorView(v)}
-                                    className={`px-3 py-1 rounded text-[8px] font-bold uppercase tracking-widest transition-all ${editorView === v ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
-                                    aria-pressed={editorView === v}
-                                >
-                                    {v}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+                        {/* Action Nodes */}
+                        {(
+                            <div className="flex flex-col items-center w-full select-text cursor-auto">
+                                <div className="space-y-6 w-full flex flex-col items-center relative" ref={actionsListRef}>
+                                    {(() => {
 
-                <div
-                    className={`flex-1 p-8 min-h-0 relative ${editorView === 'json' ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'} ${editorView === 'visual' ? 'space-y-8' : ''}`}
-                >
-                    {editorView === 'visual' && (
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Target URL</label>
-                                <div className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-sm focus-within:border-white/30 transition-all">
-                                    <RichInput
-                                        value={currentTask.url}
-                                        onChange={(val) => setCurrentTask({ ...currentTask, url: val })}
-                                        onBlur={() => handleAutoSave()}
-                                        variables={currentTask.variables}
-                                        placeholder="https://..."
-                                    />
-                                </div>
-                            </div>
+                                        const buildAst = (startIndex: number, endIndex: number, depth: number = 0): React.ReactNode[] => {
+                                            const nodes: React.ReactNode[] = [];
+                                            let i = startIndex;
+                                            while (i < endIndex) {
+                                                const action = currentTask.actions[i];
+                                                if (!action) { i++; continue; }
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Wait (Sec)</label>
-                                    <input
-                                        type="number"
-                                        value={currentTask.wait}
-                                        onChange={(e) => setCurrentTask({ ...currentTask, wait: parseFloat(e.target.value) || 0 })}
-                                        onBlur={() => handleAutoSave()}
-                                        className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/30 transition-all text-white"
-                                    />
-                                </div>
-                            </div>
+                                                if (action.type === 'if' || action.type === 'while') {
+                                                    const blockStart = i;
+                                                    let nestLevel = 1;
+                                                    let j = i + 1;
+                                                    let elseIndex = -1;
+                                                    while (j < endIndex && nestLevel > 0) {
+                                                        const a = currentTask.actions[j];
+                                                        if (a.type === 'if' || a.type === 'while') nestLevel++;
+                                                        if (a.type === 'end') {
+                                                            nestLevel--;
+                                                            if (nestLevel === 0) break;
+                                                        }
+                                                        if (a.type === 'else' && nestLevel === 1 && action.type === 'if') {
+                                                            elseIndex = j;
+                                                        }
+                                                        j++;
+                                                    }
+                                                    const blockEnd = j;
 
-                            {currentTask.mode === 'agent' && (
-                                <div className="space-y-6 order-1">
-                                    <div className="space-y-3" ref={actionsListRef}>
-                                        {(() => {
-                                            const blockDepths = getBlockDepths(currentTask.actions);
-                                            return currentTask.actions.map((action, idx) => {
-                                                const isDragging = dragState?.id === action.id;
-                                                const isBetween =
-                                                    dragState &&
-                                                    dragOverIndex !== null &&
-                                                    dragState.index !== dragOverIndex &&
-                                                    action.id !== dragState.id &&
-                                                    ((dragState.index < dragOverIndex && idx > dragState.index && idx <= dragOverIndex) ||
-                                                        (dragState.index > dragOverIndex && idx < dragState.index && idx >= dragOverIndex));
-                                                const translateY = isBetween ? (dragState?.height || 0) * (dragState.index < (dragOverIndex ?? 0) ? -1 : 1) : 0;
-                                                // Calculate transform for the dragged item here to prevent passing the changing dragState object to all children.
-                                                // This allows ActionItem to be memoized effectively.
-                                                const dragTransformY = (isDragging && dragState) ? (dragState.currentY - dragState.pointerOffset - dragState.originTop) : undefined;
-                                                const depth = blockDepths[idx] || 0;
-                                                const status = action.disabled ? 'skipped' : actionStatusById[action.id]; return (
-                                                    <ActionItem
-                                                        action={action}
-                                                        index={idx}
-                                                        depth={depth}
-                                                        status={status}
-                                                        isDragging={isDragging}
-                                                        isDragOver={dragOverIndex === idx}
-                                                        translateY={translateY}
-                                                        variables={currentTask.variables}
-                                                        availableTasks={availableTasks}
-                                                        onUpdate={updateAction}
-                                                        onRemove={removeAction}
-                                                        onAutoSave={handleAutoSave}
-                                                        onOpenPalette={openActionPalette}
-                                                        onOpenContextMenu={openContextMenu}
-                                                        onPointerDown={handlePointerDown}
-                                                        dragTransformY={dragTransformY}
-                                                        onGenerateSelector={handleGenerateSelector}
-                                                    />
+                                                    const trueStart = blockStart + 1;
+                                                    const trueEnd = elseIndex !== -1 ? elseIndex : blockEnd;
+                                                    const falseStart = elseIndex !== -1 ? elseIndex + 1 : -1;
+                                                    const falseEnd = elseIndex !== -1 ? blockEnd : -1;
 
-                                                );
-                                            });
-                                        })()}
-                                        {contextMenu && (() => {
-                                            const targetIndex = currentTask.actions.findIndex(a => a.id === contextMenu.id);
-                                            const target = currentTask.actions[targetIndex];
-                                            if (!target) return null;
-                                            return (
-                                                <div
-                                                    className="action-context-menu fixed z-50 w-[200px] bg-[#0b0b0b] border border-white/10 rounded-xl shadow-2xl p-2 text-[10px] font-bold uppercase tracking-widest text-white/80"
-                                                    style={{ left: contextMenu.x, top: contextMenu.y }}
+                                                    nodes.push(
+                                                        <div key={action.id} className="flex flex-col items-center w-full">
+                                                            <div className="w-[360px]">
+                                                                <ActionItem
+                                                                    action={action}
+                                                                    index={i}
+                                                                    isDragOver={false}
+                                                                    isDragging={false}
+                                                                    status={actionStatusById[action.id]}
+                                                                    translateY={0}
+                                                                    variables={currentTask.variables}
+                                                                    availableTasks={availableTasks}
+                                                                    onUpdate={(id, updates, save) => updateAction(id, updates, save)}
+                                                                    onRemove={(id) => removeAction(id)}
+                                                                    onAutoSave={handleAutoSave}
+                                                                    onOpenPalette={openActionPalette}
+                                                                    onOpenContextMenu={openContextMenu}
+                                                                    onPointerDown={() => { }}
+                                                                    onGenerateSelector={handleGenerateSelector}
+                                                                />
+                                                            </div>
+                                                            {/* Branch layout */}
+                                                            <div className="flex gap-16 mt-4 relative">
+                                                                {/* True branch */}
+                                                                <div className="flex flex-col items-center min-w-[200px]">
+                                                                    <div className="text-[8px] font-bold text-white/60 uppercase tracking-widest mb-2">
+                                                                        {action.type === 'while' ? 'Loop' : 'True'}
+                                                                    </div>
+                                                                    <div className="w-px h-6 bg-white/25" />
+                                                                    <div className="flex flex-col items-center gap-3">
+                                                                        {buildAst(trueStart, trueEnd, depth + 1)}
+                                                                    </div>
+                                                                    {/* Branch + button */}
+                                                                    <div className="mt-2 flex flex-col items-center">
+                                                                        <div className="w-px h-4 bg-white/20" />
+                                                                        <button
+                                                                            onClick={() => openActionPalette(undefined, trueEnd)}
+                                                                            className="w-12 h-12 border border-dashed border-white/15 rounded-xl hover:border-white/30 hover:bg-white/5 transition-all flex items-center justify-center group cursor-pointer"
+                                                                        >
+                                                                            <MaterialIcon name="add" className="text-lg text-gray-500 group-hover:text-white transition-colors" />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                {/* False branch (if only) */}
+                                                                {action.type === 'if' && (
+                                                                    <div className="flex flex-col items-center min-w-[200px]">
+                                                                        <div className="text-[8px] font-bold text-white/60 uppercase tracking-widest mb-2">Otherwise</div>
+                                                                        <div className="w-px h-6 bg-white/25" />
+                                                                        <div className="flex flex-col items-center gap-3">
+                                                                            {falseStart !== -1 ? buildAst(falseStart, falseEnd, depth + 1) : null}
+                                                                        </div>
+                                                                        {/* Branch + button */}
+                                                                        <div className="mt-2 flex flex-col items-center">
+                                                                            <div className="w-px h-4 bg-white/20" />
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    if (falseStart !== -1) {
+                                                                                        openActionPalette(undefined, falseEnd);
+                                                                                    } else {
+                                                                                        // Need to insert an 'else' first, then add action after it
+                                                                                        const elseAction: Action = { id: 'act_' + Date.now() + '_else', type: 'else', selector: '', value: '' };
+                                                                                        const newActions = [...currentTask.actions];
+                                                                                        newActions.splice(blockEnd, 0, elseAction);
+                                                                                        const next = { ...currentTask, actions: newActions };
+                                                                                        setCurrentTask(next);
+                                                                                        handleAutoSave(next);
+                                                                                        // Open palette to insert after the else
+                                                                                        setTimeout(() => openActionPalette(undefined, blockEnd + 1), 50);
+                                                                                    }
+                                                                                }}
+                                                                                className="w-12 h-12 border border-dashed border-white/15 rounded-xl hover:border-white/30 hover:bg-white/5 transition-all flex items-center justify-center group cursor-pointer"
+                                                                            >
+                                                                                <MaterialIcon name="add" className="text-lg text-gray-500 group-hover:text-white transition-colors" />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {/* + button after if/while block — inserts OUTSIDE the block */}
+                                                            <div className="flex flex-col items-center mt-3">
+                                                                <div className="w-px h-2 bg-white/25" />
+                                                                <button
+                                                                    onClick={() => openActionPalette(undefined, blockEnd + 1)}
+                                                                    className="w-8 h-8 border border-dashed border-white/10 rounded-lg hover:border-white/30 hover:bg-white/5 transition-all flex items-center justify-center group cursor-pointer"
+                                                                >
+                                                                    <MaterialIcon name="add" className="text-sm text-gray-600 group-hover:text-white transition-colors" />
+                                                                </button>
+                                                                <div className="w-px h-2 bg-white/25" />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                    i = blockEnd + 1;
+                                                } else if (action.type === 'end' || action.type === 'else') {
+                                                    i++;
+                                                } else {
+                                                    nodes.push(
+                                                        <div key={action.id} className="flex flex-col items-center">
+                                                            <div className="w-[360px]">
+                                                                <ActionItem
+                                                                    action={action}
+                                                                    index={i}
+                                                                    isDragOver={false}
+                                                                    isDragging={false}
+                                                                    status={actionStatusById[action.id]}
+                                                                    translateY={0}
+                                                                    variables={currentTask.variables}
+                                                                    availableTasks={availableTasks}
+                                                                    onUpdate={(id, updates, save) => updateAction(id, updates, save)}
+                                                                    onRemove={(id) => removeAction(id)}
+                                                                    onAutoSave={handleAutoSave}
+                                                                    onOpenPalette={openActionPalette}
+                                                                    onOpenContextMenu={openContextMenu}
+                                                                    onPointerDown={() => { }}
+                                                                    onGenerateSelector={handleGenerateSelector}
+                                                                />
+                                                            </div>
+                                                            {/* + button between blocks */}
+                                                            {i < endIndex - 1 && currentTask.actions[i + 1]?.type !== 'end' && (
+                                                                <div className="flex flex-col items-center my-1">
+                                                                    <div className="w-px h-2 bg-white/25" />
+                                                                    <button
+                                                                        onClick={() => openActionPalette(undefined, i + 1)}
+                                                                        className="w-8 h-8 border border-dashed border-white/10 rounded-lg hover:border-white/30 hover:bg-white/5 transition-all flex items-center justify-center group cursor-pointer"
+                                                                    >
+                                                                        <MaterialIcon name="add" className="text-sm text-gray-600 group-hover:text-white transition-colors" />
+                                                                    </button>
+                                                                    <div className="w-px h-2 bg-white/25" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                    i++;
+                                                }
+                                            }
+                                            return nodes;
+                                        };
+
+                                        return buildAst(0, currentTask.actions.length);
+                                    })()}
+                                    {contextMenu && (() => {
+                                        const targetIndex = currentTask.actions.findIndex(a => a.id === contextMenu.id);
+                                        const target = currentTask.actions[targetIndex];
+                                        if (!target) return null;
+                                        return (
+                                            <div
+                                                className="action-context-menu fixed z-50 w-[200px] bg-[#0b0b0b] border border-white/10 rounded-xl shadow-2xl p-2 text-[10px] font-bold uppercase tracking-widest text-white/80"
+                                                style={{ left: contextMenu.x, top: contextMenu.y }}
+                                            >
+                                                <button
+                                                    onClick={() => {
+                                                        updateAction(target.id, { disabled: !target.disabled }, true);
+                                                        closeContextMenu();
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
                                                 >
-                                                    <button
-                                                        onClick={() => {
-                                                            updateAction(target.id, { disabled: !target.disabled }, true);
-                                                            closeContextMenu();
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                    >
-                                                        {target.disabled ? 'Enable' : 'Disable'}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            removeAction(target.id);
-                                                            closeContextMenu();
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-red-400"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setActionClipboard(createActionClone(target));
-                                                            removeAction(target.id);
-                                                            closeContextMenu();
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                    >
-                                                        Cut
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setActionClipboard(createActionClone(target));
-                                                            closeContextMenu();
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                    >
-                                                        Copy
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            const clone = createActionClone(target);
-                                                            const next = [...currentTask.actions];
-                                                            next.splice(targetIndex + 1, 0, clone);
-                                                            setCurrentTask({ ...currentTask, actions: next });
-                                                            closeContextMenu();
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                    >
-                                                        Duplicate
-                                                    </button>
-                                                </div>
-                                            );
-                                        })()}
+                                                    {target.disabled ? 'Enable' : 'Disable'}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        removeAction(target.id);
+                                                        closeContextMenu();
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-red-400"
+                                                >
+                                                    Delete
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setActionClipboard(createActionClone(target));
+                                                        removeAction(target.id);
+                                                        closeContextMenu();
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                                                >
+                                                    Cut
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setActionClipboard(createActionClone(target));
+                                                        closeContextMenu();
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                                                >
+                                                    Copy
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const clone = createActionClone(target);
+                                                        const next = [...currentTask.actions];
+                                                        next.splice(targetIndex + 1, 0, clone);
+                                                        setCurrentTask({ ...currentTask, actions: next });
+                                                        closeContextMenu();
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                                                >
+                                                    Duplicate
+                                                </button>
+                                            </div>
+                                        );
+                                    })()}
+                                    {/* Add Action Block — always visible, block-shaped */}
+                                    <div className="pt-2 flex flex-col items-center">
+                                        <div className="w-px h-6 bg-white/10" />
                                         <button
                                             onClick={() => openActionPalette()}
-                                            className="w-full py-3 border border-dashed border-white/20 rounded-xl text-[9px] font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-all bg-white/[0.02] flex items-center justify-center gap-2"
+                                            className="w-[360px] bg-[#0a0a0a] border border-dashed border-white/15 rounded-2xl p-6 hover:border-white/30 hover:bg-white/[0.03] transition-all flex flex-col items-center justify-center gap-2 group cursor-pointer"
                                         >
-                                            <span>+ Append Action Seq</span>
+                                            <div className="w-10 h-10 rounded-xl bg-white/5 group-hover:bg-white/10 transition-all flex items-center justify-center">
+                                                <MaterialIcon name="add" className="text-2xl text-gray-500 group-hover:text-white transition-colors" />
+                                            </div>
+                                            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 group-hover:text-gray-300 transition-colors">Add Action</span>
                                         </button>
                                     </div>
-
-                                    <div className="bg-white/5 rounded-xl p-4 border border-white/5 space-y-4">
-                                        <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-2">Behavior Config</h4>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {Object.entries(currentTask.stealth).map(([key, val]) => (
-                                                <label key={key} className="flex items-center gap-3 cursor-pointer group">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={val}
-                                                        onChange={(e) => {
-                                                            const next = {
-                                                                ...currentTask,
-                                                                stealth: { ...currentTask.stealth, [key]: e.target.checked },
-                                                                humanTyping: key === 'naturalTyping' ? e.target.checked : currentTask.humanTyping
-                                                            };
-                                                            setCurrentTask(next);
-                                                            handleAutoSave(next);
-                                                        }}
-                                                        className="w-3 h-3 rounded bg-transparent border-white/20"
-                                                    />
-                                                    <span className="text-[9px] font-bold text-gray-500 group-hover:text-white transition-all">
-                                                        {key.replace(/([A-Z])/g, ' $1').toUpperCase()}
-                                                    </span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            <details className="border-t border-white/10 pt-6 font-sans">
-                                <summary className="cursor-pointer text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] hover:text-gray-400 transition-all">
-                                    Variables (Injectable)
-                                </summary>
-                                <div className="space-y-3 mt-3">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-[8px] text-gray-600">Dynamic Params</p>
-                                        <button onClick={addVariable} className="px-3 py-1 bg-white/5 border border-white/10 text-white text-[8px] font-bold rounded-lg uppercase tracking-widest hover:bg-white/10 transition-all">+ Add</button>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {Object.entries(currentTask.variables).map(([name, def]) => (
-                                            <VariableRow
-                                                key={name}
-                                                name={name}
-                                                def={def}
-                                                updateVariable={updateVariable}
-                                                removeVariable={removeVariable}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            </details>
-
-                            <details className="border-t border-white/10 pt-6 font-sans">
-                                <summary className="cursor-pointer text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] hover:text-gray-400 transition-all">
-                                    Extraction Script
-                                </summary>
-                                <div className="space-y-3 mt-3">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[8px] text-gray-600 uppercase tracking-widest">Output format</span>
-                                        <select
-                                            value={currentTask.extractionFormat || 'json'}
-                                            onChange={(e) => {
-                                                const next = { ...currentTask, extractionFormat: e.target.value as 'json' | 'csv' };
-                                                setCurrentTask(next);
-                                                handleAutoSave(next);
-                                            }}
-                                            className="custom-select bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-[8px] font-bold uppercase text-white/60"
-                                        >
-                                            <option value="json">JSON</option>
-                                            <option value="csv">CSV</option>
-                                        </select>
-                                    </div>
-                                    <p className="text-[8px] text-gray-600">Process scraped HTML with JavaScript. Use <code className="text-blue-400 bg-white/5 px-1 py-0.5 rounded">$$data.html()</code> to access the raw HTML.</p>
-                                    <div className="w-full bg-[#050505] border border-white/10 rounded-xl p-4 font-mono text-xs text-green-300 focus-within:border-white/30 resize-none custom-scrollbar leading-relaxed min-h-[200px] whitespace-pre-wrap">
-                                        <RichInput
-                                            value={currentTask.extractionScript || ''}
-                                            onChange={(val) => setCurrentTask({ ...currentTask, extractionScript: val })}
-                                            onBlur={() => handleAutoSave()}
-                                            variables={currentTask.variables}
-                                            syntax="javascript"
-                                            placeholder={`// Example: Extract all links
-const html = $$data.html();
-const parser = new DOMParser();
-const doc = parser.parseFromString(html, 'text/html');
-const links = Array.from(doc.querySelectorAll('a')).map(a => a.href);
-return JSON.stringify(links, null, 2);`}
-                                        />
-                                    </div>
-                                </div>
-                            </details>
-
-                            {currentTask.mode === 'scrape' && (
-                                <div className="space-y-2">
-                                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Selector Filter</label>
-                                    <div className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-sm focus-within:border-white/30 transition-all">
-                                        <RichInput
-                                            value={currentTask.selector || ''}
-                                            onChange={(val) => setCurrentTask({ ...currentTask, selector: val })}
-                                            onBlur={() => handleAutoSave()}
-                                            variables={currentTask.variables}
-                                            placeholder=".main-content"
-                                        />
-                                    </div>
-                                </div>
-                            )
-                            }
-
-                            <div className="pt-4 border-t border-white/10 space-y-3">
-                                <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all cursor-pointer group">
-                                    <input
-                                        type="checkbox"
-                                        checked={currentTask.rotateUserAgents}
-                                        onChange={(e) => {
-                                            const next = { ...currentTask, rotateUserAgents: e.target.checked };
-                                            setCurrentTask(next);
-                                            handleAutoSave(next);
-                                        }}
-                                        className="w-4 h-4 rounded border-white/20 bg-transparent"
-                                    />
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Rotate UA</span>
-                                </label>
-                                <label
-                                    className={`flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 transition-all ${rotateProxiesDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/[0.05] cursor-pointer group'}`}
-                                    title={rotateProxiesDisabled ? 'Configure proxies in Settings → Proxies to enable rotation.' : 'Rotate proxies per task.'}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={currentTask.rotateProxies}
-                                        onChange={(e) => {
-                                            const next = { ...currentTask, rotateProxies: e.target.checked };
-                                            setCurrentTask(next);
-                                            handleAutoSave(next);
-                                        }}
-                                        disabled={rotateProxiesDisabled}
-                                        className="w-4 h-4 rounded border-white/20 bg-transparent"
-                                    />
-                                    <span className={`text-[10px] font-bold text-gray-500 uppercase tracking-widest ${rotateProxiesDisabled ? '' : 'group-hover:text-white'}`}>Rotate Proxies</span>
-                                </label>
-                                <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all cursor-pointer group">
-                                    <input
-                                        type="checkbox"
-                                        checked={currentTask.rotateViewport}
-                                        onChange={(e) => {
-                                            const next = { ...currentTask, rotateViewport: e.target.checked };
-                                            setCurrentTask(next);
-                                            handleAutoSave(next);
-                                        }}
-                                        className="w-4 h-4 rounded border-white/20 bg-transparent"
-                                    />
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Rotate Viewport</span>
-                                </label>
-                                <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all cursor-pointer group">
-                                    <input
-                                        type="checkbox"
-                                        checked={currentTask.includeShadowDom !== false}
-                                        onChange={(e) => {
-                                            const next = { ...currentTask, includeShadowDom: e.target.checked };
-                                            setCurrentTask(next);
-                                            handleAutoSave(next);
-                                        }}
-                                        className="w-4 h-4 rounded border-white/20 bg-transparent"
-                                    />
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Include Shadow DOM in HTML</span>
-                                </label>
-                                <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all cursor-pointer group">
-                                    <input
-                                        type="checkbox"
-                                        checked={!!currentTask.disableRecording}
-                                        onChange={(e) => {
-                                            const next = { ...currentTask, disableRecording: e.target.checked };
-                                            setCurrentTask(next);
-                                            handleAutoSave(next);
-                                        }}
-                                        className="w-4 h-4 rounded border-white/20 bg-transparent"
-                                    />
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Disable automated recording</span>
-                                </label>
-                                <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all cursor-pointer group">
-                                    <input
-                                        type="checkbox"
-                                        checked={!!currentTask.statelessExecution}
-                                        onChange={(e) => {
-                                            const next = { ...currentTask, statelessExecution: e.target.checked };
-                                            setCurrentTask(next);
-                                            handleAutoSave(next);
-                                        }}
-                                        className="w-4 h-4 rounded border-white/20 bg-transparent"
-                                    />
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white">Stateless execution</span>
-                                </label>
-                            </div>
-                        </div>
-                    )}
-
-                    {editorView === 'json' && (
-                        <JsonEditorPane
-                            task={currentTask}
-                            onChange={setCurrentTask}
-                            onCopy={(text, id) => { void handleCopy(text, id); }}
-                            copiedId={copied}
-                        />
-                    )}
-
-                    {
-                        editorView === 'api' && (
-                            <div className="h-full flex flex-col">
-                                <div className="space-y-6 flex-1 flex flex-col min-h-0">
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Deployment Endpoint</label>
-                                        <div className="flex gap-2 items-center">
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={currentTask.id ? `${window.location.origin}/tasks/${currentTask.id}/api` : 'Save task to view endpoint'}
-                                                className="flex-1 bg-[#050505] border border-white/10 rounded-xl px-4 py-2 font-mono text-xs text-green-300 focus:outline-none"
-                                            />
-                                            <button
-                                                onClick={() => {
-                                                    const url = currentTask.id ? `${window.location.origin}/tasks/${currentTask.id}/api` : '';
-                                                    if (url) void handleCopy(url, 'endpoint');
-                                                }}
-                                                className={`px-4 py-2 border text-[9px] font-bold rounded-xl uppercase transition-all flex items-center gap-2 ${copied === 'endpoint' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}
-                                            >
-                                                {copied === 'endpoint' ? <MaterialIcon name="check" className="text-sm" /> : <MaterialIcon name="content_copy" className="text-sm" />}
-                                                {copied === 'endpoint' ? 'Copied' : 'Copy'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 flex flex-col min-h-0">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Override Variables (JSON)</label>
-                                            <button onClick={() => {
-                                                const cleanVars: Record<string, any> = {};
-                                                Object.entries(currentTask.variables).forEach(([n, d]) => cleanVars[n] = d.value);
-                                                void handleCopy(JSON.stringify({ variables: cleanVars }, null, 2), 'vars');
-                                            }} className={`px-4 py-2 border text-[9px] font-bold rounded-xl uppercase transition-all flex items-center gap-2 ${copied === 'vars' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}>
-                                                {copied === 'vars' ? <MaterialIcon name="check" className="text-sm" /> : <MaterialIcon name="content_copy" className="text-sm" />}
-                                                {copied === 'vars' ? 'Copied' : 'Copy'}
-                                            </button>
-                                        </div>
-                                        <CodeEditor
-                                            readOnly
-                                            value={(() => {
-                                                const cleanVars: Record<string, any> = {};
-                                                Object.entries(currentTask.variables).forEach(([n, d]) => cleanVars[n] = d.value);
-                                                return JSON.stringify({ variables: cleanVars }, null, 2);
-                                            })()}
-                                            language="json"
-                                            className="flex-1"
-                                        />
-                                    </div>
-                                </div>
-                                <p className="text-[8px] text-gray-600 mt-4 font-mono uppercase tracking-widest leading-loose">Automate via HTTP POST to the above endpoint with your API key in the headers.</p>
-                            </div>
-                        )
-                    }
-                    {editorView === 'history' && (
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Task Versions</span>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={loadVersions}
-                                        className="px-4 py-2 border border-white/10 text-[9px] font-bold rounded-xl uppercase tracking-widest text-white hover:bg-white/5 transition-all"
-                                    >
-                                        Refresh
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            if (!currentTask.id) return;
-                                            const confirmed = await onConfirm('Clear all task versions?');
-                                            if (!confirmed) return;
-                                            const res = await fetch(`/api/tasks/${currentTask.id}/versions/clear`, { method: 'POST' });
-                                            if (res.ok) {
-                                                onNotify('Version history cleared.', 'success');
-                                                loadVersions();
-                                            } else {
-                                                onNotify('Clear failed.', 'error');
-                                            }
-                                        }}
-                                        className="px-4 py-2 border border-red-500/20 text-[9px] font-bold rounded-xl uppercase tracking-widest text-red-300 hover:bg-red-500/10 transition-all"
-                                    >
-                                        Clear
-                                    </button>
                                 </div>
                             </div>
-                            {versionsLoading && (
-                                <div className="text-[9px] text-gray-500 uppercase tracking-widest">Loading versions...</div>
-                            )}
-                            {!versionsLoading && versions.length === 0 && (
-                                <div className="text-[9px] text-gray-600 uppercase tracking-widest">No versions yet. Save changes to create history.</div>
-                            )}
-                            <div className="space-y-3">
-                                {versions.map((version) => (
-                                    <div key={version.id} className="glass-card p-4 rounded-2xl flex items-center justify-between">
-                                        <div className="space-y-1">
-                                            <div className="text-[10px] font-bold text-white uppercase tracking-widest">{version.name}</div>
-                                            <div className="text-[8px] text-gray-500 uppercase tracking-[0.2em]">
-                                                {new Date(version.timestamp).toLocaleString()} | {version.mode}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => openVersionPreview(version.id)}
-                                                disabled={versionPreviewLoading}
-                                                className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                {versionPreviewLoading ? 'Loading...' : 'View'}
-                                            </button>
-                                            <button
-                                                onClick={() => rollbackToVersion(version.id)}
-                                                className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
-                                            >
-                                                Rollback
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div >
-                <ActionPalette
-                    open={actionPaletteOpen}
-                    query={actionPaletteQuery}
-                    onQueryChange={setActionPaletteQuery}
-                    onClose={() => setActionPaletteOpen(false)}
-                    onSelect={(type) => {
-                        if (actionPaletteTargetId) {
-                            if (type === 'if') {
-                                updateAction(actionPaletteTargetId, {
-                                    type,
-                                    conditionVar: '',
-                                    conditionVarType: 'string',
-                                    conditionOp: 'equals',
-                                    conditionValue: ''
-                                }, true);
-                            } else if (type === 'while') {
-                                updateAction(actionPaletteTargetId, {
-                                    type,
-                                    conditionVar: '',
-                                    conditionVarType: 'string',
-                                    conditionOp: 'equals',
-                                    conditionValue: ''
-                                }, true);
-                            } else {
-                                updateAction(actionPaletteTargetId, { type }, true);
-                            }
-                        } else {
-                            addActionByType(type);
-                        }
-                        setActionPaletteOpen(false);
-                    }}
-                />
-
-                <div className="p-8 border-t border-white/10 backdrop-blur-xl shrink-0">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={onRun}
-                            disabled={isExecuting || isHeadfulOpen}
-                            className="shine-effect flex-1 bg-white text-black py-4 rounded-2xl font-bold text-[10px] tracking-[0.3em] uppercase transition-all shadow-xl shadow-white/5 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isExecuting ? (
-                                <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                            ) : <MaterialIcon name="play_arrow" className="text-sm text-black" />}
-                            <span>
-                                {isExecuting ? 'Running...' : 'Run Task'}
-                            </span>
-                        </button>
-                        {isExecuting && (
-                            <button
-                                onClick={() => onStop?.()}
-                                className="w-12 h-12 rounded-2xl border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center"
-                                title="Stop task"
-                                aria-label="Stop task"
-                            >
-                                <MaterialIcon name="stop" className="text-base" />
-                            </button>
                         )}
-                        <button
-                            onClick={() => {
-                                if (isHeadfulOpen) {
-                                    onStopHeadful?.();
-                                } else {
-                                    onOpenHeadful?.(currentTask.url || 'https://www.google.com');
-                                }
-                            }}
-                            disabled={isExecuting}
-                            className={`px-4 h-12 rounded-2xl border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed ${isHeadfulOpen
-                                ? 'border-blue-500/30 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                                : 'border-white/10 text-white/80 hover:text-white hover:bg-white/10'
-                                }`}
-                            title={isHeadfulOpen ? 'Stop headful browser' : 'Open browser to log in'}
-                        >
-                            <MaterialIcon name={isHeadfulOpen ? 'stop' : 'open_in_browser'} className="text-base" />
-                            {isHeadfulOpen ? 'Close Browser' : 'Open Browser'}
-                        </button>
                     </div>
                 </div>
-            </aside >
-            <div
-                className="w-2 cursor-col-resize bg-white/5 hover:bg-white/10 transition-colors"
-                onPointerDown={(event) => {
-                    event.preventDefault();
-                    resizingRef.current = true;
-                    document.body.style.cursor = 'col-resize';
-                    document.body.style.userSelect = 'none';
+            </div>
+
+            {/* Zoom Controls — bottom-left overlay */}
+            <div className="absolute bottom-24 left-6 z-30 flex flex-col gap-1 bg-[#111] border border-white/10 rounded-xl p-1 shadow-xl">
+                <button
+                    onClick={() => {
+                        const newScale = Math.min(2, canvasScale * 1.2);
+                        setCanvasScale(newScale);
+                    }}
+                    className="w-8 h-8 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center text-sm font-bold"
+                    title="Zoom In"
+                >+</button>
+                <div className="text-[8px] text-center text-gray-500 font-bold select-none">{Math.round(canvasScale * 100)}%</div>
+                <button
+                    onClick={() => {
+                        const newScale = Math.max(0.25, canvasScale * 0.8);
+                        setCanvasScale(newScale);
+                    }}
+                    className="w-8 h-8 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center text-sm font-bold"
+                    title="Zoom Out"
+                >−</button>
+                <button
+                    onClick={() => {
+                        setCanvasScale(1);
+                        const vp = canvasViewportRef.current;
+                        const vpWidth = vp ? vp.clientWidth : 1000;
+                        setCanvasOffset({ x: (vpWidth - 400) / 2, y: 20 });
+                    }}
+                    className="w-8 h-8 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center"
+                    title="Reset View"
+                >
+                    <MaterialIcon name="fit_screen" className="text-sm" />
+                </button>
+            </div>
+
+            {/* Action Palette Overlay */}
+            <ActionPalette
+                open={actionPaletteOpen}
+                query={actionPaletteQuery}
+                onQueryChange={setActionPaletteQuery}
+                onClose={() => setActionPaletteOpen(false)}
+                onSelect={(type) => {
+                    if (actionPaletteTargetId) {
+                        if (type === 'if') {
+                            updateAction(actionPaletteTargetId, {
+                                type,
+                                conditionVar: '',
+                                conditionVarType: 'string',
+                                conditionOp: 'equals',
+                                conditionValue: ''
+                            }, true);
+                        } else if (type === 'while') {
+                            updateAction(actionPaletteTargetId, {
+                                type,
+                                conditionVar: '',
+                                conditionVarType: 'string',
+                                conditionOp: 'equals',
+                                conditionValue: ''
+                            }, true);
+                        } else {
+                            updateAction(actionPaletteTargetId, { type }, true);
+                        }
+                    } else if (actionPaletteInsertIndex !== null) {
+                        // Insert at specific index (for branch + buttons)
+                        const base: Action = {
+                            id: 'act_' + Date.now(),
+                            type,
+                            selector: '',
+                            value: ''
+                        };
+                        if (type === 'set') base.varName = '';
+                        if (type === 'merge') base.varName = '';
+                        if (type === 'start') base.value = '';
+                        if (type === 'type') base.typeMode = 'replace';
+                        if (type === 'if') {
+                            base.conditionVar = '';
+                            base.conditionVarType = 'string';
+                            base.conditionOp = 'equals';
+                            base.conditionValue = '';
+                        }
+                        if (type === 'while') {
+                            base.conditionVar = '';
+                            base.conditionVarType = 'string';
+                            base.conditionOp = 'equals';
+                            base.conditionValue = '';
+                        }
+                        if (type === 'wait_downloads') base.value = '30';
+                        const newActions = [...currentTask.actions];
+                        if (type === 'if' || type === 'while') {
+                            const endAction: Action = { id: 'act_' + Date.now() + '_end', type: 'end', selector: '', value: '' };
+                            newActions.splice(actionPaletteInsertIndex, 0, base, endAction);
+                        } else {
+                            newActions.splice(actionPaletteInsertIndex, 0, base);
+                        }
+                        const next = { ...currentTask, actions: newActions };
+                        setCurrentTask(next);
+                        handleAutoSave(next);
+                    } else {
+                        addActionByType(type);
+                    }
+                    setActionPaletteOpen(false);
+                    setActionPaletteInsertIndex(null);
                 }}
             />
 
-            <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#020202] p-12 relative">
-                <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
-                    style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+            {/* Results Drawer */}
+            <div
+                className={`fixed top-0 right-0 h-full w-[600px] max-w-[90vw] bg-[#080808] border-l border-white/10 shadow-2xl transition-transform duration-500 ease-in-out z-40 transform ${isResultsOpen ? 'translate-x-0' : 'translate-x-full'}`}
+            >
+                <button
+                    onClick={() => setIsResultsOpen(!isResultsOpen)}
+                    className={`absolute top-1/2 -left-8 -translate-y-1/2 w-8 h-24 bg-[#111] border border-r-0 border-white/10 rounded-l-xl flex items-center justify-center cursor-pointer shadow-[-8px_0_15px_rgba(0,0,0,0.5)] transition-all hover:bg-white/5 hover:w-10 hover:-left-10`}
+                >
+                    <MaterialIcon name="drag_indicator" className={`text-white/30 text-xl transition-transform duration-500 ${isResultsOpen ? 'rotate-180' : ''}`} />
+                </button>
+                <div className="h-full w-full overflow-y-auto custom-scrollbar p-6">
+                    <ResultsPane
+                        results={results}
+                        pinnedResults={pinnedResults}
+                        isExecuting={isExecuting}
+                        isHeadful={isHeadfulOpen}
+                        runId={runId}
+                        onConfirm={onConfirm}
+                        onNotify={onNotify}
+                        onPin={onPinResults}
+                        onUnpin={onUnpinResults}
+                        fullWidth={true}
+                    />
+                </div>
+            </div>
 
-                <ResultsPane
-                    results={results}
-                    pinnedResults={pinnedResults}
-                    isExecuting={isExecuting}
-                    isHeadful={isHeadfulOpen}
-                    runId={runId}
-                    onConfirm={onConfirm}
-                    onNotify={onNotify}
-                    onPin={onPinResults}
-                    onUnpin={onUnpinResults}
-                    fullWidth={isHeadfulOpen}
-                />
-                {versionPreview && (
-                    <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 backdrop-blur-sm px-6">
-                        <div className="glass-card w-full max-w-6xl rounded-[32px] border border-white/10 p-8 shadow-2xl flex flex-col max-h-[90vh]">
-                            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
-                                <div className="space-y-1">
-                                    <div className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.3em]">Task Snapshot</div>
-                                    <div className="text-lg font-bold text-white">{versionPreview.snapshot.name}</div>
-                                    <div className="text-[8px] text-gray-500 uppercase tracking-[0.2em]">
-                                        {new Date(versionPreview.timestamp).toLocaleString()} | {versionPreview.snapshot.mode}
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setVersionPreview(null)}
-                                        className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
-                                    >
-                                        Close
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            if (onRunSnapshot) onRunSnapshot(versionPreview.snapshot);
-                                            setVersionPreview(null);
-                                        }}
-                                        className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white text-black hover:bg-white/90 transition-all"
-                                    >
-                                        Run Version
-                                    </button>
+            {/* Version Preview Modal */}
+            {versionPreview && (
+                <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 backdrop-blur-sm px-6">
+                    <div className="glass-card w-full max-w-6xl rounded-[32px] border border-white/10 p-8 shadow-2xl flex flex-col max-h-[90vh]">
+                        <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
+                            <div className="space-y-1">
+                                <div className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.3em]">Task Snapshot</div>
+                                <div className="text-lg font-bold text-white">{versionPreview.snapshot.name}</div>
+                                <div className="text-[8px] text-gray-500 uppercase tracking-[0.2em]">
+                                    {new Date(versionPreview.timestamp).toLocaleString()} | {versionPreview.snapshot.mode}
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 overflow-y-auto custom-scrollbar pr-2 flex-1 min-h-0">
-                                <div className="space-y-2">
-                                    <div className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Snapshot JSON</div>
-                                    <CodeEditor
-                                        readOnly
-                                        value={JSON.stringify(versionPreview.snapshot, null, 2)}
-                                        language="json"
-                                        className="min-h-[320px]"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Output</div>
-                                    <div className="glass-card rounded-2xl p-6 border border-white/10 text-[10px] text-gray-500">
-                                        No output captured for this snapshot yet. Run this version to see results.
-                                    </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setVersionPreview(null)}
+                                    className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (onRunSnapshot) onRunSnapshot(versionPreview.snapshot);
+                                        setVersionPreview(null);
+                                    }}
+                                    className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white text-black hover:bg-white/90 transition-all"
+                                >
+                                    Run Version
+                                </button>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 overflow-y-auto custom-scrollbar pr-2 flex-1 min-h-0">
+                            <div className="space-y-2">
+                                <div className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Snapshot JSON</div>
+                                <CodeEditor
+                                    readOnly
+                                    value={JSON.stringify(versionPreview.snapshot, null, 2)}
+                                    language="json"
+                                    className="min-h-[320px]"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Output</div>
+                                <div className="glass-card rounded-2xl p-6 border border-white/10 text-[10px] text-gray-500">
+                                    No output captured for this snapshot yet. Run this version to see results.
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Bottom Action Bar */}
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#111] border border-white/10 p-2 rounded-3xl shadow-2xl backdrop-blur-xl">
+                <button
+                    onClick={() => {
+                        setIsResultsOpen(true);
+                        onRun();
+                    }}
+                    disabled={isExecuting || isHeadfulOpen}
+                    className="shine-effect bg-white text-black px-8 py-4 rounded-2xl font-bold text-[10px] tracking-[0.3em] uppercase transition-all shadow-xl shadow-white/5 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px]"
+                >
+                    {isExecuting ? (
+                        <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                    ) : <MaterialIcon name="play_arrow" className="text-sm text-black" />}
+                    <span>
+                        {isExecuting ? 'Running...' : 'Run Task'}
+                    </span>
+                </button>
+                {isExecuting && (
+                    <button
+                        onClick={() => onStop?.()}
+                        className="w-12 h-12 rounded-2xl border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center"
+                        title="Stop task"
+                        aria-label="Stop task"
+                    >
+                        <MaterialIcon name="stop" className="text-base" />
+                    </button>
                 )}
-            </main>
+                <button
+                    onClick={() => {
+                        if (isHeadfulOpen) {
+                            onStopHeadful?.();
+                        } else {
+                            onOpenHeadful?.(currentTask.url || 'https://www.google.com');
+                        }
+                    }}
+                    disabled={isExecuting}
+                    className={`px-4 h-12 rounded-2xl border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed ${isHeadfulOpen
+                        ? 'border-blue-500/30 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                        : 'border-white/10 text-white/80 hover:text-white hover:bg-white/10'
+                        }`}
+                    title={isHeadfulOpen ? 'Stop headful browser' : 'Open browser to log in'}
+                >
+                    <MaterialIcon name={isHeadfulOpen ? 'stop' : 'open_in_browser'} className="text-base" />
+                    {isHeadfulOpen ? 'Close Browser' : 'Open Browser'}
+                </button>
+            </div>
         </div >
     );
 };
 
 export default EditorScreen;
+
