@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { APP_VERSION } from '../../utils/appInfo';
 
-const RELEASE_NOTES_KEY = 'doppelganger.seenReleaseNotes_0_8';
+const RELEASE_NOTES_KEY = 'figranium.seenReleaseNotes_0_8';
 
 export default function ReleaseNotesModal() {
     const [open, setOpen] = useState(false);
@@ -22,7 +22,7 @@ export default function ReleaseNotesModal() {
     const fetchReleaseNotes = async () => {
         try {
             // Fetch v0.8.0 release notes from Github
-            const res = await fetch('https://api.github.com/repos/mnemosynestack/doppelganger/releases/tags/v0.8.0');
+            const res = await fetch('https://api.github.com/repos/mnemosynestack/figranium/releases/tags/v0.8.0');
             if (res.ok) {
                 const data = await res.json();
                 // We'll just display the raw body text or a simple formatted version

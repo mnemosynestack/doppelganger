@@ -4,7 +4,6 @@ const FileStore = require('session-file-store')(session);
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { execSync } = require('child_process');
 
 // Constants
 const {
@@ -19,7 +18,8 @@ const {
 } = require('./src/server/constants');
 
 const {
-    loadTasks
+    loadTasks,
+    getTaskById
 } = require('./src/server/storage');
 
 // Context & Utils
@@ -67,13 +67,8 @@ if (!SESSION_SECRET) {
         if (fs.existsSync(SESSION_SECRET_FILE)) {
             SESSION_SECRET = fs.readFileSync(SESSION_SECRET_FILE, 'utf8').trim();
         } else {
-            try {
-                // Generate secret using openssl per user request
-                SESSION_SECRET = execSync('openssl rand -base64 32').toString().trim();
-            } catch (opensslErr) {
-                console.warn('openssl not found or failed, falling back to crypto.randomBytes.');
-                SESSION_SECRET = crypto.randomBytes(48).toString('hex');
-            }
+            // Generate secret using crypto.randomBytes
+            SESSION_SECRET = crypto.randomBytes(48).toString('hex');
             if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
             fs.writeFileSync(SESSION_SECRET_FILE, SESSION_SECRET);
         }
@@ -241,8 +236,8 @@ const executeTaskById = async (req, res) => {
     const taskId = req.params.id;
     let task;
     try {
-        const tasks = await loadTasks();
-        task = tasks.find(t => t.id === taskId);
+        await loadTasks();
+        task = getTaskById(taskId);
     } catch (e) {
         return res.status(500).json({ error: 'FAILED_TO_LOAD_TASK' });
     }

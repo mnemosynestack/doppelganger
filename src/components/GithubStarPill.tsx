@@ -47,7 +47,7 @@ export default function GithubStarPill({ className = '' }: GithubStarPillProps) 
     useEffect(() => {
         let isMounted = true;
 
-        fetch('https://api.github.com/repos/mnemosynestack/doppelganger')
+        fetch('https://api.github.com/repos/mnemosynestack/figranium')
             .then((res) => (res.ok ? res.json() : null))
             .then((data) => {
                 if (!isMounted || !data?.stargazers_count) {
@@ -68,13 +68,13 @@ export default function GithubStarPill({ className = '' }: GithubStarPillProps) 
 
     return (
         <a
-            href="https://github.com/mnemosynestack/doppelganger"
+            href="https://github.com/mnemosynestack/figranium"
             target="_blank"
             rel="noreferrer"
             onPointerMove={handlePointerMove}
             onPointerLeave={handlePointerLeave}
             className={`gh-pill beam-follow inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] uppercase tracking-[0.25em] text-white/70 transition hover:border-white/20 hover:bg-white/10 hover:text-white ${className}`}
-            aria-label="Star Doppelganger on GitHub"
+            aria-label="Star Figranium on GitHub"
         >
             <GithubLogo className="h-4 w-4" />
             GitHub

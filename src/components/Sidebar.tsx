@@ -16,7 +16,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onNewTask, onLogout, curr
                 className="mb-12 hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg"
                 aria-label="Go to Dashboard"
             >
-                <img src="/icon.png" alt="Doppelganger Logo" className="w-10 h-10" onError={(e) => { e.currentTarget.src = '/icon.png' }} />
+                <img src="/figranium_icon.svg" alt="Figranium Logo" className="w-10 h-10" onError={(e) => { e.currentTarget.src = '/figranium_icon.svg' }} />
             </button>
 
             <div className="flex-1 flex flex-col gap-6">

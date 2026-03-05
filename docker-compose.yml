@@ -1,5 +1,5 @@
 services:
-  doppelganger:
+  figranium:
     build: .
     # By default, Docker Compose uses the host's architecture.
     # This ensures ARM devices (like Apple Silicon) use the linux/arm64 images

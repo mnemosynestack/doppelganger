@@ -1,6 +1,6 @@
 # Terms of Service
 
-By using Doppelganger, you agree to the terms below and acknowledge that the software is distributed under the GNU General Public License v3.0 (GPLv3).
+By using Figranium, you agree to the terms below and acknowledge that the software is distributed under the GNU General Public License v3.0 (GPLv3).
 
 1. License and Usage
    - You are free to use, modify, and distribute the software in accordance with the GPLv3.

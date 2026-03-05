@@ -28,7 +28,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ status, onSubmit, error, busy =
                 style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
             <div className="w-[400px] glass-card p-10 rounded-[48px] space-y-8 relative">
                 <div className="text-center space-y-2">
-                    <img src="/logo.png" alt="Doppelganger" className="h-10 mx-auto object-contain" />
+                    <img src="/figranium_logo.svg" alt="Figranium" className="h-24 mx-auto object-contain" />
                     {status === 'setup' && (
                         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">
                             Initializing System

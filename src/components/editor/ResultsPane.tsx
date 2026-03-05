@@ -445,7 +445,7 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                         Headful Session Active
                     </div>
                     <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80 max-w-lg leading-relaxed">
-                        Doppelganger is not optimized for native browser windows. Please install the proper tools for stability (Xvfb, x11vnc, websockify) or simply use the Docker version.
+                        Figranium is not optimized for native browser windows. Please install the proper tools for stability (Xvfb, x11vnc, websockify) or simply use the Docker version.
                     </div>
                 </div>
             );
@@ -675,7 +675,7 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                                         onNotify('No data to export.', 'error');
                                         return;
                                     }
-                                    const name = `doppelganger-data-${new Date().toISOString().replace(/[:.]/g, '-')}.${payload.ext}`;
+                                    const name = `figranium-data-${new Date().toISOString().replace(/[:.]/g, '-')}.${payload.ext}`;
                                     downloadText(name, payload.content, payload.mime);
                                     onNotify(`Exported ${payload.ext.toUpperCase()}.`, 'success');
                                 }}
@@ -712,7 +712,7 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                                         const url = URL.createObjectURL(content);
                                         const link = document.createElement('a');
                                         link.href = url;
-                                        link.download = `doppelganger-downloads-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+                                        link.download = `figranium-downloads-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
                                         document.body.appendChild(link);
                                         link.click();
                                         link.remove();
@@ -817,6 +817,7 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                                                     download={file.name}
                                                     className="shrink-0 p-3 rounded-lg border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white transition-all flex items-center justify-center"
                                                     title="Download file"
+                                                    aria-label="Download file"
                                                 >
                                                     <MaterialIcon name="download" className="text-[18px]" />
                                                 </a>

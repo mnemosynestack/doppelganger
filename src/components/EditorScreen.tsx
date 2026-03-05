@@ -8,6 +8,8 @@ import ActionPalette from './editor/ActionPalette';
 import ResultsPane from './editor/ResultsPane';
 import ActionItem from './editor/ActionItem';
 
+const blockStartTypes = new Set(['if', 'while', 'repeat', 'foreach', 'on_error']);
+
 interface EditorScreenProps {
     currentTask: Task;
     setCurrentTask: Dispatch<SetStateAction<Task | null>>;
@@ -137,6 +139,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const [_versions, setVersions] = useState<{ id: string; timestamp: number; name: string; mode: TaskMode }[]>([]);
     const [_versionsLoading, setVersionsLoading] = useState(false);
     const [actionPaletteOpen, setActionPaletteOpen] = useState(false);
+
+    const [selectedActionIds, setSelectedActionIds] = useState<Set<string>>(new Set());
+    const [selectionBox, setSelectionBox] = useState<{ startX: number, startY: number, currentX: number, currentY: number } | null>(null);
     const [actionPaletteQuery, setActionPaletteQuery] = useState('');
     const [actionPaletteTargetId, setActionPaletteTargetId] = useState<string | null>(null);
     const [actionPaletteInsertIndex, setActionPaletteInsertIndex] = useState<number | null>(null);
@@ -154,6 +159,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const canvasViewportRef = useRef<HTMLDivElement | null>(null);
     const hasInitializedCanvas = useRef(false);
     const [triggerExpanded, setTriggerExpanded] = useState(false);
+    const headfulFrameRef = useRef<HTMLDivElement | null>(null);
     const canvasScaleRef = useRef(canvasScale);
     useEffect(() => { canvasScaleRef.current = canvasScale; }, [canvasScale]);
 
@@ -182,7 +188,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const getStoredSplitPercent = () => {
         try {
-            const stored = localStorage.getItem('doppelganger.layout.leftWidthPct');
+            const stored = localStorage.getItem('figranium.layout.leftWidthPct');
             if (!stored) return 0.3;
             const value = parseFloat(stored);
             if (Number.isNaN(value)) return 0.3;
@@ -322,11 +328,10 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         return () => clearTimeout(timeout);
     }, [currentTask]);
 
-    const blockStartTypes = new Set(['if', 'while', 'repeat', 'foreach', 'on_error']);
-
-    const getBlockDepths = (actions: Action[]) => {
+    // ⚡ Bolt: Memoize block depth array to prevent O(N) array mapping on every re-render (e.g., during drag operations)
+    const blockDepths = useMemo(() => {
         let depth = 0;
-        return actions.map((action) => {
+        return currentTask.actions.map((action) => {
             if (action.type === 'else' || action.type === 'end') {
                 depth = Math.max(0, depth - 1);
             }
@@ -336,7 +341,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             }
             return currentDepth;
         });
-    };
+    }, [currentTask.actions]);
 
     const addActionByType = (type: Action['type']) => {
         const base: Action = {
@@ -592,6 +597,51 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         setEditorWidth(clampEditorWidth(Math.round(window.innerWidth * pct)));
     }, []);
 
+    const isInteractiveTarget = (el: HTMLElement) => {
+        const tagName = el.tagName.toLowerCase();
+        return tagName === 'input' || tagName === 'textarea' || el.isContentEditable || el.closest('[data-interactive-target="true"]');
+    };
+
+    // Keyboard navigation handlers (delete, select all)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (isInteractiveTarget(e.target as HTMLElement)) return;
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                if (selectedActionIds.size > 0) {
+                    e.preventDefault();
+                    let nextActions = [...currentTask.actions];
+                    selectedActionIds.forEach(id => {
+                        const idx = nextActions.findIndex(a => a.id === id);
+                        if (idx !== -1) {
+                            const action = nextActions[idx];
+                            if (action.type === 'if' || action.type === 'while') {
+                                let nestCount = 1;
+                                for (let i = idx + 1; i < nextActions.length; i++) {
+                                    if (nextActions[i].type === 'if' || nextActions[i].type === 'while') nestCount++;
+                                    if (nextActions[i].type === 'end') nestCount--;
+                                    if (nestCount === 0) {
+                                        nextActions.splice(i, 1);
+                                        break;
+                                    }
+                                }
+                            }
+                            nextActions.splice(idx, 1);
+                        }
+                    });
+                    const next = { ...currentTask, actions: nextActions };
+                    setCurrentTask(next);
+                    handleAutoSave(next);
+                    setSelectedActionIds(new Set());
+                }
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+                e.preventDefault();
+                setSelectedActionIds(new Set(currentTask.actions.map(a => a.id)));
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [selectedActionIds, currentTask, handleAutoSave]);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -803,12 +853,12 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     // Suppress unused variable errors for features temporarily removed from canvas
     void _VariableRow; void _handleCopy; void _addVariable; void _removeVariable;
-    void _updateVariable; void _rollbackToVersion; void _openVersionPreview; void getBlockDepths;
+    void _updateVariable; void _rollbackToVersion; void _openVersionPreview; void blockDepths;
     void handlePointerDown; void dragState; void dragOverIndex; void finalizeDrag; void getDragIndexFromY;
 
     return (
         <div className="flex-1 flex overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 bg-black relative" data-editor-width={editorWidth}>
-            <div className="absolute inset-0 pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: `${40 * canvasScale}px ${40 * canvasScale}px`, backgroundPosition: `${canvasOffset.x}px ${canvasOffset.y}px` }} />
+            <div className="absolute inset-0 pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: `${20 * canvasScale}px ${20 * canvasScale}px`, backgroundPosition: `${canvasOffset.x}px ${canvasOffset.y}px` }} />
 
             {/* Infinite Canvas Viewport */}
             <div
@@ -822,16 +872,42 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                         isPanningRef.current = true;
                         panStartRef.current = { x: e.clientX, y: e.clientY, offsetX: canvasOffset.x, offsetY: canvasOffset.y };
                         (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+                    } else if (e.button === 0 && !isInteractiveTarget(e.target as HTMLElement)) {
+                        setSelectionBox({ startX: e.clientX, startY: e.clientY, currentX: e.clientX, currentY: e.clientY });
+                        if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                            setSelectedActionIds(new Set());
+                        }
+                        (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
                     }
                 }}
                 onPointerMove={(e) => {
-                    if (!isPanningRef.current) return;
-                    const dx = e.clientX - panStartRef.current.x;
-                    const dy = e.clientY - panStartRef.current.y;
-                    setCanvasOffset({ x: panStartRef.current.offsetX + dx, y: panStartRef.current.offsetY + dy });
+                    if (isPanningRef.current) {
+                        const dx = e.clientX - panStartRef.current.x;
+                        const dy = e.clientY - panStartRef.current.y;
+                        setCanvasOffset({ x: panStartRef.current.offsetX + dx, y: panStartRef.current.offsetY + dy });
+                    } else if (selectionBox) {
+                        setSelectionBox(prev => prev ? { ...prev, currentX: e.clientX, currentY: e.clientY } : null);
+                        if (!selectionBox) return; // For TS
+                        const boxRect = {
+                            left: Math.min(selectionBox.startX, e.clientX),
+                            right: Math.max(selectionBox.startX, e.clientX),
+                            top: Math.min(selectionBox.startY, e.clientY),
+                            bottom: Math.max(selectionBox.startY, e.clientY)
+                        };
+                        const elements = document.querySelectorAll('[data-action-id]');
+                        const newSelected = new Set(e.shiftKey || e.ctrlKey || e.metaKey ? Array.from(selectedActionIds) : []);
+                        elements.forEach(el => {
+                            const rect = el.getBoundingClientRect();
+                            const overlap = !(rect.right < boxRect.left || rect.left > boxRect.right || rect.bottom < boxRect.top || rect.top > boxRect.bottom);
+                            if (overlap) {
+                                newSelected.add(el.getAttribute('data-action-id')!);
+                            }
+                        });
+                        setSelectedActionIds(newSelected);
+                    }
                 }}
-                onPointerUp={() => { isPanningRef.current = false; }}
-                onPointerCancel={() => { isPanningRef.current = false; }}
+                onPointerUp={() => { isPanningRef.current = false; setSelectionBox(null); }}
+                onPointerCancel={() => { isPanningRef.current = false; setSelectionBox(null); }}
             >
                 {/* Canvas Layer — transforms with pan/zoom */}
                 <div
@@ -929,16 +1005,26 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                                     index={i}
                                                                     isDragOver={false}
                                                                     isDragging={false}
+                                                                    isSelected={selectedActionIds.has(action.id)}
                                                                     status={actionStatusById[action.id]}
                                                                     translateY={0}
                                                                     variables={currentTask.variables}
                                                                     availableTasks={availableTasks}
                                                                     onUpdate={(id, updates, save) => updateAction(id, updates, save)}
-                                                                    onRemove={(id) => removeAction(id)}
                                                                     onAutoSave={handleAutoSave}
                                                                     onOpenPalette={openActionPalette}
                                                                     onOpenContextMenu={openContextMenu}
-                                                                    onPointerDown={() => { }}
+                                                                    onPointerDown={(e, id) => {
+                                                                        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+                                                                            setSelectedActionIds(prev => {
+                                                                                const next = new Set(prev);
+                                                                                if (next.has(id)) next.delete(id); else next.add(id);
+                                                                                return next;
+                                                                            });
+                                                                        } else {
+                                                                            setSelectedActionIds(new Set([id]));
+                                                                        }
+                                                                    }}
                                                                     onGenerateSelector={handleGenerateSelector}
                                                                 />
                                                             </div>
@@ -1024,16 +1110,26 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                                     index={i}
                                                                     isDragOver={false}
                                                                     isDragging={false}
+                                                                    isSelected={selectedActionIds.has(action.id)}
                                                                     status={actionStatusById[action.id]}
                                                                     translateY={0}
                                                                     variables={currentTask.variables}
                                                                     availableTasks={availableTasks}
                                                                     onUpdate={(id, updates, save) => updateAction(id, updates, save)}
-                                                                    onRemove={(id) => removeAction(id)}
                                                                     onAutoSave={handleAutoSave}
                                                                     onOpenPalette={openActionPalette}
                                                                     onOpenContextMenu={openContextMenu}
-                                                                    onPointerDown={() => { }}
+                                                                    onPointerDown={(e, id) => {
+                                                                        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+                                                                            setSelectedActionIds(prev => {
+                                                                                const next = new Set(prev);
+                                                                                if (next.has(id)) next.delete(id); else next.add(id);
+                                                                                return next;
+                                                                            });
+                                                                        } else {
+                                                                            setSelectedActionIds(new Set([id]));
+                                                                        }
+                                                                    }}
                                                                     onGenerateSelector={handleGenerateSelector}
                                                                 />
                                                             </div>
@@ -1059,67 +1155,6 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                         };
 
                                         return buildAst(0, currentTask.actions.length);
-                                    })()}
-                                    {contextMenu && (() => {
-                                        const targetIndex = currentTask.actions.findIndex(a => a.id === contextMenu.id);
-                                        const target = currentTask.actions[targetIndex];
-                                        if (!target) return null;
-                                        return (
-                                            <div
-                                                className="action-context-menu fixed z-50 w-[200px] bg-[#0b0b0b] border border-white/10 rounded-xl shadow-2xl p-2 text-[10px] font-bold uppercase tracking-widest text-white/80"
-                                                style={{ left: contextMenu.x, top: contextMenu.y }}
-                                            >
-                                                <button
-                                                    onClick={() => {
-                                                        updateAction(target.id, { disabled: !target.disabled }, true);
-                                                        closeContextMenu();
-                                                    }}
-                                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                >
-                                                    {target.disabled ? 'Enable' : 'Disable'}
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        removeAction(target.id);
-                                                        closeContextMenu();
-                                                    }}
-                                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-red-400"
-                                                >
-                                                    Delete
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setActionClipboard(createActionClone(target));
-                                                        removeAction(target.id);
-                                                        closeContextMenu();
-                                                    }}
-                                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                >
-                                                    Cut
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setActionClipboard(createActionClone(target));
-                                                        closeContextMenu();
-                                                    }}
-                                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                >
-                                                    Copy
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const clone = createActionClone(target);
-                                                        const next = [...currentTask.actions];
-                                                        next.splice(targetIndex + 1, 0, clone);
-                                                        setCurrentTask({ ...currentTask, actions: next });
-                                                        closeContextMenu();
-                                                    }}
-                                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                                                >
-                                                    Duplicate
-                                                </button>
-                                            </div>
-                                        );
                                     })()}
                                     {/* Add Action Block — always visible, block-shaped */}
                                     <div className="pt-2 flex flex-col items-center">
@@ -1173,6 +1208,84 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                     <MaterialIcon name="fit_screen" className="text-sm" />
                 </button>
             </div>
+
+            {/* Selection Box Render */}
+            {selectionBox && (
+                <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+                    <div
+                        className="absolute bg-blue-500/10 border border-blue-400"
+                        style={{
+                            left: Math.min(selectionBox.startX, selectionBox.currentX),
+                            top: Math.min(selectionBox.startY, selectionBox.currentY),
+                            width: Math.abs(selectionBox.currentX - selectionBox.startX),
+                            height: Math.abs(selectionBox.currentY - selectionBox.startY)
+                        }}
+                    />
+                </div>
+            )}
+
+            {/* Context Menu Overlay */}
+            {contextMenu && (() => {
+                const targetIndex = currentTask.actions.findIndex(a => a.id === contextMenu.id);
+                const target = currentTask.actions[targetIndex];
+                if (!target) return null;
+                return (
+                    <div
+                        className="action-context-menu fixed z-50 w-[200px] bg-[#0b0b0b] border border-white/10 rounded-xl shadow-2xl p-2 text-[10px] font-bold uppercase tracking-widest text-white/80"
+                        style={{ left: contextMenu.x, top: contextMenu.y }}
+                    >
+                        <button
+                            onClick={() => {
+                                updateAction(target.id, { disabled: !target.disabled }, true);
+                                closeContextMenu();
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                        >
+                            {target.disabled ? 'Enable' : 'Disable'}
+                        </button>
+                        <button
+                            onClick={() => {
+                                removeAction(target.id);
+                                closeContextMenu();
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-red-400"
+                        >
+                            Delete
+                        </button>
+                        <button
+                            onClick={() => {
+                                setActionClipboard(createActionClone(target));
+                                removeAction(target.id);
+                                closeContextMenu();
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                        >
+                            Cut
+                        </button>
+                        <button
+                            onClick={() => {
+                                setActionClipboard(createActionClone(target));
+                                closeContextMenu();
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                        >
+                            Copy
+                        </button>
+                        <button
+                            onClick={() => {
+                                const clone = createActionClone(target);
+                                const next = [...currentTask.actions];
+                                next.splice(targetIndex + 1, 0, clone);
+                                setCurrentTask({ ...currentTask, actions: next });
+                                closeContextMenu();
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                        >
+                            Duplicate
+                        </button>
+                    </div>
+                );
+            })()}
 
             {/* Action Palette Overlay */}
             <ActionPalette
@@ -1320,6 +1433,66 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* Headful Browser Modal */}
+            {isHeadfulOpen && (() => {
+                const { origin, hostname } = window.location;
+                // Currently defaults to 'websockify' if not using unified headfulViewer state,
+                // but let's implement the standard viewer
+                const headfulUrl = `${origin}/novnc.html?host=${hostname}&path=websockify`;
+
+                const requestFullscreen = () => {
+                    const target = headfulFrameRef.current;
+                    if (!target) return;
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(() => { });
+                        return;
+                    }
+                    target.requestFullscreen?.().catch(() => { });
+                };
+
+                return (
+                    <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md flex items-center justify-center p-8 pointer-events-auto">
+                        <div className="w-full h-full max-w-6xl max-h-[800px] bg-black/60 backdrop-blur-3xl border border-white/20 rounded-[32px] shadow-2xl overflow-hidden flex flex-col">
+                            {/* Header bar */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 border-b border-white/10 bg-black/20 gap-4">
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-white">Active Browser Session</span>
+                                    </div>
+                                    <span className="text-[10px] text-amber-500/80 max-w-md hidden sm:block">
+                                        Figranium is not optimized for native browser windows. Please install the proper tools for stability (Xvfb, x11vnc, websockify) or use Docker.
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={requestFullscreen}
+                                        className="p-2 text-white/60 hover:text-white transition-colors"
+                                        title="Toggle fullscreen"
+                                    >
+                                        <MaterialIcon name="fullscreen" className="text-[16px]" />
+                                    </button>
+                                    <button
+                                        onClick={() => onStopHeadful?.()}
+                                        className="p-2 text-white/60 hover:text-white transition-colors"
+                                        title="Close Browser"
+                                    >
+                                        <MaterialIcon name="close" className="text-[16px]" />
+                                    </button>
+                                </div>
+                            </div>
+                            {/* Browser specific container */}
+                            <div ref={headfulFrameRef} className="flex-1 relative bg-black">
+                                <iframe
+                                    src={headfulUrl}
+                                    className="absolute inset-0 w-full h-full border-0"
+                                    title="Headful Browser"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Bottom Action Bar */}
             <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#111] border border-white/10 p-2 rounded-3xl shadow-2xl backdrop-blur-xl">

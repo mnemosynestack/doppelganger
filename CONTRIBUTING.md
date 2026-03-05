@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in contributing to Doppelganger. This guide explains how to propose changes safely and efficiently.
+Thanks for your interest in contributing to Figranium. This guide explains how to propose changes safely and efficiently.
 
 ## Ways to Contribute
 - Report bugs with clear reproduction steps
