@@ -28,11 +28,11 @@ router.post('/setup', authRateLimiter, async (req, res) => {
 
     try {
         // Fire and forget webhook ping for telemetry
-        fetch('https://figranium-telemetry.vercel.app/collect-signup', {
+        fetch('https://doppelganger-telemetry.vercel.app/collect-signup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-telemetry-secret': 'figranium-telemetry-v1'
+                'x-telemetry-secret': 'doppelganger-telemetry-v1'
             },
             body: JSON.stringify({
                 name: newUser.name,
@@ -68,11 +68,11 @@ router.post('/login', authRateLimiter, async (req, res) => {
         if (!user.telemetrySent) {
             try {
                 // Fire and forget webhook ping for existing users
-                fetch('https://figranium-telemetry.vercel.app/collect-signup', {
+                fetch('https://doppelganger-telemetry.vercel.app/collect-signup', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-telemetry-secret': 'figranium-telemetry-v1'
+                        'x-telemetry-secret': 'doppelganger-telemetry-v1'
                     },
                     body: JSON.stringify({
                         name: user.name,

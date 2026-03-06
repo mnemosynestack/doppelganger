@@ -27,10 +27,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ status, onSubmit, error, busy =
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
                 style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
             <div className="w-[400px] glass-card p-10 rounded-[48px] space-y-8 relative">
-                <div className="text-center space-y-2">
+                <div className="text-center space-y-3">
                     <img src="/figranium_logo.svg" alt="Figranium" className="h-24 mx-auto object-contain" />
+                    <p className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] leading-relaxed max-w-[200px] mx-auto">
+                        Deterministic Control for an Agentic World
+                    </p>
                     {status === 'setup' && (
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">
+                        <p className="text-[10px] font-bold text-accent uppercase tracking-[0.3em]">
                             Initializing System
                         </p>
                     )}

@@ -2,16 +2,16 @@
   <img src="https://raw.githubusercontent.com/mnemosynestack/figranium/main/figranium_banner.png" alt="Figranium Banner">
 </div>
 
-# Figranium — Browser Automation for Everyone
+# Figranium — Deterministic Control for an Agentic World
 
 Figranium (formerly Doppelganger) is a self‑hosted, block-first automation control plane built for teams that want predictable, auditable browser workflows without pushing sensitive data to third‑party SaaS. It bundles a React/Vite frontend, an Express/Playwright backend, helper scripts, and optional CLI tooling so you can sketch blocks, inject JavaScript, rotate proxies, and run everything locally.
 
-![Demo run](https://raw.githubusercontent.com/mnemosynestack/figranium/main/demo-run.gif)
+![Screenshot](https://raw.githubusercontent.com/mnemosynestack/figranium/main/figranium_screenshot.png)
 
 # What You Get
 
 - **Block‑based automation** — build flows with actions like click, type, wait, hover, and execute JavaScript against modern pages.
-- **Task API + CLI** — trigger saved tasks via HTTP (`/tasks/:id/api`) or `npx figranium` while passing variables and securing runs with the API key you control.
+- **Task API + CLI** — trigger saved tasks via HTTP (`/tasks/:id/api`) or `npx @doppelgangerdev/doppelganger` while passing variables and securing runs with the API key you control.
 - **Captures & storage** — automatically store screenshots/recordings and cookies; view them in the captures tab, reset storage, or download built assets.
 - **Proxy management** — host, rotate, or import HTTP/SOCKS proxies, flag a default, and toggle rotation per task.
 - **Security-first** — session authentication, IP allowlists, secret management, and audit trails live entirely inside your environment.
@@ -30,7 +30,7 @@ Figranium (formerly Doppelganger) is a self‑hosted, block-first automation con
 
 3. **Scripts & automation**  
    - `scripts/postinstall.js` runs when dependencies install (keep an eye if you customize).
-   - `agent.js`, `headful.js`, `scrape.js` expose specialized runners; the CLI binary `bin/cli.js` wires them for `npx figranium`.
+   - `agent.js`, `headful.js`, `scrape.js` expose specialized runners; the CLI binary `bin/cli.js` wires them for `npx @doppelgangerdev/doppelganger`.
 
 4. **Code layout highlights**
    - `src/App.tsx` glues together routing, alerts, and the sidebar that links dashboards, tasks, and settings.
@@ -48,7 +48,7 @@ The easiest way to run Figranium on any architecture (including M1/M2/M3 Macs) i
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/mnemosynestack/figranium.git
+git clone https://github.com/figranium/figranium.git
 cd figranium
 ```
 
@@ -63,16 +63,16 @@ This starts the app on `http://localhost:11345` and the VNC viewer on `http://lo
 ### Docker Run (Standard)
 
 ```bash
-docker pull mnemosyneai/figranium
+docker pull mnemosyneai/doppelganger
 docker run -d \
-  --name figranium \
+  --name doppelganger \
   -p 11345:11345 \
   -p 54311:54311 \
   -e SESSION_SECRET=replace_with_long_random_value \
   -v $(pwd)/data:/app/data \
   -v $(pwd)/public:/app/public \
   -v $(pwd)/storage_state.json:/app/storage_state.json \
-  mnemosyneai/figranium
+  mnemosyneai/doppelganger
 ```
 
 Visit `http://localhost:11345`. Stop/start with `docker stop/start figranium`.
@@ -101,17 +101,17 @@ Frontend calls `/api` via the Vite proxy defined in `vite.config.mts`; the backe
 If you just want to run the packaged release (no source checkout), install the published npm package and run `figranium` directly.
 
 ```bash
-npm install -g @figraniumdev/figranium
-figranium
+npm install -g @doppelgangerdev/doppelganger
+doppelganger
 ```
 
 Or use `npx`:
 
 ```bash
-npx @figraniumdev/figranium
+npx @doppelgangerdev/doppelganger
 ```
 
-If you prefer not to install globally, clone the repo, run `npm install` to pull dependencies, and then run `npx @figraniumdev/figranium` inside that folder. This ensures `npx` can resolve the package from the local registry/cache while still shipping the same dashboard experience.
+If you prefer not to install globally, clone the repo, run `npm install` to pull dependencies, and then run `npx @doppelgangerdev/doppelganger` inside that folder. This ensures `npx` can resolve the package from the local registry/cache while still shipping the same dashboard experience.
 
 Set `SESSION_SECRET` and optionally mount `data/`, `public/`, and `storage_state.json` (match the Docker volume layout). The CLI spins up the same Express/Playwright stack and opens the browser-based dashboard at `http://localhost:11345` unless you override `PORT`.
 
@@ -162,7 +162,7 @@ Proxy rotation also respects `data/proxies.json` (see below), and `data/allowed_
 
 # CLI & Agent Mode
 
-- Use `npx figranium` (or `npm run cli`) to launch the interactive CLI that shows tasks, status, and logs.
+- Use `npx @doppelgangerdev/doppelganger` (or `npm run cli`) to launch the interactive CLI that shows tasks, status, and logs.
 - Behind the scenes, `bin/cli.js` can invoke `agent.js`, `headful.js`, or `scrape.js` depending on the runtime mode (`--agent`, `--headful`, `--scrape`).
 - Run `node agent.js --help` to see flags like `--task`, `--browser`, or `--version`. These runners share the same settings (API key, proxies, storage) as the web UI.
 - When connecting via the API key, prefer `Authorization: Bearer <key>` so reverse proxies can normalize headers; the CLI also accepts a `--api-key` flag for scripted runs.
@@ -254,7 +254,7 @@ If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For
 
 - The project is governed by the **[GNU General Public License v3.0](https://github.com/mnemosynestack/figranium/blob/main/LICENSE)**, which grants rights for distribution and modification as per the GPLv3 terms.
 - Keep `data/` and `storage_state.json` backed up if you rely on historical cookies or proxies.
-- Release updates by pulling `mnemosyneai/figranium` (Docker) or `npm i @figraniumdev/figranium` (npm). The Settings view always displays the current package version.
+- Release updates by pulling `mnemosyneai/doppelganger` (Docker) or `npm i @doppelgangerdev/doppelganger` (npm). The Settings view always displays the current package version.
 - Contributions: follow `.github/` templates, respect `CONTRIBUTING.md`, and run available lint/test scripts if you touch critical areas.
 
 # Roadmap

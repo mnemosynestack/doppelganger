@@ -188,7 +188,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const getStoredSplitPercent = () => {
         try {
-            const stored = localStorage.getItem('figranium.layout.leftWidthPct');
+            const stored = localStorage.getItem('doppelganger.layout.leftWidthPct');
             if (!stored) return 0.3;
             const value = parseFloat(stored);
             if (Number.isNaN(value)) return 0.3;
@@ -858,7 +858,6 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     return (
         <div className="flex-1 flex overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 bg-black relative" data-editor-width={editorWidth}>
-            <div className="absolute inset-0 pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: `${20 * canvasScale}px ${20 * canvasScale}px`, backgroundPosition: `${canvasOffset.x}px ${canvasOffset.y}px` }} />
 
             {/* Infinite Canvas Viewport */}
             <div
@@ -916,16 +915,25 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                         transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`,
                     }}
                 >
+                    {/* Synchronized Dot Grid */}
+                    <div
+                        className="absolute pointer-events-none z-0"
+                        style={{
+                            inset: '-1000vw -1000vh',
+                            backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.15) ${0.8 / canvasScale}px, transparent 0)`,
+                            backgroundSize: '20px 20px'
+                        }}
+                    />
                     {/* Node graph container */}
                     <div className="flex flex-col items-center" style={{ paddingTop: '60px', minWidth: '500px' }}>
                         {/* Trigger Node */}
-                        <div className="w-[360px] bg-[#0a0a0a] border border-white/15 p-5 rounded-2xl shadow-2xl shadow-black/50 select-text cursor-auto">
+                        <div className="w-[360px] bg-black border border-white/15 p-5 rounded-2xl shadow-2xl shadow-black/50 select-text cursor-auto relative z-10">
                             <div className="flex items-center justify-between cursor-pointer" onClick={() => setTriggerExpanded(!triggerExpanded)}>
                                 <div className="flex items-center gap-3">
                                     <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
                                         <MaterialIcon name="bolt" className="text-white text-base" />
                                     </div>
-                                    <h3 className="text-white font-bold tracking-widest uppercase text-[10px]">Trigger</h3>
+                                    <h3 className="text-white font-bold tracking-widest uppercase text-[10px]">On Execution</h3>
                                 </div>
                                 <MaterialIcon name={triggerExpanded ? 'expand_less' : 'expand_more'} className="text-base text-gray-600" />
                             </div>

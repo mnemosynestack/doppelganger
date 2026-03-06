@@ -127,7 +127,7 @@ export function useTasks(
         const link = document.createElement('a');
         const stamp = new Date().toISOString().slice(0, 10);
         link.href = url;
-        link.download = `figranium-tasks-${stamp}.json`;
+        link.download = `doppelganger-tasks-${stamp}.json`;
         document.body.appendChild(link);
         link.click();
         link.remove();
