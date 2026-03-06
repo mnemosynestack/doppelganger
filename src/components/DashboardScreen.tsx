@@ -47,7 +47,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
 
     return (
         <>
-            <div className="flex-1 overflow-hidden animate-in fade-in duration-500">
+            <div className="flex-1 overflow-hidden animate-in fade-in duration-500 bg-black">
                 <div className="h-full flex flex-col px-12 py-12 max-w-7xl mx-auto space-y-12 w-full">
                     <div className="flex items-end justify-between">
                         <div className="space-y-2">
@@ -94,9 +94,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                             {tasks.map(task => {
                                 const favicon = getFavicon(task.url);
                                 return (
-                                    <div key={task.id} className="glass-card p-8 rounded-[40px] flex flex-col gap-6 group hover:-translate-y-1">
+                                    <div key={task.id} className="bg-[#050505] border border-white/10 p-6 rounded-2xl flex flex-col gap-6 group hover:-translate-y-1 hover:border-white/30 transition-all shadow-xl hover:bg-[#0a0a0a]">
                                         <div className="flex justify-between items-start">
-                                            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+                                            <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
                                                 {favicon ? (
                                                     <img
                                                         src={favicon}
@@ -110,7 +110,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                                                     <MaterialIcon name="public" className="text-gray-500 text-xl" />
                                                 )}
                                             </div>
-                                            <div className="px-3 py-1 rounded-full bg-white/5 text-[7px] font-bold uppercase tracking-widest text-gray-500">{task.mode}</div>
+                                            <div className="px-3 py-1 rounded-lg bg-white/5 text-[7px] font-bold uppercase tracking-widest text-white/60">{task.mode}</div>
                                         </div>
                                         <div>
                                             <h3 className="text-lg font-bold text-white truncate">{task.name || 'Untitled'}</h3>
@@ -119,13 +119,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                                         <div className="flex gap-3 pt-4 border-t border-white/5">
                                             <button
                                                 onClick={() => onEditTask(task)}
-                                                className="flex-1 py-2 rounded-xl bg-white text-black text-[9px] font-bold uppercase tracking-widest hover:scale-105 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                                className="flex-1 py-2 rounded-lg bg-white text-black text-[9px] font-bold uppercase tracking-widest hover:scale-105 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                             >
                                                 Edit Task
                                             </button>
                                             <button
                                                 onClick={() => onDeleteTask(task.id!)}
-                                                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                                className="w-10 h-10 rounded-lg bg-transparent border border-white/10 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                                 aria-label="Delete task"
                                                 title="Delete task"
                                             >
@@ -139,21 +139,20 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                     </div>
 
                     {tasks.length === 0 && (
-                        <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-                            <div className="w-24 h-24 border-2 border-dashed border-white/20 rounded-[40px] flex items-center justify-center text-3xl bg-white/5">
-                                <MaterialIcon name="rocket_launch" className="text-white/50 text-4xl" />
-                            </div>
-                            <div className="text-center space-y-2">
-                                <p className="text-sm font-bold uppercase tracking-widest text-white/70">No Tasks Found</p>
-                                <p className="text-[10px] text-gray-500 max-w-[200px] mx-auto leading-relaxed">
-                                    Get started by creating your first automation task.
-                                </p>
-                            </div>
+                        <div className="flex-1 flex flex-col items-center justify-center">
                             <button
                                 onClick={onNewTask}
-                                className="px-6 py-3 bg-white text-black rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase hover:scale-105 transition-transform shadow-lg shadow-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                className="w-full max-w-[400px] bg-[#0a0a0a] border border-dashed border-white/15 rounded-2xl p-8 hover:border-white/30 hover:bg-white/[0.03] transition-all flex flex-col items-center justify-center gap-4 group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                             >
-                                Create First Task
+                                <div className="w-12 h-12 rounded-xl bg-white/5 group-hover:bg-white/10 transition-all flex items-center justify-center border border-white/5">
+                                    <MaterialIcon name="add" className="text-3xl text-gray-500 group-hover:text-white transition-colors" />
+                                </div>
+                                <div className="text-center space-y-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70 group-hover:text-white transition-colors">Create First Task</p>
+                                    <p className="text-[10px] text-gray-500 max-w-[250px] mx-auto leading-relaxed group-hover:text-gray-400 transition-colors">
+                                        Get started by creating your first automation task. This will open the visual editor.
+                                    </p>
+                                </div>
                             </button>
                         </div>
                     )}
@@ -164,7 +163,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                 isExportModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 pb-20 sm:pb-6">
                         <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsExportModalOpen(false)} />
-                        <div className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-full slide-up">
+                        <div className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-full slide-up">
                             <div className="p-6 sm:p-8 shrink-0">
                                 <h3 className="text-xl font-bold text-white tracking-tight">Export Tasks</h3>
                                 <p className="text-[11px] text-white/50 mt-2 font-mono">
