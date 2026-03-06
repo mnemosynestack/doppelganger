@@ -1263,7 +1263,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
             {/* Selection Box Render */}
             {selectionBox && (
-                <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none z-20 overflow-hidden">
                     <div
                         className="absolute bg-blue-500/10 border border-blue-400"
                         style={{
