@@ -954,7 +954,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                         className="absolute pointer-events-none z-0"
                         style={{
                             inset: '-1000vw -1000vh',
-                            backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.15) ${0.8 / canvasScale}px, transparent 0)`,
+                            backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.3) ${0.8 / canvasScale}px, transparent 0)`,
                             backgroundSize: '20px 20px'
                         }}
                     />
