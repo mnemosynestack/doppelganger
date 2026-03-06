@@ -1,12 +1,12 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/mnemosynestack/figranium/main/figranium_banner.png" alt="Figranium Banner">
+  <img src="https://raw.githubusercontent.com/figranium/figranium/main/figranium_banner.png" alt="Figranium Banner">
 </div>
 
 # Figranium — Deterministic Control for an Agentic World
 
 Figranium (formerly Doppelganger) is a self‑hosted, block-first automation control plane built for teams that want predictable, auditable browser workflows without pushing sensitive data to third‑party SaaS. It bundles a React/Vite frontend, an Express/Playwright backend, helper scripts, and optional CLI tooling so you can sketch blocks, inject JavaScript, rotate proxies, and run everything locally.
 
-![Screenshot](https://raw.githubusercontent.com/mnemosynestack/figranium/main/figranium_screenshot.png)
+![Screenshot](https://raw.githubusercontent.com/figranium/figranium/main/figranium_screenshot.png)
 
 # What You Get
 
@@ -252,7 +252,7 @@ If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For
 
 # Maintenance
 
-- The project is governed by the **[GNU General Public License v3.0](https://github.com/mnemosynestack/figranium/blob/main/LICENSE)**, which grants rights for distribution and modification as per the GPLv3 terms.
+- The project is governed by the **[GNU General Public License v3.0](https://github.com/figranium/figranium/blob/main/LICENSE)**, which grants rights for distribution and modification as per the GPLv3 terms.
 - Keep `data/` and `storage_state.json` backed up if you rely on historical cookies or proxies.
 - Release updates by pulling `mnemosyneai/doppelganger` (Docker) or `npm i @doppelgangerdev/doppelganger` (npm). The Settings view always displays the current package version.
 - Contributions: follow `.github/` templates, respect `CONTRIBUTING.md`, and run available lint/test scripts if you touch critical areas.
@@ -297,7 +297,7 @@ If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For
 # Community
 
 - Report issues or request features via the GitHub repo issue tracker.
-- Follow the authors on `https://github.com/mnemosynestack` for releases.
+- Follow the authors on `https://github.com/figranium` for releases.
 - Share automation recipes with other self-hosted users in your org, but respect the license for sharing infrastructure.
 - Join the community on [Discord](https://discord.gg/kPmfbgu9Xn).
 

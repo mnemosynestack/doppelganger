@@ -47,7 +47,7 @@ export default function GithubStarPill({ className = '' }: GithubStarPillProps) 
     useEffect(() => {
         let isMounted = true;
 
-        fetch('https://api.github.com/repos/mnemosynestack/figranium')
+        fetch('https://api.github.com/repos/figranium/figranium')
             .then((res) => (res.ok ? res.json() : null))
             .then((data) => {
                 if (!isMounted || !data?.stargazers_count) {
@@ -68,7 +68,7 @@ export default function GithubStarPill({ className = '' }: GithubStarPillProps) 
 
     return (
         <a
-            href="https://github.com/mnemosynestack/figranium"
+            href="https://github.com/figranium/figranium"
             target="_blank"
             rel="noreferrer"
             onPointerMove={handlePointerMove}
