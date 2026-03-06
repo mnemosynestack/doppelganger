@@ -43,8 +43,7 @@ const isStopRequested = (runId) => {
     }
 };
 
-async function handleAgent(req, res) {
-    const data = (req.method === 'POST') ? req.body : req.query;
+async function runAgent(data, options = {}) {
     let { url, actions, wait: globalWait, rotateUserAgents, rotateProxies, humanTyping, stealth = {} } = data;
 
     const runtimeVars = { ...(data.taskVariables || data.variables || {}) };
@@ -74,22 +73,18 @@ async function handleAgent(req, res) {
     };
 
     if (url) {
-        try {
-            await validateUrl(resolveTemplate(url));
-        } catch (e) {
-            return res.status(400).json({ error: 'INVALID_URL', details: e.message });
-        }
+        await validateUrl(resolveTemplate(url));
     }
 
     const runId = data.runId ? String(data.runId) : null;
     const captureRunId = runId || `run_${Date.now()}_unknown`;
-    const includeShadowDomRaw = data.includeShadowDom ?? req.query.includeShadowDom;
+    const includeShadowDomRaw = data.includeShadowDom;
     const includeShadowDom = includeShadowDomRaw === undefined
         ? true
         : !(String(includeShadowDomRaw).toLowerCase() === 'false' || includeShadowDomRaw === false);
-    const disableRecordingRaw = data.disableRecording ?? req.query.disableRecording;
+    const disableRecordingRaw = data.disableRecording;
     const disableRecording = parseBooleanFlag(disableRecordingRaw);
-    const statelessExecutionRaw = data.statelessExecution ?? req.query.statelessExecution;
+    const statelessExecutionRaw = data.statelessExecution;
     const statelessExecution = parseBooleanFlag(statelessExecutionRaw);
     const {
         allowTypos = false,
@@ -106,21 +101,17 @@ async function handleAgent(req, res) {
         try {
             actions = JSON.parse(actions);
         } catch (e) {
-            return res.status(400).json({ error: 'Invalid actions JSON format.' });
+            throw new Error('Invalid actions JSON format.');
         }
     }
 
     if (!actions || !Array.isArray(actions)) {
-        return res.status(400).json({
-            error: 'Actions array is required.',
-            usage: 'POST JSON with {"actions": [...], "stealth": {...}}'
-        });
+        throw new Error('Actions array is required.');
     }
 
-    const localPort = req.socket && req.socket.localPort;
-    const configuredPort = process.env.PORT || process.env.VITE_BACKEND_PORT;
-    const basePort = localPort || configuredPort || '11345';
-    const baseUrl = `${req.protocol || 'http'}://127.0.0.1:${basePort}`;
+    const basePort = options.localPort || process.env.PORT || process.env.VITE_BACKEND_PORT || '11345';
+    const protocol = options.protocol || 'http';
+    const baseUrl = `${protocol}://127.0.0.1:${basePort}`;
 
     const resolveMaybe = (value) => {
         if (typeof value !== 'string') return value;
@@ -588,15 +579,30 @@ async function handleAgent(req, res) {
             }
         }
         try { await browser.close(); } catch { }
-        res.json(outputData);
+        return outputData;
     } catch (error) {
         console.error('Agent Error:', error);
         try {
             if (context) await context.close();
         } catch { }
         if (browser) await browser.close();
+        throw error;
+    }
+}
+
+async function handleAgent(req, res) {
+    const data = (req.method === 'POST') ? req.body : req.query;
+    const options = {
+        localPort: req.socket && req.socket.localPort,
+        protocol: req.protocol
+    };
+
+    try {
+        const result = await runAgent(data, options);
+        res.json(result);
+    } catch (error) {
         res.status(500).json({ error: 'Agent failed', details: error.message });
     }
 }
 
-module.exports = { handleAgent, setProgressReporter, setStopChecker };
+module.exports = { runAgent, handleAgent, setProgressReporter, setStopChecker };

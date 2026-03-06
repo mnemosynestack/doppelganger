@@ -22,41 +22,35 @@ const STORAGE_STATE_FILE = (() => {
     return STORAGE_STATE_PATH;
 })();
 
-async function handleScrape(req, res) {
-    const url = req.body.url || req.query.url;
-    const customHeaders = req.body.headers || {};
-    const userSelector = req.body.selector || req.query.selector;
-    const waitInput = req.body.wait || req.query.wait;
+async function runScrape(data) {
+    const url = data.url;
+    const customHeaders = data.headers || {};
+    const userSelector = data.selector;
+    const waitInput = data.wait;
     const waitTime = waitInput ? parseFloat(waitInput) * 1000 : 2000;
-    const rotateUserAgents = req.body.rotateUserAgents || req.query.rotateUserAgents || false;
-    const rotateViewportRaw = req.body.rotateViewport ?? req.query.rotateViewport;
+    const rotateUserAgents = data.rotateUserAgents || false;
+    const rotateViewportRaw = data.rotateViewport;
     const rotateViewport = String(rotateViewportRaw).toLowerCase() === 'true' || rotateViewportRaw === true;
-    const runId = req.body.runId || req.query.runId || null;
+    const runId = data.runId || null;
     const captureRunId = runId ? String(runId) : `run_${Date.now()}_unknown`;
-    const rotateProxiesRaw = req.body.rotateProxies ?? req.query.rotateProxies;
+    const rotateProxiesRaw = data.rotateProxies;
     const rotateProxies = String(rotateProxiesRaw).toLowerCase() === 'true' || rotateProxiesRaw === true;
-    const includeShadowDomRaw = req.body.includeShadowDom ?? req.query.includeShadowDom;
+    const includeShadowDomRaw = data.includeShadowDom;
     const includeShadowDom = includeShadowDomRaw === undefined
         ? true
         : !(String(includeShadowDomRaw).toLowerCase() === 'false' || includeShadowDomRaw === false);
-    const disableRecordingRaw = req.body.disableRecording ?? req.query.disableRecording;
+    const disableRecordingRaw = data.disableRecording;
     const disableRecording = parseBooleanFlag(disableRecordingRaw);
-    const statelessExecutionRaw = req.body.statelessExecution ?? req.query.statelessExecution;
+    const statelessExecutionRaw = data.statelessExecution;
     const statelessExecution = parseBooleanFlag(statelessExecutionRaw);
-    const extractionScript = req.body.extractionScript || req.query.extractionScript;
-    const extractionFormat = (req.body.extractionFormat || req.query.extractionFormat) === 'csv' ? 'csv' : 'json';
+    const extractionScript = data.extractionScript;
+    const extractionFormat = data.extractionFormat === 'csv' ? 'csv' : 'json';
 
     if (!url) {
-        return res.status(400).json({ error: 'URL is required.' });
+        throw new Error('URL is required.');
     }
 
-    try {
-        await validateUrl(url);
-    } catch (e) {
-        return res.status(400).json({ error: 'INVALID_URL', details: e.message });
-    }
-
-    console.log(`Scraping: ${url}`);
+    await validateUrl(url);
 
     const selectedUA = await selectUserAgent(rotateUserAgents);
 
@@ -64,7 +58,6 @@ async function handleScrape(req, res) {
     let context;
     let page;
     try {
-        // Use 'chrome' channel to use a real installed browser instead of default Chromium
         const launchOptions = {
             headless: true,
             args: [
@@ -80,7 +73,7 @@ async function handleScrape(req, res) {
         if (selection.proxy) {
             launchOptions.proxy = selection.proxy;
         }
-        console.log(`[PROXY] Mode: ${selection.mode}; Target: ${selection.proxy ? selection.proxy.server : 'host_ip'}`);
+
         browser = await chromium.launch(launchOptions);
 
         const recordingsDir = path.join(__dirname, 'data', 'recordings');
@@ -112,7 +105,6 @@ async function handleScrape(req, res) {
 
         context = await browser.newContext(contextOptions);
 
-        // Manual WebDriver Patch
         await context.addInitScript(() => {
             Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
         });
@@ -133,7 +125,6 @@ async function handleScrape(req, res) {
 
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        // Auto-scroll logic
         await page.evaluate(async () => {
             await new Promise((resolve) => {
                 let totalHeight = 0;
@@ -239,8 +230,6 @@ async function handleScrape(req, res) {
             if (!script || typeof script !== 'string') return { result: undefined, logs: [] };
 
             return new Promise((resolve) => {
-                // Security: Only pass safe environment variables to the worker process
-                // to prevent leaking secrets (like API keys) if the worker is compromised.
                 const safeEnv = {
                     NODE_ENV: 'production',
                     PATH: process.env.PATH,
@@ -303,7 +292,6 @@ async function handleScrape(req, res) {
 
         const extraction = await runExtractionScript(extractionScript, productHtml, page.url());
 
-        // Ensure the public/screenshots directory exists
         const capturesDir = path.join(__dirname, 'public', 'captures');
         await fs.promises.mkdir(capturesDir, { recursive: true });
 
@@ -318,7 +306,7 @@ async function handleScrape(req, res) {
         const rawExtraction = extraction.result !== undefined ? extraction.result : (extraction.logs.length ? extraction.logs.join('\n') : undefined);
         const formattedExtraction = extractionFormat === 'csv' ? toCsvString(rawExtraction) : rawExtraction;
 
-        const data = {
+        const resultData = {
             title: await page.title(),
             url: page.url(),
             html: formatHTML(productHtml),
@@ -331,7 +319,6 @@ async function handleScrape(req, res) {
             screenshot_url: `/captures/${screenshotName}`
         };
 
-        // Save session state
         if (!statelessExecution) {
             await context.storageState({ path: STORAGE_STATE_FILE });
         }
@@ -362,15 +349,26 @@ async function handleScrape(req, res) {
         }
 
         await browser.close();
-        res.json(data);
+        return resultData;
     } catch (error) {
-        console.error('Scrape Error:', error);
-        try {
-            if (context) await context.close();
-        } catch { }
+        if (context) await context.close();
         if (browser) await browser.close();
+        throw error;
+    }
+}
+
+async function handleScrape(req, res) {
+    const data = {
+        ...req.body,
+        ...req.query
+    };
+
+    try {
+        const result = await runScrape(data);
+        res.json(result);
+    } catch (error) {
         res.status(500).json({ error: 'Failed to scrape', details: error.message });
     }
 }
 
-module.exports = { handleScrape };
+module.exports = { runScrape, handleScrape };
