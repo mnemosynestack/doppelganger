@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const { authRateLimiter, requireAuthForSettings, csrfProtection } = require('../middleware');
+const { requireAuthForSettings, csrfProtection } = require('../middleware');
 const {
     loadApiKey, saveApiKey,
     loadGeminiApiKey, saveGeminiApiKey,
@@ -17,7 +17,7 @@ function createNewApiKey() {
 }
 
 // API Key
-router.get('/api-key', authRateLimiter, requireAuthForSettings, async (req, res) => {
+router.get('/api-key', requireAuthForSettings, async (req, res) => {
     try {
         const currentKey = await loadApiKey();
         res.json({ apiKey: currentKey || null });
@@ -41,7 +41,7 @@ router.post('/api-key', requireAuthForSettings, (req, res) => {
 
 // User Agent
 // User Agent
-router.get('/user-agent', authRateLimiter, requireAuthForSettings, async (_req, res) => {
+router.get('/user-agent', requireAuthForSettings, async (_req, res) => {
     try {
         res.json(await getUserAgentConfig());
     } catch (e) {
@@ -50,7 +50,7 @@ router.get('/user-agent', authRateLimiter, requireAuthForSettings, async (_req, 
     }
 });
 
-router.post('/user-agent', authRateLimiter, csrfProtection, requireAuthForSettings, async (req, res) => {
+router.post('/user-agent', csrfProtection, requireAuthForSettings, async (req, res) => {
     if (typeof req.csrfToken === 'function') req.csrfToken();
     try {
         const selection = req.body && typeof req.body.selection === 'string' ? req.body.selection : null;
@@ -63,7 +63,7 @@ router.post('/user-agent', authRateLimiter, csrfProtection, requireAuthForSettin
 });
 
 // Gemini API Key
-router.get('/gemini-api-key', authRateLimiter, requireAuthForSettings, async (req, res) => {
+router.get('/gemini-api-key', requireAuthForSettings, async (req, res) => {
     try {
         const keys = await loadGeminiApiKey();
         res.json({ geminiApiKeys: keys || [] });
@@ -91,7 +91,7 @@ router.post('/gemini-api-key', requireAuthForSettings, async (req, res) => {
 });
 
 // OpenAI API Key
-router.get('/openai-api-key', authRateLimiter, requireAuthForSettings, async (req, res) => {
+router.get('/openai-api-key', requireAuthForSettings, async (req, res) => {
     try {
         const keys = await loadOpenAiApiKey();
         res.json({ openAiApiKeys: keys || [] });
@@ -119,7 +119,7 @@ router.post('/openai-api-key', requireAuthForSettings, async (req, res) => {
 });
 
 // Claude API Key
-router.get('/claude-api-key', authRateLimiter, requireAuthForSettings, async (req, res) => {
+router.get('/claude-api-key', requireAuthForSettings, async (req, res) => {
     try {
         const keys = await loadClaudeApiKey();
         res.json({ claudeApiKeys: keys || [] });
