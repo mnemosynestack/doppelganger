@@ -63,7 +63,7 @@ This starts the app on `http://localhost:11345` and the VNC viewer on `http://lo
 ### Docker Run (Standard)
 
 ```bash
-docker pull figranium/figranium
+docker pull ghcr.io/figranium/figranium
 docker run -d \
   --name figranium \
   -p 11345:11345 \
