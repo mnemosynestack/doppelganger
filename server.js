@@ -47,7 +47,7 @@ const {
 // Feature Modules (Legacy/Existing)
 const { handleScrape } = require('./scrape');
 const { handleAgent, setProgressReporter, setStopChecker } = require('./agent');
-const { handleHeadful, stopHeadful } = require('./headful');
+const { handleHeadful, stopHeadful, toggleInspectMode, headfulEventEmitter } = require('./headful');
 
 // Routes
 const authRoutes = require('./src/server/routes/auth');
@@ -367,6 +367,71 @@ app.get('/api/headful/status', (req, res) => {
     // This allows Docker and manual installations with proper deps to hide the disclaimer.
     res.json({ useNovnc: novncEnabled });
 });
+
+app.get('/api/headful/selector_stream', requireAuth, (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+    res.write('event: ready\ndata: {}\n\n');
+
+    const onSelectorSelected = (selector) => {
+        try {
+            res.write(`data: ${JSON.stringify({ selector })}\n\n`);
+        } catch (err) {
+            // ignore
+        }
+    };
+
+    headfulEventEmitter.on('selectorSelected', onSelectorSelected);
+
+    const keepAlive = setInterval(() => {
+        try {
+            res.write(':keep-alive\n\n');
+        } catch {
+            // ignore
+        }
+    }, 20000);
+
+    req.on('close', () => {
+        clearInterval(keepAlive);
+        headfulEventEmitter.off('selectorSelected', onSelectorSelected);
+    });
+});
+
+app.get('/headful/selector_stream', requireAuth, (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+    res.write('event: ready\ndata: {}\n\n');
+
+    const onSelectorSelected = (selector) => {
+        try {
+            res.write(`data: ${JSON.stringify({ selector })}\n\n`);
+        } catch (err) {
+            // ignore
+        }
+    };
+
+    headfulEventEmitter.on('selectorSelected', onSelectorSelected);
+
+    const keepAlive = setInterval(() => {
+        try {
+            res.write(':keep-alive\n\n');
+        } catch {
+            // ignore
+        }
+    }, 20000);
+
+    req.on('close', () => {
+        clearInterval(keepAlive);
+        headfulEventEmitter.off('selectorSelected', onSelectorSelected);
+    });
+});
+
+app.post('/api/headful/inspect', requireAuth, toggleInspectMode);
+app.post('/headful/inspect', requireAuth, toggleInspectMode);
 
 // Start Server
 findAvailablePort(port, 20)
