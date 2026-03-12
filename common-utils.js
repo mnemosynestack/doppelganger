@@ -161,9 +161,9 @@ const parseCoords = (value) => {
     return null;
 };
 
-const cookieMatches = (cookie, requestUrl) => {
+const cookieMatches = (cookie, requestUrlOrObj) => {
     try {
-        const url = new URL(requestUrl);
+        const url = (typeof requestUrlOrObj === 'string') ? new URL(requestUrlOrObj) : requestUrlOrObj;
         const host = url.hostname.toLowerCase();
         const path = url.pathname || '/';
 
