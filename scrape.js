@@ -120,7 +120,9 @@ async function runScrape(data) {
 
             const isDataRequest = ['document', 'script', 'xhr', 'fetch'].includes(resourceType);
             if (isDataRequest && preloadedCookies.length > 0) {
-                const filteredCookies = preloadedCookies.filter(cookie => cookieMatches(cookie, requestUrl));
+                // ⚡ Bolt: Parse URL once to avoid redundant parsing inside cookieMatches filter loop
+                const urlObj = new URL(requestUrl);
+                const filteredCookies = preloadedCookies.filter(cookie => cookieMatches(cookie, urlObj));
                 if (filteredCookies.length > 0) {
                     const fileCookieMap = new Map();
                     filteredCookies.forEach(c => fileCookieMap.set(c.name, c.value));
