@@ -29,3 +29,7 @@
 ## 2025-03-24 - [Agent Performance: Template Resolution and Loop Optimization]
 **Learning:** `resolveTemplate` was executing a regex replacement on every call even for static strings. Additionally, the agent loop was stringifying every action object on every iteration to check for `{$html}` markers, which is expensive for large tasks or long-running loops.
 **Action:** Add a fast-path check (`!input.includes('{$')`) to template resolution functions and pre-calculate action properties (like HTML requirement) before entering the execution loop to avoid redundant O(N) operations inside the loop.
+
+## 2024-06-12 - [Utility Performance: CSV Generation Optimization]
+**Learning:** `toCsvString` used `Array.includes` to collect unique keys from all rows, leading to $O(N \cdot K^2)$ complexity (where $N$ is rows and $K$ is unique keys). On large datasets, this became a significant bottleneck. Additionally, `csvEscape` executed regex and string conversions for every cell, including empty ones.
+**Action:** Use a `Set` for unique key collection to achieve $O(N \cdot K)$ complexity. Implement a fast-path in `csvEscape` to return early for empty or nullish values, bypassing unnecessary regex overhead.

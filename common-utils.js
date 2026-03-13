@@ -103,7 +103,9 @@ const parseCsv = (input) => {
 };
 
 const csvEscape = (value) => {
-    const text = value === undefined || value === null ? '' : String(value);
+    if (value === undefined || value === null || value === '') return '';
+    const text = String(value);
+    // ⚡ Bolt: Fast-path for simple values that don't need escaping
     if (/[",\n\r]/.test(text) || /^\s|\s$/.test(text)) {
         return `"${text.replace(/"/g, '""')}"`;
     }
@@ -126,14 +128,16 @@ const toCsvString = (raw) => {
     const rows = Array.isArray(raw) ? raw : [raw];
     if (rows.length === 0) return '';
 
-    const allKeys = [];
+    // ⚡ Bolt: Use a Set for unique key collection to reduce complexity from O(N * K^2) to O(N * K)
+    const allKeysSet = new Set();
     rows.forEach((row) => {
         if (row && typeof row === 'object' && !Array.isArray(row)) {
             Object.keys(row).forEach((key) => {
-                if (!allKeys.includes(key)) allKeys.push(key);
+                allKeysSet.add(key);
             });
         }
     });
+    const allKeys = Array.from(allKeysSet);
 
     if (allKeys.length === 0) {
         const lines = rows.map((row) => {
