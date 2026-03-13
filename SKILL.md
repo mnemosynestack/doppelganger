@@ -1,12 +1,12 @@
 ---
-name: Doppelganger API Provider
+name: Figranium API Provider
 description: A REST API-focused OpenClaw skill that executes and manages headless/headful browser automation tasks via the local Doppelganger engine.
 version: 1.0.0
 author: OpenClaw Community
 keywords: [automation, scraping, playwright, doppelganger, api]
 ---
 
-# Doppelganger API Integration Skill for OpenClaw
+# Figranium API Integration Skill for OpenClaw
 
 This document enables OpenClaw agents to interface with the Doppelganger browser automation REST API. It is designed to be comprehensive, ensuring that any agent utilizing this skill understands the precise schemas, headers, response types, and endpoints available for executing scraping, autonomous agent tasks, and managing metadata.
 
@@ -45,7 +45,7 @@ This document enables OpenClaw agents to interface with the Doppelganger browser
 
 ## 1. Base URL & Authentication
 
-The Doppelganger API is designed to run locally. Ensure all endpoints are accessed via the host port.
+The Figranium API is designed to run locally. Ensure all endpoints are accessed via the host port.
 
 **Default Base URL:**
 ```
@@ -54,7 +54,7 @@ http://localhost:11345
 *(Optionally configurable via the `PORT` or `VITE_BACKEND_PORT` environment variable.)*
 
 **Authentication:**
-If the user has enabled authentication on the Doppelganger instance, all endpoints require the `x-api-key` header. Note that for private networks, anonymous access might be permitted by default unless explicitly locked.
+If the user has enabled authentication on the Figranium instance, all endpoints require the `x-api-key` header. Note that for private networks, anonymous access might be permitted by default unless explicitly locked.
 
 **Headers:**
 ```http
