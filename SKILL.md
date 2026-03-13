@@ -3,7 +3,7 @@ name: Figranium API Provider
 description: A REST API-focused OpenClaw skill that executes and manages headless/headful browser automation tasks via the local Doppelganger engine.
 version: 1.0.0
 author: OpenClaw Community
-keywords: [automation, scraping, playwright, doppelganger, api]
+keywords: [automation, scraping, playwright, figranium, api]
 ---
 
 # Figranium API Integration Skill for OpenClaw
