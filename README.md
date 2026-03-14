@@ -14,6 +14,7 @@ Figranium (formerly Doppelganger) is a self‑hosted, block-first automation con
 - **Task API + CLI** — trigger saved tasks via HTTP (`/tasks/:id/api`) or `npx figranium` while passing variables and securing runs with the API key you control.
 - **Captures & storage** — automatically store screenshots/recordings and cookies; view them in the captures tab, reset storage, or download built assets.
 - **Proxy management** — host, rotate, or import HTTP/SOCKS proxies, flag a default, and toggle rotation per task.
+- **Task Scheduling** — run workflows automatically using visual interval/daily/weekly/monthly settings or advanced cron expressions.
 - **Security-first** — session authentication, IP allowlists, secret management, and audit trails live entirely inside your environment.
 
 # Architecture Snapshot
@@ -152,7 +153,7 @@ Proxy rotation also respects `data/proxies.json` (see below), and `data/allowed_
 # UI Walkthrough
 
 - **Dashboard** — quick stats, recent runs, and a “New Task” entry point (block or agent).
- - **Task Editor** — drag blocks (click, type, wait, scroll, press, JavaScript); toggle “Rotate Proxies”; run/stop tasks; inspect results with pins & logs.
+ - **Task Editor** — drag blocks (click, type, wait, scroll, press, JavaScript); toggle “Rotate Proxies”; schedule runs via the **Schedule** tab; run/stop tasks; inspect results with pins & logs.
  - **Captures** — review screenshots/recordings stored under `public/captures`; delete individually or refresh.
  - **Executions** — historical runs with detail drill-down and the ability to re-run or download results.
  - **Settings**
@@ -203,6 +204,12 @@ If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For
 *   **`PUT /api/tasks/:id`**: Update an existing task profile.
 *   **`POST /api/tasks/:id/api`**: Execute a predefined task. Pass `{"variables": {}}` in the body to override execution variables dynamically.
 
+### Scheduling API
+*   **`GET /api/schedules`**: List all scheduled tasks and their status.
+*   **`POST /api/schedules/:taskId`**: Create or update a schedule (supports visual config or raw cron).
+*   **`DELETE /api/schedules/:taskId`**: Disable/remove a schedule.
+*   **`GET /api/schedules/status/all`**: Get an overview of all active scheduled jobs.
+
 ### Execution & Logging API
 *   **`GET /api/executions`**: Retrieve paginated logs of all past runs.
 *   **`GET /api/executions/:id`**: View the exact steps, result JSON, and configuration state of a specific run.
@@ -229,7 +236,17 @@ If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For
 2. Add conditional `javascript` blocks to test for specific DOM elements; use the retry/timer controls per block.
 3. Attach `extract` (JSON output) or `screenshot` actions before submitting so you can inspect results in the Captures tab.
 4. Toggle “Rotate Proxies” if you need egress diversity and pick a default proxy on Settings → Proxies.
-5. Save the task, pin results you care about, and use the `POST /tasks/:id/api` endpoint with variables like `{"variables":{"query":"books"}}` to run it from automation tools.
+5. Use the **Schedule** tab to set up automated runs (e.g., every day at 9 AM or every 15 minutes).
+6. Save the task, pin results you care about, and use the `POST /tasks/:id/api` endpoint with variables like `{"variables":{"query":"books"}}` to run it from automation tools.
+
+# Task Scheduling
+
+Figranium includes a built-in scheduler that handles automated task execution without requiring external cron jobs or triggers.
+
+- **Visual Mode**: Easily configure periodic runs (every X minutes), hourly, daily, weekly (select specific days), or monthly runs.
+- **Advanced Mode**: Use standard 5-field cron expressions (`* * * * *`) for complex schedules.
+- **Persistence**: Schedules are stored within the task metadata and persist across server restarts.
+- **Monitoring**: The "Next Run" and "Last Run" status (including duration) are visible directly in the Task Editor's Schedule tab.
 
 # Testing & Validation
 

@@ -25,20 +25,11 @@ This document enables OpenClaw agents to interface with the Doppelganger browser
     - [GET /api/data/captures/:name](#42-get-apidatacapturesname)
 5. [Settings API](#5-settings-api)
     - [GET /api/settings/proxies](#51-get-apisettingsproxies)
-6. [Payload Type Schemas Reference](#6-payload-type-schemas-reference)
-3. [Task Management API](#3-task-management-api)
-    - [GET /api/tasks](#31-get-apitasks)
-    - [POST /api/tasks](#32-post-apitasks)
-    - [PUT /api/tasks/:id](#33-put-apitasksid)
-    - [POST /api/tasks/:id/api](#34-post-apitasksidapi)
-4. [Execution & Logging API](#4-execution--logging-api)
-    - [GET /api/executions](#41-get-apiexecutions)
-    - [GET /api/executions/:id](#42-get-apiexecutionsid)
-5. [Data Management API](#5-data-management-api)
-    - [GET /api/data/captures](#51-get-apidatacaptures)
-    - [GET /api/data/captures/:name](#52-get-apidatacapturesname)
-6. [Settings API](#6-settings-api)
-    - [GET /api/settings/proxies](#61-get-apisettingsproxies)
+6. [Schedule Management API](#6-schedule-management-api)
+    - [GET /api/schedules](#61-get-apischedules)
+    - [POST /api/schedules/:taskId](#62-post-apischedulestaskid)
+    - [DELETE /api/schedules/:taskId](#63-delete-apischedulestaskid)
+    - [GET /api/schedules/status/all](#64-get-apischedulesstatusall)
 7. [Payload Type Schemas Reference](#7-payload-type-schemas-reference)
 
 ---
@@ -275,7 +266,96 @@ Retrieves all configured proxy rotational profiles available to the system.
 
 ---
 
-## 6. Payload Type Schemas Reference
+## 6. Schedule Management API
+
+Manage automated execution schedules for tasks.
+
+### 6.1. GET `/api/schedules`
+Lists all tasks that have an associated schedule.
+
+**Success Response (200 OK):**
+```json
+{
+  "schedules": [
+    {
+      "taskId": "c1f7a08b",
+      "taskName": "Extract Acme Pricing",
+      "mode": "agent",
+      "schedule": {
+        "enabled": true,
+        "frequency": "daily",
+        "hour": 9,
+        "minute": 0,
+        "cron": "0 9 * * *",
+        "nextRun": 1690099200000
+      }
+    }
+  ]
+}
+```
+
+---
+
+### 6.2. POST `/api/schedules/:taskId`
+Create or update the schedule for a specific task.
+
+**Request Body Schema:**
+```json
+{
+  "enabled": "boolean",
+  "frequency": "'interval' | 'hourly' | 'daily' | 'weekly' | 'monthly' (Optional)",
+  "cron": "string (Optional - raw 5-field cron expression)",
+  "intervalMinutes": "number (Optional)",
+  "hour": "number (Optional, 0-23)",
+  "minute": "number (Optional, 0-59)",
+  "daysOfWeek": "number[] (Optional, 0=Sun..6=Sat)",
+  "dayOfMonth": "number (Optional, 1-31)"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "schedule": { ... },
+  "description": "Every day at 9:00 AM",
+  "nextRun": 1690099200000
+}
+```
+
+---
+
+### 6.3. DELETE `/api/schedules/:taskId`
+Disables the schedule for a task.
+
+**Success Response (200 OK):**
+```json
+{ "success": true }
+```
+
+---
+
+### 6.4. GET `/api/schedules/status/all`
+Returns the runtime status of the scheduler and all active jobs.
+
+**Success Response (200 OK):**
+```json
+{
+  "running": true,
+  "scheduledCount": 1,
+  "tasks": [
+    {
+      "taskId": "c1f7a08b",
+      "cron": "0 9 * * *",
+      "nextRun": "2023-07-23T09:00:00.000Z",
+      "nextRunMs": 1690099200000
+    }
+  ]
+}
+```
+
+---
+
+## 7. Payload Type Schemas Reference
 
 Reference objects primarily focused on the `/api/tasks/:id/api` endpoint definitions, as these map direct sequential instructions to Playwright contexts. OpenClaw must strictly adhere to these interfaces when forging JSON definitions.
 
@@ -353,5 +433,19 @@ export interface Task {
     variables: Record<string, { type: 'string'|'number'|'boolean', value: any }>;
     extractionScript?: string;
     extractionFormat?: 'json' | 'csv';
+    schedule?: {
+        enabled: boolean;
+        frequency?: 'interval' | 'hourly' | 'daily' | 'weekly' | 'monthly';
+        intervalMinutes?: number;
+        hour?: number;
+        minute?: number;
+        daysOfWeek?: number[];
+        dayOfMonth?: number;
+        cron?: string;
+        lastRun?: number;
+        lastRunStatus?: 'success' | 'error';
+        lastRunDurationMs?: number;
+        nextRun?: number;
+    };
 }
 ```
