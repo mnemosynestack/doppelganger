@@ -26,7 +26,13 @@ This document is a concise, implementation-focused reference for AI agents that 
     "naturalTyping": false
   },
   "actions": [],
-  "variables": {}
+  "variables": {},
+  "schedule": {
+    "enabled": false,
+    "frequency": "daily",
+    "hour": 9,
+    "minute": 0
+  }
 }
 ```
 
