@@ -497,11 +497,14 @@ const executeAction = async (act, context) => {
         case 'javascript':
             logs.push('Running custom JavaScript...');
             if (act.value) {
-                result = await page.evaluate((code) => {
-                    const html = document.documentElement.outerHTML;
+                const jsCode = resolveMaybe(act.value);
+                // ⚡ Bolt: Only fetch full outerHTML if the code actually references 'html'
+                const needsHtml = /\bhtml\b/.test(jsCode);
+                result = await page.evaluate(({ code, needsHtml }) => {
+                    const html = needsHtml ? document.documentElement.outerHTML : '';
                     // eslint-disable-next-line no-eval
                     return eval(code);
-                }, resolveMaybe(act.value));
+                }, { code: jsCode, needsHtml });
             }
             break;
         case 'csv': {

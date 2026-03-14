@@ -86,7 +86,11 @@ const evalStructuredCondition = (act, runtimeVars, resolveTemplate) => {
 const evalCondition = async (expr, page, runtimeVars, lastBlockOutput, resolveTemplate) => {
     const resolved = resolveTemplate(expr || '');
     if (!resolved.trim()) return false;
-    return page.evaluate(({ expression, vars, blockOutput }) => {
+
+    // ⚡ Bolt: Only fetch full outerHTML if the expression actually references 'html'
+    const needsHtml = /\bhtml\b/.test(resolved);
+
+    return page.evaluate(({ expression, vars, blockOutput, needsHtml }) => {
         const exists = (selector) => {
             if (!selector) return false;
             return !!document.querySelector(selector);
@@ -97,12 +101,12 @@ const evalCondition = async (expr, page, runtimeVars, lastBlockOutput, resolveTe
             return el ? (el.textContent || '').trim() : '';
         };
         const url = () => window.location.href;
-        const html = document.documentElement.outerHTML;
+        const html = needsHtml ? document.documentElement.outerHTML : '';
         const block = { output: blockOutput };
         // eslint-disable-next-line no-new-func
         const fn = new Function('vars', 'block', 'exists', 'text', 'url', 'html', `return !!(${expression});`);
         return fn(vars || {}, block, exists, text, url, html);
-    }, { expression: resolved, vars: runtimeVars, blockOutput: lastBlockOutput });
+    }, { expression: resolved, vars: runtimeVars, blockOutput: lastBlockOutput, needsHtml });
 };
 
 module.exports = {
