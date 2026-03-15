@@ -279,6 +279,15 @@ async function runAgent(data, options = {}) {
         // ⚡ Bolt: Pre-calculate which actions need {$html} to avoid repeated JSON.stringify in loop
         const actionNeedsHtml = actions.map(act => JSON.stringify(act).includes('{$html}'));
 
+        // ⚡ Bolt: Pre-calculate foreach blocks that reference 'loop.html' to optimize innerHTML fetching
+        const foreachNeedsHtml = actions.map((act, i) => {
+            if (act.type !== 'foreach') return false;
+            const endIndex = startToEnd[i];
+            if (endIndex === undefined) return true; // Safety fallback
+            const subActions = actions.slice(i + 1, endIndex);
+            return subActions.some(sub => JSON.stringify(sub).includes('loop.html'));
+        });
+
         let index = 0;
         const maxSteps = Math.max(actions.length * 20, 1000);
         let steps = 0;
@@ -425,7 +434,7 @@ async function runAgent(data, options = {}) {
                 reportProgress(runId, { actionId: act.id, status: 'running' });
                 let state = foreachState.get(index);
                 if (!state) {
-                    const items = await getForeachItems(act, page, runtimeVars);
+                    const items = await getForeachItems(act, page, runtimeVars, foreachNeedsHtml[index]);
                     state = { items, index: 0 };
                     foreachState.set(index, state);
                 }

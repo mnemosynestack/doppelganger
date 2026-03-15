@@ -37,7 +37,7 @@ const buildBlockMap = (list) => {
 
 const randomBetween = (min, max) => min + Math.random() * (max - min);
 
-const getForeachItems = async (act, page, runtimeVars) => {
+const getForeachItems = async (act, page, runtimeVars, needsHtml = true) => {
     const resolve = (input) => {
         if (typeof input !== 'string' || !input.includes('{$')) return input;
         return input.replace(/\{\$([\w.]+)\}/g, (_match, name) => {
@@ -59,10 +59,16 @@ const getForeachItems = async (act, page, runtimeVars) => {
     const varName = resolve(act.varName);
 
     if (selector) {
-        return page.$$eval(String(selector), (elements) => elements.map((el) => ({
-            text: (el.textContent || '').trim(),
-            html: el.innerHTML || ''
-        })));
+        // ⚡ Bolt: Only fetch innerHTML if sub-actions reference 'loop.html' to reduce serialization overhead
+        return page.$$eval(String(selector), (elements, needsHtml) => elements.map((el) => {
+            const item = {
+                text: (el.textContent || '').trim()
+            };
+            if (needsHtml) {
+                item.html = el.innerHTML || '';
+            }
+            return item;
+        }), needsHtml);
     }
     if (varName && runtimeVars[String(varName)]) {
         const source = runtimeVars[String(varName)];
