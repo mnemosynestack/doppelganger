@@ -28,6 +28,7 @@ Module.prototype.require = function() {
 };
 
 const { requireAuthForSettings } = require('../src/server/middleware');
+const { executeAction } = require('../src/agent/action-handler');
 const assert = require('assert');
 
 async function testAuthForSettings() {
@@ -71,7 +72,61 @@ async function testAuthForSettings() {
     console.log('--- requireAuthForSettings Security Tests Passed ---');
 }
 
-testAuthForSettings().catch(err => {
+async function testTaskIdSanitization() {
+    console.log('\n--- Testing taskId Sanitization in agent start action ---');
+
+    const logs = [];
+    const context = {
+        logs,
+        resolveTemplate: (val) => val,
+        options: {},
+        baseUrl: 'http://localhost:11345',
+        lastMouse: null,
+        setStopOutcome: () => {},
+        setStopRequested: () => {}
+    };
+
+    // Mock fetch
+    const originalFetch = global.fetch;
+    global.fetch = async (url) => {
+        logs.push(`Fetch called with URL: ${url}`);
+        return {
+            ok: true,
+            json: async () => ({ success: true })
+        };
+    };
+
+    const act = {
+        type: 'start',
+        value: '../../api/clear-cookies?'
+    };
+
+    try {
+        await executeAction(act, context);
+    } catch (e) {
+        logs.push(`Action failed as expected: ${e.message}`);
+    } finally {
+        global.fetch = originalFetch;
+    }
+
+    const lastFetchLog = logs.find(l => l.startsWith('Fetch called with URL:'));
+    console.log('Last fetch URL:', lastFetchLog);
+
+    if (lastFetchLog && lastFetchLog.includes('..')) {
+        throw new Error('TaskId was NOT sanitized, path traversal possible!');
+    }
+
+    assert.ok(logs.some(l => l.includes('Invalid task id.') || (l.startsWith('Fetch called with URL:') && !l.includes('..'))), 'TaskId should be sanitized');
+
+    console.log('PASS: TaskId sanitization verified');
+}
+
+async function runTests() {
+    await testAuthForSettings();
+    await testTaskIdSanitization();
+}
+
+runTests().catch(err => {
     console.error('TEST FAILED:', err);
     process.exit(1);
 });
