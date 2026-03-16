@@ -127,6 +127,8 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
             <div className="flex items-center justify-between">
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Scheduled Execution</label>
                 <button
+                    role="switch"
+                    aria-checked={schedule.enabled}
                     onClick={() => {
                         const nextEnabled = !schedule.enabled;
                         const nextSchedule = { ...schedule, enabled: nextEnabled };
@@ -139,7 +141,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
                         // Immediate save when toggling
                         saveSchedule(nextSchedule);
                     }}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
                         schedule.enabled
                             ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
                             : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:border-white/20'
@@ -151,23 +153,27 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
             </div>
 
             {/* Mode toggle: Visual / Advanced */}
-            <div className="flex items-center gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
+            <div role="tablist" className="flex items-center gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
                 <button
+                    role="tab"
+                    aria-selected={!advancedMode}
                     onClick={() => {
                         setAdvancedMode(false);
                         updateSchedule({ cron: undefined, frequency: schedule.frequency || 'daily' });
                     }}
-                    className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        !advancedMode ? 'bg-white text-black' : 'text-gray-500 hover:text-white'
+                    className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all focus:outline-none focus-visible:ring-2 ${
+                        !advancedMode ? 'bg-white text-black focus-visible:ring-blue-500' : 'text-gray-500 hover:text-white focus-visible:ring-white/50'
                     }`}
                 >Visual</button>
                 <button
+                    role="tab"
+                    aria-selected={advancedMode}
                     onClick={() => {
                         setAdvancedMode(true);
                         updateSchedule({ frequency: undefined, cron: schedule.cron || '0 9 * * *' });
                     }}
-                    className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        advancedMode ? 'bg-white text-black' : 'text-gray-500 hover:text-white'
+                    className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all focus:outline-none focus-visible:ring-2 ${
+                        advancedMode ? 'bg-white text-black focus-visible:ring-blue-500' : 'text-gray-500 hover:text-white focus-visible:ring-white/50'
                     }`}
                 >Advanced</button>
             </div>
@@ -177,15 +183,17 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
                     {/* Frequency selector */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Frequency</label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div role="tablist" className="grid grid-cols-3 gap-2">
                             {(['interval', 'hourly', 'daily', 'weekly', 'monthly'] as const).map(f => (
                                 <button
                                     key={f}
+                                    role="tab"
+                                    aria-selected={freq === f}
                                     onClick={() => updateSchedule({ frequency: f, cron: undefined })}
-                                    className={`px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                                    className={`px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all focus:outline-none focus-visible:ring-2 ${
                                         freq === f
-                                            ? 'bg-white/15 border-white/40 text-white'
-                                            : 'bg-white/5 border-white/5 text-gray-500 hover:text-white hover:border-white/15'
+                                            ? 'bg-white/15 border-white/40 text-white focus-visible:ring-blue-500'
+                                            : 'bg-white/5 border-white/5 text-gray-500 hover:text-white hover:border-white/15 focus-visible:ring-white/50'
                                     }`}
                                 >
                                     {f === 'interval' ? 'Every X min' : f}
@@ -198,15 +206,17 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
                     {freq === 'interval' && (
                         <div className="space-y-3">
                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Run every</label>
-                            <div className="grid grid-cols-6 gap-2">
+                            <div role="tablist" className="grid grid-cols-6 gap-2">
                                 {[1, 5, 10, 15, 30, 60].map(m => (
                                     <button
                                         key={m}
+                                        role="tab"
+                                        aria-selected={(schedule.intervalMinutes || 5) === m}
                                         onClick={() => updateSchedule({ intervalMinutes: m })}
-                                        className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                        className={`py-2 rounded-xl text-xs font-bold border transition-all focus:outline-none focus-visible:ring-2 ${
                                             (schedule.intervalMinutes || 5) === m
-                                                ? 'bg-white/15 border-white/40 text-white'
-                                                : 'bg-white/5 border-white/5 text-gray-500 hover:text-white hover:border-white/15'
+                                                ? 'bg-white/15 border-white/40 text-white focus-visible:ring-blue-500'
+                                                : 'bg-white/5 border-white/5 text-gray-500 hover:text-white hover:border-white/15 focus-visible:ring-white/50'
                                         }`}
                                     >
                                         {m}m
@@ -220,15 +230,17 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
                     {freq === 'hourly' && (
                         <div className="space-y-3">
                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">At minute</label>
-                            <div className="grid grid-cols-4 gap-2">
+                            <div role="tablist" className="grid grid-cols-4 gap-2">
                                 {[0, 15, 30, 45].map(m => (
                                     <button
                                         key={m}
+                                        role="tab"
+                                        aria-selected={(schedule.minute ?? 0) === m}
                                         onClick={() => updateSchedule({ minute: m })}
-                                        className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                        className={`py-2 rounded-xl text-xs font-bold border transition-all focus:outline-none focus-visible:ring-2 ${
                                             (schedule.minute ?? 0) === m
-                                                ? 'bg-white/15 border-white/40 text-white'
-                                                : 'bg-white/5 border-white/5 text-gray-500 hover:text-white hover:border-white/15'
+                                                ? 'bg-white/15 border-white/40 text-white focus-visible:ring-blue-500'
+                                                : 'bg-white/5 border-white/5 text-gray-500 hover:text-white hover:border-white/15 focus-visible:ring-white/50'
                                         }`}
                                     >
                                         :{String(m).padStart(2, '0')}
@@ -244,9 +256,10 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Time</label>
                             <div className="flex gap-2">
                                 <select
+                                    aria-label="Hour"
                                     value={schedule.hour ?? 9}
                                     onChange={e => updateSchedule({ hour: parseInt(e.target.value) })}
-                                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white"
+                                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-all focus-visible:ring-2 focus-visible:ring-white/50"
                                 >
                                     {Array.from({ length: 24 }, (_, i) => (
                                         <option key={i} value={i}>
@@ -255,9 +268,10 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
                                     ))}
                                 </select>
                                 <select
+                                    aria-label="Minute"
                                     value={schedule.minute ?? 0}
                                     onChange={e => updateSchedule({ minute: parseInt(e.target.value) })}
-                                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white"
+                                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-all focus-visible:ring-2 focus-visible:ring-white/50"
                                 >
                                     {Array.from({ length: 60 }, (_, i) => (
                                         <option key={i} value={i}>:{String(i).padStart(2, '0')}</option>
@@ -275,16 +289,17 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
                                 {dayNames.map((name, i) => (
                                     <button
                                         key={i}
+                                        aria-pressed={daysOfWeek.includes(i)}
                                         onClick={() => {
                                             const next = daysOfWeek.includes(i)
                                                 ? daysOfWeek.filter(d => d !== i)
                                                 : [...daysOfWeek, i].sort();
                                             updateSchedule({ daysOfWeek: next });
                                         }}
-                                        className={`py-2 rounded-xl text-[10px] font-bold uppercase border transition-all ${
+                                        className={`py-2 rounded-xl text-[10px] font-bold uppercase border transition-all focus:outline-none focus-visible:ring-2 ${
                                             daysOfWeek.includes(i)
-                                                ? 'bg-white/20 border-white/40 text-white'
-                                                : 'bg-white/5 border-white/5 text-gray-600 hover:text-white hover:border-white/15'
+                                                ? 'bg-white/20 border-white/40 text-white focus-visible:ring-blue-500'
+                                                : 'bg-white/5 border-white/5 text-gray-600 hover:text-white hover:border-white/15 focus-visible:ring-white/50'
                                         }`}
                                     >
                                         {name}
@@ -299,9 +314,10 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
                         <div className="space-y-3">
                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Day of Month</label>
                             <select
+                                aria-label="Day of Month"
                                 value={schedule.dayOfMonth ?? 1}
                                 onChange={e => updateSchedule({ dayOfMonth: parseInt(e.target.value) })}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white"
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-all focus-visible:ring-2 focus-visible:ring-white/50"
                             >
                                 {Array.from({ length: 31 }, (_, i) => (
                                     <option key={i + 1} value={i + 1}>{i + 1}</option>
@@ -316,10 +332,11 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Cron Expression</label>
                     <input
                         type="text"
+                        aria-label="Cron Expression"
                         value={schedule.cron || ''}
                         onChange={e => updateSchedule({ cron: e.target.value, frequency: undefined })}
                         placeholder="*/5 * * * *"
-                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-gray-700 focus:outline-none focus:border-white/30 transition-all"
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-gray-700 focus:outline-none focus:border-white/30 transition-all focus-visible:ring-2 focus-visible:ring-white/50"
                     />
                     <p className="text-[9px] text-gray-600 font-mono">minute hour day-of-month month day-of-week</p>
                 </div>
@@ -373,10 +390,10 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ currentTask, onUpdateTask }) 
             <button
                 onClick={() => saveSchedule()}
                 disabled={saving}
-                className={`w-full py-3 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${
+                className={`w-full py-3 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 focus:outline-none focus-visible:ring-2 ${
                     saveSuccess 
-                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
-                        : 'bg-white text-black hover:bg-gray-200 shadow-xl shadow-white/5'
+                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 focus-visible:ring-white'
+                        : 'bg-white text-black hover:bg-gray-200 shadow-xl shadow-white/5 focus-visible:ring-blue-500'
                 } disabled:opacity-50`}
             >
                 {saving ? (
