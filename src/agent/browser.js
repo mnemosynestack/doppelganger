@@ -53,6 +53,7 @@ async function launchBrowser(options = {}) {
         '--disable-blink-features=AutomationControlled',
         '--hide-scrollbars',
         '--mute-audio',
+        '--force-webrtc-ip-handling-policy=disable_non_proxied_udp',
         ...buildDnsArgs(!!selection.proxy)
     ];
     if (headless === false) {
@@ -66,8 +67,6 @@ async function launchBrowser(options = {}) {
 
     console.log(`[PROXY] Mode: ${selection.mode}; Target: ${selection.proxy ? selection.proxy.server : 'host_ip'}`);
 
-    await fs.promises.mkdir(PROFILE_DIR, { recursive: true });
-    // Store launch options for createBrowserContext to merge into persistent context
     launchOptions._proxySelection = selection;
     return launchOptions;
 }
@@ -77,7 +76,6 @@ async function createBrowserContext(launchOptions, options = {}) {
         userAgent,
         rotateViewport,
         statelessExecution,
-        storageStateFile,
         disableRecording,
         recordingsDir,
         includeShadowDom
@@ -88,8 +86,6 @@ async function createBrowserContext(launchOptions, options = {}) {
         : { width: 1366, height: 768 };
 
     const contextOptions = {
-        headless: launchOptions.headless,
-        args: launchOptions.args,
         userAgent: userAgent,
         viewport,
         deviceScaleFactor: 1,
@@ -108,7 +104,22 @@ async function createBrowserContext(launchOptions, options = {}) {
         contextOptions.recordVideo = { dir: recordingsDir, size: viewport };
     }
 
-    const context = await chromium.launchPersistentContext(PROFILE_DIR, contextOptions);
+    let context;
+    if (statelessExecution) {
+        const browser = await chromium.launch({
+            headless: launchOptions.headless,
+            args: launchOptions.args,
+            ...(launchOptions.proxy ? { proxy: launchOptions.proxy } : {})
+        });
+        context = await browser.newContext(contextOptions);
+    } else {
+        await fs.promises.mkdir(PROFILE_DIR, { recursive: true });
+        context = await chromium.launchPersistentContext(PROFILE_DIR, {
+            headless: launchOptions.headless,
+            args: launchOptions.args,
+            ...contextOptions
+        });
+    }
 
     await context.addInitScript(installMouseHelper);
 

@@ -5,7 +5,7 @@ const path = require('path');
 const { getProxySelection } = require('./proxy-rotation');
 const { selectUserAgent } = require('./user-agent-settings');
 const { validateUrl } = require('./url-utils');
-const { parseBooleanFlag, cookieMatches } = require('./common-utils');
+const { parseBooleanFlag } = require('./common-utils');
 const { Mutex } = require('./src/server/utils');
 
 const stealth = StealthPlugin();
@@ -37,30 +37,12 @@ const headfulMutex = new Mutex();
 const EventEmitter = require('events');
 const headfulEventEmitter = new EventEmitter();
 
-const STORAGE_STATE_PATH = path.join(__dirname, 'storage_state.json');
-const STORAGE_STATE_FILE = (() => {
-    try {
-        if (fs.existsSync(STORAGE_STATE_PATH)) {
-            const stat = fs.statSync(STORAGE_STATE_PATH);
-            if (stat.isDirectory()) {
-                return path.join(STORAGE_STATE_PATH, 'storage_state.json');
-            }
-        }
-    } catch { }
-    return STORAGE_STATE_PATH;
-})();
-
 let activeSession = null;
 
 const teardownActiveSession = async () => {
     if (!activeSession) return;
     try {
         if (activeSession.interval) clearInterval(activeSession.interval);
-    } catch { }
-    try {
-        if (activeSession.context && !activeSession.stateless) {
-            await activeSession.context.storageState({ path: STORAGE_STATE_FILE });
-        }
     } catch { }
     try {
         if (activeSession.browser) {
@@ -87,7 +69,7 @@ async function runHeadful(data, options = {}) {
 
     const inspectModeEnabled = true;
 
-    activeSession = { status: 'starting', startedAt: Date.now(), stateless: statelessExecution, inspectModeEnabled };
+    activeSession = { status: 'starting', startedAt: Date.now(), inspectModeEnabled };
 
     const selectedUA = await selectUserAgent(false);
 
@@ -131,7 +113,8 @@ async function runHeadful(data, options = {}) {
                 '--window-size=1920,1080',
                 '--window-position=0,0',
                 '--start-maximized',
-                '--dns-prefetch-disable'
+                '--dns-prefetch-disable',
+                '--force-webrtc-ip-handling-policy=disable_non_proxied_udp'
             ];
             if (!hasProxy) {
                 args.push(
@@ -141,66 +124,24 @@ async function runHeadful(data, options = {}) {
                 );
             }
 
-            await fs.promises.mkdir(HEADFUL_PROFILE_DIR, { recursive: true });
-
             const contextOptions = {
-                headless: false,
-                args,
                 viewport: null,
                 userAgent: selectedUA,
                 locale: 'en-US',
                 timezoneId: 'America/New_York',
-                permissions: ['clipboard-read', 'clipboard-write']
+                permissions: ['clipboard-read', 'clipboard-write'],
+                ...(selection.proxy ? { proxy: selection.proxy } : {})
             };
 
-            if (selection.proxy) {
-                contextOptions.proxy = selection.proxy;
+            if (statelessExecution) {
+                browser = await chromium.launch({ headless: false, args, ...(selection.proxy ? { proxy: selection.proxy } : {}) });
+                context = await browser.newContext(contextOptions);
+            } else {
+                await fs.promises.mkdir(HEADFUL_PROFILE_DIR, { recursive: true });
+                context = await chromium.launchPersistentContext(HEADFUL_PROFILE_DIR, { headless: false, args, ...contextOptions });
+                browser = context.browser();
             }
-
-            context = await chromium.launchPersistentContext(HEADFUL_PROFILE_DIR, contextOptions);
-            browser = context.browser();
         }
-
-        let preloadedCookies = [];
-        if (fs.existsSync(STORAGE_STATE_FILE)) {
-            try {
-                const state = JSON.parse(fs.readFileSync(STORAGE_STATE_FILE, 'utf8'));
-                preloadedCookies = state.cookies || [];
-            } catch (e) { }
-        }
-
-        await context.route('**/*', async (route) => {
-            const request = route.request();
-            const requestUrl = request.url();
-            const resourceType = request.resourceType();
-
-            const isDataRequest = ['document', 'script', 'xhr', 'fetch'].includes(resourceType);
-            if (isDataRequest && preloadedCookies.length > 0) {
-                // ⚡ Bolt: Parse URL once to avoid redundant parsing inside cookieMatches filter loop
-                const urlObj = new URL(requestUrl);
-                const filteredCookies = preloadedCookies.filter(cookie => cookieMatches(cookie, urlObj));
-                if (filteredCookies.length > 0) {
-                    const fileCookieMap = new Map();
-                    filteredCookies.forEach(c => fileCookieMap.set(c.name, c.value));
-
-                    const existingCookieHeader = request.headers()['cookie'] || '';
-                    const existingCookies = existingCookieHeader.split(';').filter(Boolean).map(s => s.trim());
-
-                    existingCookies.forEach(s => {
-                        const [name, ...valParts] = s.split('=');
-                        const val = valParts.join('=');
-                        if (!fileCookieMap.has(name)) {
-                            fileCookieMap.set(name, val);
-                        }
-                    });
-
-                    const cookieHeader = Array.from(fileCookieMap.entries()).map(([n, v]) => `${n}=${v}`).join('; ');
-                    const headers = { ...request.headers(), 'cookie': cookieHeader };
-                    return route.continue({ headers });
-                }
-            }
-            route.continue();
-        });
 
         const inspectInitFn = () => {
             Object.defineProperty(window, 'open', { writable: true, configurable: true, value: () => null });
@@ -526,25 +467,13 @@ async function runHeadful(data, options = {}) {
             await page.goto(url).catch(() => { });
         }
 
-        const saveState = async () => {
-            if (statelessExecution) return;
-            try {
-                await context.storageState({ path: STORAGE_STATE_FILE });
-            } catch (e) { }
-        };
+        activeSession = { browser, context, page, status: 'running', startedAt: activeSession.startedAt, inspectModeEnabled: activeSession.inspectModeEnabled };
 
-        const interval = setInterval(saveState, 10000);
-        activeSession = { browser, context, page, interval, status: 'running', startedAt: activeSession.startedAt, stateless: statelessExecution, inspectModeEnabled: activeSession.inspectModeEnabled };
-
-        page.on('close', async () => {
-            clearInterval(interval);
-            await saveState();
-        });
+        page.on('close', async () => { });
 
         const responseData = {
             message: 'Headful session started.',
-            userAgentUsed: selectedUA,
-            path: statelessExecution ? null : STORAGE_STATE_FILE
+            userAgentUsed: selectedUA
         };
 
         if (res) {
@@ -552,8 +481,6 @@ async function runHeadful(data, options = {}) {
         }
 
         await new Promise((resolve) => browser.on('disconnected', resolve));
-        clearInterval(interval);
-        await saveState();
         activeSession = null;
         return responseData;
     } catch (error) {

@@ -7,7 +7,7 @@ const { getProxySelection } = require('./proxy-rotation');
 const { selectUserAgent } = require('./user-agent-settings');
 const { formatHTML } = require('./html-utils');
 const { validateUrl } = require('./url-utils');
-const { parseBooleanFlag, sanitizeRunId, toCsvString, cookieMatches } = require('./common-utils');
+const { parseBooleanFlag, sanitizeRunId, toCsvString } = require('./common-utils');
 const { installMouseHelper } = require('./src/agent/dom-utils');
 
 const stealth = StealthPlugin();
@@ -33,19 +33,6 @@ stealth.enabledEvasions.clear();
 chromium.use(stealth);
 
 const PROFILE_DIR = path.join(__dirname, 'data', 'browser-profile-scrape');
-
-const STORAGE_STATE_PATH = path.join(__dirname, 'storage_state.json');
-const STORAGE_STATE_FILE = (() => {
-    try {
-        if (fs.existsSync(STORAGE_STATE_PATH)) {
-            const stat = fs.statSync(STORAGE_STATE_PATH);
-            if (stat.isDirectory()) {
-                return path.join(STORAGE_STATE_PATH, 'storage_state.json');
-            }
-        }
-    } catch { }
-    return STORAGE_STATE_PATH;
-})();
 
 async function runScrape(data) {
     const url = data.url;
@@ -93,7 +80,8 @@ async function runScrape(data) {
             '--disable-blink-features=AutomationControlled',
             '--hide-scrollbars',
             '--mute-audio',
-            '--dns-prefetch-disable'
+            '--dns-prefetch-disable',
+            '--force-webrtc-ip-handling-policy=disable_non_proxied_udp'
         ];
         if (!hasProxy) {
             args.push(
@@ -132,49 +120,15 @@ async function runScrape(data) {
             contextOptions.recordVideo = { dir: recordingsDir, size: viewport };
         }
 
-        context = await chromium.launchPersistentContext(PROFILE_DIR, contextOptions);
-        browser = context.browser();
-
-        let preloadedCookies = [];
-        if (!statelessExecution && fs.existsSync(STORAGE_STATE_FILE)) {
-            try {
-                const state = JSON.parse(fs.readFileSync(STORAGE_STATE_FILE, 'utf8'));
-                preloadedCookies = state.cookies || [];
-            } catch (e) { }
+        if (statelessExecution) {
+            const launchOpts = { headless: true, args, ...(selection.proxy ? { proxy: selection.proxy } : {}) };
+            browser = await chromium.launch(launchOpts);
+            context = await browser.newContext(contextOptions);
+        } else {
+            await fs.promises.mkdir(PROFILE_DIR, { recursive: true });
+            context = await chromium.launchPersistentContext(PROFILE_DIR, { headless: true, args, ...contextOptions });
+            browser = context.browser();
         }
-
-        await context.route('**/*', async (route) => {
-            const request = route.request();
-            const requestUrl = request.url();
-            const resourceType = request.resourceType();
-
-            const isDataRequest = ['document', 'script', 'xhr', 'fetch'].includes(resourceType);
-            if (isDataRequest && preloadedCookies.length > 0) {
-                // ⚡ Bolt: Parse URL once to avoid redundant parsing inside cookieMatches filter loop
-                const urlObj = new URL(requestUrl);
-                const filteredCookies = preloadedCookies.filter(cookie => cookieMatches(cookie, urlObj));
-                if (filteredCookies.length > 0) {
-                    const fileCookieMap = new Map();
-                    filteredCookies.forEach(c => fileCookieMap.set(c.name, c.value));
-
-                    const existingCookieHeader = request.headers()['cookie'] || '';
-                    const existingCookies = existingCookieHeader.split(';').filter(Boolean).map(s => s.trim());
-
-                    existingCookies.forEach(s => {
-                        const [name, ...valParts] = s.split('=');
-                        const val = valParts.join('=');
-                        if (!fileCookieMap.has(name)) {
-                            fileCookieMap.set(name, val);
-                        }
-                    });
-
-                    const cookieHeader = Array.from(fileCookieMap.entries()).map(([n, v]) => `${n}=${v}`).join('; ');
-                    const headers = { ...request.headers(), 'cookie': cookieHeader };
-                    return route.continue({ headers });
-                }
-            }
-            route.continue();
-        });
 
         await context.addInitScript(installMouseHelper);
 
@@ -389,10 +343,6 @@ async function runScrape(data) {
             screenshot_url: `/captures/${screenshotName}`
         };
 
-        if (!statelessExecution) {
-            try { await context.storageState({ path: STORAGE_STATE_FILE }); } catch { }
-        }
-
         const video = page.video();
         await context.close();
         if (video) {
@@ -421,9 +371,6 @@ async function runScrape(data) {
         if (browser) await browser.close();
         return resultData;
     } catch (error) {
-        if (context && !statelessExecution) {
-            try { await context.storageState({ path: STORAGE_STATE_FILE }); } catch { }
-        }
         if (context) await context.close();
         if (browser) await browser.close();
         throw error;
