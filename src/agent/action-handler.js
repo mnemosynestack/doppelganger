@@ -1,5 +1,5 @@
 const { validateUrl } = require('../../url-utils');
-const { parseCoords, parseValue, parseCsv } = require('../../common-utils');
+const { parseCoords, parseValue, parseCsv, sanitizeRunId } = require('../../common-utils');
 const { moveMouseHumanlike, idleMouse, overshootScroll, humanType } = require('./human-interaction');
 const { loadApiKey } = require('../server/storage'); // Need to access server storage for internal API key loading
 
@@ -552,8 +552,11 @@ const executeAction = async (act, context) => {
             result = act.value === 'error' ? 'error' : 'success';
             break;
         case 'start': {
-            const taskId = resolveMaybe(act.value);
-            if (!taskId) throw new Error('Missing task id.');
+            const rawTaskId = resolveMaybe(act.value);
+            if (!rawTaskId) throw new Error('Missing task id.');
+            const taskId = sanitizeRunId(rawTaskId);
+            if (!taskId) throw new Error('Invalid task id.');
+
             const apiKey = (await loadApiKey()) || context.options.apiKey; // Handle API key from context option if needed, but mainly loadApiKey
             if (!apiKey) {
                 logs.push('No API key available; attempting internal start.');
