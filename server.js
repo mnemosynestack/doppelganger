@@ -159,7 +159,8 @@ sessionStore.on('error', (err) => {
 app.use(session({
     store: sessionStore,
     secret: SESSION_SECRET,
-    resave: false,
+    resave: true,
+    rolling: true,
     saveUninitialized: false,
     cookie: {
         secure: SESSION_COOKIE_SECURE,
