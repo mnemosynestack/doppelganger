@@ -70,11 +70,10 @@ async function loadUsers() {
     const now = Date.now();
     if (useDB) {
         if (usersCache && (now - usersLastCheck < STORAGE_CACHE_TTL)) {
-            return [...usersCache];
+            return usersCache;
         }
         if (usersLoadPromise) {
-            const result = await usersLoadPromise;
-            return [...result];
+            return await usersLoadPromise;
         }
         usersLoadPromise = (async () => {
             try {
@@ -88,12 +87,11 @@ async function loadUsers() {
             usersLoadPromise = null;
             return usersCache;
         })();
-        const result = await usersLoadPromise;
-        return [...result];
+        return await usersLoadPromise;
     }
 
     if (usersCache && (now - usersLastCheck < STORAGE_CACHE_TTL)) {
-        return [...usersCache];
+        return usersCache;
     }
 
     let stat;
@@ -107,12 +105,11 @@ async function loadUsers() {
 
     if (usersCache && usersMtime === stat.mtimeMs) {
         usersLastCheck = now;
-        return [...usersCache];
+        return usersCache;
     }
 
     if (usersLoadPromise) {
-        const result = await usersLoadPromise;
-        return [...result];
+        return await usersLoadPromise;
     }
 
     usersLoadPromise = (async () => {
@@ -129,8 +126,7 @@ async function loadUsers() {
         return usersCache;
     })();
 
-    const result = await usersLoadPromise;
-    return [...result];
+    return await usersLoadPromise;
 }
 
 async function saveUsers(users) {
@@ -196,11 +192,10 @@ async function loadTasks() {
     const now = Date.now();
     if (useDB) {
         // Simple cache without mtime check if we rely on in-memory operations to mutate it
-        if (tasksCache && (now - tasksLastCheck < STORAGE_CACHE_TTL)) return [...tasksCache];
+        if (tasksCache && (now - tasksLastCheck < STORAGE_CACHE_TTL)) return tasksCache;
 
         if (tasksLoadPromise) {
-            const result = await tasksLoadPromise;
-            return [...result];
+            return await tasksLoadPromise;
         }
 
         tasksLoadPromise = (async () => {
@@ -218,12 +213,11 @@ async function loadTasks() {
             return tasksCache;
         })();
 
-        const result = await tasksLoadPromise;
-        return [...result];
+        return await tasksLoadPromise;
     }
 
     if (tasksCache && (now - tasksLastCheck < STORAGE_CACHE_TTL)) {
-        return [...tasksCache];
+        return tasksCache;
     }
 
     let stat;
@@ -237,12 +231,11 @@ async function loadTasks() {
 
     if (tasksCache && tasksMtime === stat.mtimeMs) {
         tasksLastCheck = now;
-        return [...tasksCache];
+        return tasksCache;
     }
 
     if (tasksLoadPromise) {
-        const result = await tasksLoadPromise;
-        return [...result];
+        return await tasksLoadPromise;
     }
 
     tasksLoadPromise = (async () => {
@@ -261,8 +254,7 @@ async function loadTasks() {
         return tasksCache;
     })();
 
-    const result = await tasksLoadPromise;
-    return [...result];
+    return await tasksLoadPromise;
 }
 
 async function saveTasks(tasks) {
@@ -324,11 +316,10 @@ async function performExecutionsWrite(data) {
 }
 
 async function loadExecutions() {
-    if (executionsCache) return [...executionsCache];
+    if (executionsCache) return executionsCache;
 
     if (executionsLoadPromise) {
-        const result = await executionsLoadPromise;
-        return [...result];
+        return await executionsLoadPromise;
     }
 
     executionsLoadPromise = (async () => {
@@ -355,8 +346,7 @@ async function loadExecutions() {
         return executionsCache;
     })();
 
-    const result = await executionsLoadPromise;
-    return [...result];
+    return await executionsLoadPromise;
 }
 
 async function saveExecutions(executions) {
@@ -394,10 +384,13 @@ async function appendExecution(entry) {
     if (!executionsCache) await loadExecutions();
 
     executionsCache.unshift(entry);
+    // ⚡ Bolt: Incremental Map update instead of rebuilding the entire map (O(1) vs O(N))
+    executionsMap.set(entry.id, entry);
+
     if (executionsCache.length > MAX_EXECUTIONS) {
-        executionsCache.length = MAX_EXECUTIONS;
+        const removed = executionsCache.pop();
+        if (removed) executionsMap.delete(removed.id);
     }
-    syncExecutionsMap();
 
     const useDB = await ensureDB();
     if (useDB) {
@@ -536,10 +529,9 @@ async function loadGeminiApiKey() {
     const now = Date.now();
 
     if (useDB) {
-        if (geminiKeysCache && (now - geminiKeysLastCheck < STORAGE_CACHE_TTL)) return [...geminiKeysCache];
+        if (geminiKeysCache && (now - geminiKeysLastCheck < STORAGE_CACHE_TTL)) return geminiKeysCache;
         if (geminiKeysLoadPromise) {
-            const result = await geminiKeysLoadPromise;
-            return [...result];
+            return await geminiKeysLoadPromise;
         }
 
         geminiKeysLoadPromise = (async () => {
@@ -556,11 +548,10 @@ async function loadGeminiApiKey() {
             return geminiKeysCache;
         })();
 
-        const result = await geminiKeysLoadPromise;
-        return [...result];
+        return await geminiKeysLoadPromise;
     }
 
-    if (geminiKeysCache && (now - geminiKeysLastCheck < STORAGE_CACHE_TTL)) return [...geminiKeysCache];
+    if (geminiKeysCache && (now - geminiKeysLastCheck < STORAGE_CACHE_TTL)) return geminiKeysCache;
 
     let stat;
     try {
@@ -573,12 +564,11 @@ async function loadGeminiApiKey() {
 
     if (geminiKeysCache && geminiKeysMtime === stat.mtimeMs) {
         geminiKeysLastCheck = now;
-        return [...geminiKeysCache];
+        return geminiKeysCache;
     }
 
     if (geminiKeysLoadPromise) {
-        const result = await geminiKeysLoadPromise;
-        return [...result];
+        return await geminiKeysLoadPromise;
     }
 
     geminiKeysLoadPromise = (async () => {
@@ -601,8 +591,7 @@ async function loadGeminiApiKey() {
         return geminiKeysCache;
     })();
 
-    const result = await geminiKeysLoadPromise;
-    return [...result];
+    return await geminiKeysLoadPromise;
 }
 
 async function saveGeminiApiKey(keysArg) {
@@ -652,10 +641,9 @@ async function loadOpenAiApiKey() {
     const now = Date.now();
 
     if (useDB) {
-        if (openAiKeysCache && (now - openAiKeysLastCheck < STORAGE_CACHE_TTL)) return [...openAiKeysCache];
+        if (openAiKeysCache && (now - openAiKeysLastCheck < STORAGE_CACHE_TTL)) return openAiKeysCache;
         if (openAiKeysLoadPromise) {
-            const result = await openAiKeysLoadPromise;
-            return [...result];
+            return await openAiKeysLoadPromise;
         }
 
         openAiKeysLoadPromise = (async () => {
@@ -672,11 +660,10 @@ async function loadOpenAiApiKey() {
             return openAiKeysCache;
         })();
 
-        const result = await openAiKeysLoadPromise;
-        return [...result];
+        return await openAiKeysLoadPromise;
     }
 
-    if (openAiKeysCache && (now - openAiKeysLastCheck < STORAGE_CACHE_TTL)) return [...openAiKeysCache];
+    if (openAiKeysCache && (now - openAiKeysLastCheck < STORAGE_CACHE_TTL)) return openAiKeysCache;
 
     let stat;
     try {
@@ -689,12 +676,11 @@ async function loadOpenAiApiKey() {
 
     if (openAiKeysCache && openAiKeysMtime === stat.mtimeMs) {
         openAiKeysLastCheck = now;
-        return [...openAiKeysCache];
+        return openAiKeysCache;
     }
 
     if (openAiKeysLoadPromise) {
-        const result = await openAiKeysLoadPromise;
-        return [...result];
+        return await openAiKeysLoadPromise;
     }
 
     openAiKeysLoadPromise = (async () => {
@@ -717,8 +703,7 @@ async function loadOpenAiApiKey() {
         return openAiKeysCache;
     })();
 
-    const result = await openAiKeysLoadPromise;
-    return [...result];
+    return await openAiKeysLoadPromise;
 }
 
 async function saveOpenAiApiKey(keysArg) {
@@ -768,10 +753,9 @@ async function loadClaudeApiKey() {
     const now = Date.now();
 
     if (useDB) {
-        if (claudeKeysCache && (now - claudeKeysLastCheck < STORAGE_CACHE_TTL)) return [...claudeKeysCache];
+        if (claudeKeysCache && (now - claudeKeysLastCheck < STORAGE_CACHE_TTL)) return claudeKeysCache;
         if (claudeKeysLoadPromise) {
-            const result = await claudeKeysLoadPromise;
-            return [...result];
+            return await claudeKeysLoadPromise;
         }
 
         claudeKeysLoadPromise = (async () => {
@@ -788,11 +772,10 @@ async function loadClaudeApiKey() {
             return claudeKeysCache;
         })();
 
-        const result = await claudeKeysLoadPromise;
-        return [...result];
+        return await claudeKeysLoadPromise;
     }
 
-    if (claudeKeysCache && (now - claudeKeysLastCheck < STORAGE_CACHE_TTL)) return [...claudeKeysCache];
+    if (claudeKeysCache && (now - claudeKeysLastCheck < STORAGE_CACHE_TTL)) return claudeKeysCache;
 
     let stat;
     try {
@@ -805,12 +788,11 @@ async function loadClaudeApiKey() {
 
     if (claudeKeysCache && claudeKeysMtime === stat.mtimeMs) {
         claudeKeysLastCheck = now;
-        return [...claudeKeysCache];
+        return claudeKeysCache;
     }
 
     if (claudeKeysLoadPromise) {
-        const result = await claudeKeysLoadPromise;
-        return [...result];
+        return await claudeKeysLoadPromise;
     }
 
     claudeKeysLoadPromise = (async () => {
@@ -833,8 +815,7 @@ async function loadClaudeApiKey() {
         return claudeKeysCache;
     })();
 
-    const result = await claudeKeysLoadPromise;
-    return [...result];
+    return await claudeKeysLoadPromise;
 }
 
 async function saveClaudeApiKey(keysArg) {
@@ -877,14 +858,14 @@ async function saveClaudeApiKey(keysArg) {
 let credentialsCache = null;
 
 async function loadCredentials() {
-    if (credentialsCache) return [...credentialsCache];
+    if (credentialsCache) return credentialsCache;
     try {
         const raw = await fs.promises.readFile(CREDENTIALS_FILE, 'utf8');
         credentialsCache = JSON.parse(raw);
     } catch {
         credentialsCache = [];
     }
-    return [...credentialsCache];
+    return credentialsCache;
 }
 
 async function saveCredentials(credentials) {
