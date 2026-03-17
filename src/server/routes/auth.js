@@ -22,8 +22,8 @@ router.post('/setup', authRateLimiter, async (req, res) => {
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!name || !normalizedEmail || !password) return res.status(400).json({ error: 'MISSING_FIELDS' });
 
-    // Basic email format validation
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    // Basic email validation: limit length and use a ReDoS-safe regex.
+    if (normalizedEmail.length > 255 || !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(normalizedEmail)) {
         return res.status(400).json({ error: 'INVALID_EMAIL' });
     }
 
