@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { requireAuthOrApiKey } = require('../middleware');
 const { loadCredentials, saveCredentials } = require('../storage');
+const { validateUrl } = require('../../../url-utils');
 
 const router = express.Router();
 
@@ -33,6 +34,11 @@ router.post('/', requireAuthOrApiKey, async (req, res) => {
         return res.status(400).json({ error: 'MISSING_CONFIG_FIELDS' });
     }
     try {
+        await validateUrl(config.baseUrl);
+    } catch (e) {
+        return res.status(400).json({ error: 'INVALID_BASE_URL', details: e.message });
+    }
+    try {
         const credentials = await loadCredentials();
         const credential = {
             id: 'cred_' + crypto.randomBytes(8).toString('hex'),
@@ -55,6 +61,13 @@ router.post('/', requireAuthOrApiKey, async (req, res) => {
 // PUT /api/credentials/:id
 router.put('/:id', requireAuthOrApiKey, async (req, res) => {
     const { name, config } = req.body;
+    if (config && config.baseUrl) {
+        try {
+            await validateUrl(config.baseUrl);
+        } catch (e) {
+            return res.status(400).json({ error: 'INVALID_BASE_URL', details: e.message });
+        }
+    }
     try {
         const credentials = await loadCredentials();
         const idx = credentials.findIndex(c => c.id === req.params.id);
@@ -85,6 +98,7 @@ router.get('/:id/proxy/baserow/databases', requireAuthOrApiKey, async (req, res)
         if (!credential) return res.status(404).json({ error: 'CREDENTIAL_NOT_FOUND' });
 
         const { baseUrl, token } = credential.config;
+        await validateUrl(baseUrl);
         const url = `${baseUrl}/api/applications/`;
         const resp = await fetch(url, {
             headers: { 'Authorization': `Token ${token}` }
@@ -133,6 +147,7 @@ router.get('/:id/proxy/baserow/databases/:dbId/tables', requireAuthOrApiKey, asy
         if (!credential) return res.status(404).json({ error: 'CREDENTIAL_NOT_FOUND' });
 
         const { baseUrl, token } = credential.config;
+        await validateUrl(baseUrl);
         const resp = await fetch(`${baseUrl}/api/database/tables/database/${req.params.dbId}/`, {
             headers: { 'Authorization': `Token ${token}` }
         });

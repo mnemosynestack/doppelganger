@@ -22,7 +22,17 @@ router.post('/setup', authRateLimiter, async (req, res) => {
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!name || !normalizedEmail || !password) return res.status(400).json({ error: 'MISSING_FIELDS' });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Basic email validation: limit length and use a ReDoS-safe regex.
+    if (normalizedEmail.length > 255 || !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(normalizedEmail)) {
+        return res.status(400).json({ error: 'INVALID_EMAIL' });
+    }
+
+    // Enforce minimum password length
+    if (String(password).length < 8) {
+        return res.status(400).json({ error: 'PASSWORD_TOO_SHORT' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
     const newUser = { id: Date.now(), name, email: normalizedEmail, password: hashedPassword };
     await saveUsers([newUser]);
 
