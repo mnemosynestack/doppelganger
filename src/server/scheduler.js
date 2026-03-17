@@ -126,7 +126,7 @@ async function tick(taskId) {
     // Update the task's schedule metadata
     try {
         const tasks = await loadTasks();
-        const task = tasks.find(t => t.id === taskId);
+        const task = getTaskById(taskId);
         if (task && task.schedule) {
             task.schedule.lastRun = startTime;
             task.schedule.lastRunStatus = status;
@@ -190,8 +190,8 @@ async function tick(taskId) {
  * Creates mock req/res to reuse existing handlers.
  */
 async function executeScheduledTask(taskId) {
-    const tasks = await loadTasks();
-    const task = tasks.find(t => t.id === taskId);
+    await loadTasks();
+    const task = getTaskById(taskId);
     if (!task) throw new Error('Task not found: ' + taskId);
 
     // Lazy-require to avoid circular deps
@@ -277,7 +277,7 @@ async function startScheduler() {
             const tasks = await loadTasks();
             let dirty = false;
             for (const [taskId, info] of scheduledTasks) {
-                const task = tasks.find(t => t.id === taskId);
+                const task = getTaskById(taskId);
                 if (task && task.schedule) {
                     const nextRunMs = info.nextRun.getTime();
                     if (task.schedule.nextRun !== nextRunMs) {
@@ -313,7 +313,7 @@ function stopScheduler() {
  */
 async function refreshSchedule(taskId) {
     const tasks = await loadTasks();
-    const task = tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
 
     if (!task || !task.schedule || !task.schedule.enabled) {
         scheduledTasks.delete(taskId);

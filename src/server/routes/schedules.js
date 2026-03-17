@@ -33,7 +33,7 @@ router.post('/:taskId', requireAuth, async (req, res) => {
     await taskMutex.lock();
     try {
         const tasks = await loadTasks();
-        const task = tasks.find(t => t.id === req.params.taskId);
+        const task = getTaskById(req.params.taskId);
         if (!task) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
 
         const body = req.body || {};
@@ -99,7 +99,7 @@ router.delete('/:taskId', requireAuth, async (req, res) => {
     await taskMutex.lock();
     try {
         const tasks = await loadTasks();
-        const task = tasks.find(t => t.id === req.params.taskId);
+        const task = getTaskById(req.params.taskId);
         if (!task) return res.status(404).json({ error: 'TASK_NOT_FOUND' });
 
         if (task.schedule) {
