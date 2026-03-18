@@ -74,7 +74,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                             </button>
                             <button
                                 onClick={onNewTask}
-                                className="shine-effect bg-white text-black px-8 py-3 rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase transition-all hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                className="shine-effect bg-white text-black px-8 py-3 rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase transition-all hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 aria-label="Create new task"
                             >
                                 + New Task
@@ -121,7 +121,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                                         <div className="flex gap-3 pt-4 border-t border-white/5">
                                             <button
                                                 onClick={() => onEditTask(task)}
-                                                className="flex-1 py-2 rounded-lg bg-white text-black text-[9px] font-bold uppercase tracking-widest hover:scale-105 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                                className="flex-1 py-2 rounded-lg bg-white text-black text-[9px] font-bold uppercase tracking-widest hover:scale-105 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                             >
                                                 Edit Task
                                             </button>
@@ -222,7 +222,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                                         setIsExportModalOpen(false);
                                     }}
                                     disabled={selectedTaskIds.length === 0}
-                                    className={`flex-1 px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${selectedTaskIds.length > 0 ? 'bg-white text-black hover:scale-105' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}
+                                    className={`flex-1 px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${selectedTaskIds.length > 0 ? 'bg-white text-black hover:scale-105' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}
                                 >
                                     Export ({selectedTaskIds.length})
                                 </button>

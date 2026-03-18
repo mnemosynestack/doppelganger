@@ -483,7 +483,7 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={() => onSetDefault(proxy.id)}
-                                            className={`px-3 py-2 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all inline-flex items-center gap-2 ${isDefault ? 'bg-white text-black border-white' : 'border-white/10 text-white hover:bg-white/5'}`}
+                                            className={`px-3 py-2 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all inline-flex items-center gap-2 focus:outline-none focus-visible:ring-2 ${isDefault ? 'bg-white text-black border-white focus-visible:ring-blue-500' : 'border-white/10 text-white hover:bg-white/5 focus-visible:ring-white/50'}`}
                                         >
                                             {isDefault ? <MaterialIcon name="star" className="text-base" /> : <MaterialIcon name="star_outline" className="text-base" />}
                                             {isDefault ? 'Default' : 'Set Default'}
