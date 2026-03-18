@@ -134,6 +134,10 @@ async function runHeadful(data, options = {}) {
                 context = await browser.newContext(contextOptions);
             } else {
                 await fs.promises.mkdir(HEADFUL_PROFILE_DIR, { recursive: true });
+                // Remove stale lock files left by a previous container/process to prevent launch failure
+                for (const lockFile of ['SingletonLock', 'SingletonCookie', 'SingletonSocket']) {
+                    try { await fs.promises.unlink(path.join(HEADFUL_PROFILE_DIR, lockFile)); } catch { }
+                }
                 context = await chromium.launchPersistentContext(HEADFUL_PROFILE_DIR, { headless: false, args, ...contextOptions });
                 browser = context.browser();
             }
