@@ -21,7 +21,7 @@ export const useEditorHeadful = (
 
     useEffect(() => {
         if (!isHeadfulOpen) {
-            setIsInspectMode(false);
+            setIsInspectMode(true);
             setIsInspectLoading(false);
         }
     }, [isHeadfulOpen]);
@@ -29,7 +29,6 @@ export const useEditorHeadful = (
     useEffect(() => {
         let eventSource: EventSource | null = null;
         if (isHeadfulOpen) {
-            setIsInspectMode(true);
             eventSource = new EventSource('/api/headful/selector_stream');
             eventSource.onmessage = (e) => {
                 try {
