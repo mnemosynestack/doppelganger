@@ -166,10 +166,12 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
 
         const renderTabButton = (id: typeof activeTab, label: string, icon: string) => (
             <button
+                role="tab"
+                aria-selected={activeTab === id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === id
-                    ? 'bg-white text-black shadow-lg shadow-white/10'
-                    : 'text-gray-500 hover:text-white hover:bg-white/5'
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all focus:outline-none focus-visible:ring-2 ${activeTab === id
+                    ? 'bg-white text-black shadow-lg shadow-white/10 focus-visible:ring-blue-500'
+                    : 'text-gray-500 hover:text-white hover:bg-white/5 focus-visible:ring-white/50'
                     }`}
             >
                 <MaterialIcon name={icon} className="text-sm" />
@@ -191,7 +193,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                         </div>
                         <button
                             onClick={onClose}
-                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/5 text-gray-400 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                             aria-label="Close settings"
                             title="Close settings"
                         >
@@ -200,7 +202,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                     </div>
 
                     {/* Tabs Nav */}
-                    <div className="flex flex-wrap gap-2 mb-8 bg-black/40 p-1 rounded-2xl border border-white/5">
+                    <div role="tablist" className="flex flex-wrap gap-2 mb-8 bg-black/40 p-1 rounded-2xl border border-white/5">
                         {renderTabButton('mode', 'Mode', 'settings_input_component')}
                         {renderTabButton('variables', 'Vars', 'data_object')}
                         {renderTabButton('behavior', 'Behavior', 'psychology')}
@@ -220,7 +222,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
                                             onClick={() => onUpdateTask({ mode: 'agent' })}
-                                            className={`p-4 rounded-2xl border transition-all text-left space-y-2 ${currentTask.mode === 'agent'
+                                            className={`p-4 rounded-2xl border transition-all text-left space-y-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${currentTask.mode === 'agent'
                                                 ? 'bg-white/10 border-white/30 ring-1 ring-white/20'
                                                 : 'bg-white/5 border-white/5 opacity-50 hover:opacity-100 hover:border-white/10'
                                                 }`}
@@ -235,7 +237,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                         </button>
                                         <button
                                             onClick={() => onUpdateTask({ mode: 'scrape' })}
-                                            className={`p-4 rounded-2xl border transition-all text-left space-y-2 ${currentTask.mode === 'scrape'
+                                            className={`p-4 rounded-2xl border transition-all text-left space-y-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${currentTask.mode === 'scrape'
                                                 ? 'bg-white/10 border-white/30 ring-1 ring-white/20'
                                                 : 'bg-white/5 border-white/5 opacity-50 hover:opacity-100 hover:border-white/10'
                                                 }`}
@@ -259,7 +261,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Task Variables</label>
                                     <button
                                         onClick={addVariable}
-                                        className="px-3 py-1 rounded-lg bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-white/20 transition-all border border-white/10"
+                                        className="px-3 py-1 rounded-lg bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-white/20 transition-all border border-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                     >
                                         + Add Var
                                     </button>
@@ -289,7 +291,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                                 </select>
                                                 <button
                                                     onClick={() => removeVariable(name)}
-                                                    className="text-red-500/50 hover:text-red-500 p-2"
+                                                    className="text-red-500/50 hover:text-red-500 p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg"
                                                     aria-label="Remove variable"
                                                     title="Remove variable"
                                                 >
@@ -346,7 +348,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                                 role="switch"
                                                 aria-checked={!!currentTask[item.key as keyof Task]}
                                                 onClick={() => onUpdateTask({ [item.key]: !currentTask[item.key as keyof Task] })}
-                                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${currentTask[item.key as keyof Task]
+                                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${currentTask[item.key as keyof Task]
                                                     ? 'bg-white/10 border-white/30 text-white'
                                                     : 'bg-white/5 border-white/5 text-gray-400 opacity-60 hover:opacity-100'
                                                     } ${item.disabled ? 'opacity-20 cursor-not-allowed' : ''}`}
@@ -381,7 +383,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                                 role="switch"
                                                 aria-checked={!!currentTask.stealth[item.key as keyof Task['stealth']]}
                                                 onClick={() => toggleStealth(item.key as keyof Task['stealth'])}
-                                                className={`flex flex-col gap-2 p-4 rounded-2xl border transition-all text-left ${currentTask.stealth[item.key as keyof Task['stealth']]
+                                                className={`flex flex-col gap-2 p-4 rounded-2xl border transition-all text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${currentTask.stealth[item.key as keyof Task['stealth']]
                                                     ? 'bg-white/15 border-white/40 text-white'
                                                     : 'bg-white/5 border-white/5 text-gray-500 opacity-60 hover:opacity-100'
                                                     }`}
@@ -445,8 +447,10 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                 <div className="space-y-4">
                                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Response Options</label>
                                     <button
+                                        role="switch"
+                                        aria-checked={currentTask.includeHtml}
                                         onClick={() => onUpdateTask({ includeHtml: !currentTask.includeHtml })}
-                                        className="w-full flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:bg-white/5 transition-colors"
+                                        className="w-full flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                     >
                                         <div className="text-left">
                                             <span className="text-xs font-medium">Include HTML in response</span>
@@ -490,8 +494,10 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 {/* Enable toggle */}
                                 <button
+                                    role="switch"
+                                    aria-checked={!!currentTask.output}
                                     onClick={() => onUpdateTask({ output: currentTask.output ? undefined : { provider: 'baserow', credentialId: '', tableId: '', onError: 'ignore' } })}
-                                    className="w-full flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:bg-white/5 transition-colors"
+                                    className="w-full flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                 >
                                     <div className="text-left">
                                         <span className="text-xs font-medium">Push results to destination</span>
@@ -521,7 +527,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Credential</label>
                                             <button
                                                 onClick={() => setShowNewCredForm(v => !v)}
-                                                className="text-[9px] font-bold text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+                                                className="text-[9px] font-bold text-gray-400 hover:text-white transition-colors flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded"
                                             >
                                                 <MaterialIcon name="add" className="text-xs" />
                                                 New
@@ -553,13 +559,13 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                                     <button
                                                         onClick={saveNewCredential}
                                                         disabled={credSaving || !newCred.name || !newCred.token}
-                                                        className="flex-1 py-1.5 rounded-lg bg-white text-black text-[10px] font-bold disabled:opacity-40 transition-opacity"
+                                                        className="flex-1 py-1.5 rounded-lg bg-white text-black text-[10px] font-bold disabled:opacity-40 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                                     >
                                                         {credSaving ? 'Saving…' : 'Save'}
                                                     </button>
                                                     <button
                                                         onClick={() => setShowNewCredForm(false)}
-                                                        className="px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 text-[10px] font-bold hover:text-white transition-colors"
+                                                        className="px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 text-[10px] font-bold hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                                     >
                                                         Cancel
                                                     </button>
@@ -592,7 +598,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                                             <span className="text-[10px] text-white">{c.name}</span>
                                                             <span className="text-[9px] text-gray-600 ml-2">{c.config.baseUrl}</span>
                                                         </div>
-                                                        <button onClick={() => deleteCredential(c.id)} className="text-gray-600 hover:text-red-400 transition-colors">
+                                                        <button onClick={() => deleteCredential(c.id)} className="text-gray-600 hover:text-red-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded">
                                                             <MaterialIcon name="delete" className="text-sm" />
                                                         </button>
                                                     </div>
@@ -666,7 +672,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                                 <button
                                                     key={val}
                                                     onClick={() => onUpdateTask({ output: { ...currentTask.output as TaskOutput, onError: val } })}
-                                                    className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${currentTask.output?.onError === val ? 'bg-white text-black' : 'bg-white/5 text-gray-500 hover:text-white'}`}
+                                                    className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all focus:outline-none focus-visible:ring-2 ${currentTask.output?.onError === val ? 'bg-white text-black focus-visible:ring-blue-500' : 'bg-white/5 text-gray-500 hover:text-white focus-visible:ring-white/50'}`}
                                                 >
                                                     {val === 'ignore' ? 'Ignore' : 'Log Error'}
                                                 </button>
@@ -706,7 +712,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => onPreview(v.id)}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                                     title="Preview version"
                                                     aria-label="Preview version"
                                                 >
@@ -714,7 +720,7 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                                                 </button>
                                                 <button
                                                     onClick={() => onRollback(v.id)}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                                     title="Rollback to this version"
                                                     aria-label="Rollback to this version"
                                                 >
