@@ -51,10 +51,11 @@ const HeadfulModal: React.FC<HeadfulModalProps> = ({
                             type="button"
                             onClick={onToggleInspect}
                             disabled={isInspectLoading || isExecuting}
-                            className={`px-3 py-1.5 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed ${isInspectMode
+                            className={`px-3 py-1.5 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${isInspectMode
                                 ? 'border-green-500/30 bg-green-500/20 text-green-400 hover:bg-green-500/30'
                                 : 'border-white/10 text-white/60 hover:text-white hover:bg-white/10'}`}
                             title={isInspectMode ? 'Stop inspecting elements' : 'Highlight elements on hover'}
+                            aria-label={isInspectMode ? 'Stop inspecting elements' : 'Highlight elements on hover'}
                         >
                             {isInspectLoading ? (
                                 <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -66,16 +67,18 @@ const HeadfulModal: React.FC<HeadfulModalProps> = ({
                         <button
                             type="button"
                             onClick={requestFullscreen}
-                            className="p-2 text-white/60 hover:text-white transition-colors"
+                            className="p-2 text-white/60 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg"
                             title="Toggle fullscreen"
+                            aria-label="Toggle fullscreen"
                         >
                             <MaterialIcon name="fullscreen" className="text-[16px]" />
                         </button>
                         <button
                             type="button"
                             onClick={onStopHeadful}
-                            className="p-2 text-white/60 hover:text-white transition-colors"
+                            className="p-2 text-white/60 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg"
                             title="Close Browser"
+                            aria-label="Close Browser"
                         >
                             <MaterialIcon name="close" className="text-[16px]" />
                         </button>

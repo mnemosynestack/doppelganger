@@ -29,7 +29,7 @@ const VersionPreviewModal: React.FC<VersionPreviewModalProps> = ({
                     <div className="flex items-center gap-2">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
+                            className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                         >
                             Close
                         </button>
@@ -38,7 +38,7 @@ const VersionPreviewModal: React.FC<VersionPreviewModalProps> = ({
                                 onRunSnapshot(versionPreview.snapshot);
                                 onClose();
                             }}
-                            className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white text-black hover:bg-white/90 transition-all"
+                            className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white text-black hover:bg-white/90 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                         >
                             Run Version
                         </button>
