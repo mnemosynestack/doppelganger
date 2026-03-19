@@ -63,7 +63,7 @@ async function runHeadful(data, options = {}) {
     const statelessExecutionRaw = data.statelessExecution;
     const statelessExecution = parseBooleanFlag(statelessExecutionRaw);
 
-    const inspectModeEnabled = true;
+    const inspectModeEnabled = false;
 
     activeSession = { status: 'starting', startedAt: Date.now(), inspectModeEnabled };
 
