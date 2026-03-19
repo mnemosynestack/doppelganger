@@ -78,7 +78,6 @@ function isPrivateIP(ip) {
  */
 async function validateUrl(urlStr) {
     if (!urlStr) return;
-    if (ALLOW_PRIVATE_NETWORKS) return;
 
     let url;
     try {
@@ -90,6 +89,8 @@ async function validateUrl(urlStr) {
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
         throw new Error('Only HTTP and HTTPS protocols are allowed');
     }
+
+    if (ALLOW_PRIVATE_NETWORKS) return;
 
     let hostname = url.hostname;
     // Strip brackets from IPv6 hostnames
