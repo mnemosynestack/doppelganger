@@ -304,6 +304,7 @@ Figranium includes a built-in scheduler that handles automated task execution wi
 - [x] **Autosave** — automatically persist task changes and editor state at regular intervals so operators don't lose work on long-running or complex workflow designs.
 - [x] **Highlight tool** — add a feature to highlight elements on the page (similar to a browser's inspect tool) to easily pick selectors and build workflows.
 - [x] **Cron triggers** — add support for scheduling tasks with cron expressions so workflows can run automatically on defined intervals.
+- [ ] **Canvas notes** — add sticky-note-style annotations to the block canvas so operators can leave freeform comments and context alongside their workflows without affecting execution.
 
 # Security Considerations
 
@@ -324,7 +325,7 @@ Figranium includes a built-in scheduler that handles automated task execution wi
 If you find this project helpful, please consider supporting its development. Your contributions help keep the project maintained and the lights on!
 
 <div align="center">
-  <a href="https://ko-fi.com/asernasr" target="_blank">
+  <a href="https://ko-fi.com/figranium" target="_blank">
     <img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Support on Ko-fi" />
   </a>
 </div>
