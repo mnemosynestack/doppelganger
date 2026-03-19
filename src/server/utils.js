@@ -27,9 +27,11 @@ class Mutex {
 }
 
 function cloneTaskForVersion(task) {
-    const copy = JSON.parse(JSON.stringify(task || {}));
-    if (copy.versions) delete copy.versions;
-    return copy;
+    // ⚡ Bolt: Use object destructuring to exclude 'versions' BEFORE serialization
+    // This avoids O(N) overhead of cloning a nested array of up to 30 full task snapshots
+    if (!task) return {};
+    const { versions, ...rest } = task;
+    return JSON.parse(JSON.stringify(rest));
 }
 
 function appendTaskVersion(task) {
