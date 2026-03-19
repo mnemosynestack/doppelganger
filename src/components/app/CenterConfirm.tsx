@@ -14,13 +14,13 @@ const CenterConfirm: React.FC<CenterConfirmProps> = ({ request, onResolve }) => 
                 <div className="mt-6 flex gap-4">
                     <button
                         onClick={() => onResolve(false)}
-                        className="w-full rounded-2xl px-6 py-3 text-[9px] font-bold uppercase tracking-[0.3em] transition-all bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10"
+                        className="w-full rounded-2xl px-6 py-3 text-[9px] font-bold uppercase tracking-[0.3em] transition-all bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                     >
                         {request.cancelLabel ?? 'Cancel'}
                     </button>
                     <button
                         onClick={() => onResolve(true)}
-                        className="w-full rounded-2xl px-6 py-3 text-[9px] font-bold uppercase tracking-[0.3em] transition-all bg-white text-black hover:scale-105 shadow-xl shadow-white/10"
+                        className="w-full rounded-2xl px-6 py-3 text-[9px] font-bold uppercase tracking-[0.3em] transition-all bg-white text-black hover:scale-105 shadow-xl shadow-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                     >
                         {request.confirmLabel ?? 'Confirm'}
                     </button>
