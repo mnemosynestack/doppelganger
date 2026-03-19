@@ -14,7 +14,6 @@ module.exports = {
             },
             fontFamily: {
                 sans: ['Questrial', 'sans-serif'],
-                heading: ['Inter', 'sans-serif'],
                 mono: ['JetBrains Mono', 'monospace'],
             },
         },
