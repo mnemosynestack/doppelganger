@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { useState } from 'react';
 import { Action, Task, Variable, VarType } from '../../types';
 import MaterialIcon from '../MaterialIcon';
 import RichInput from '../RichInput';
@@ -118,7 +118,7 @@ interface ActionItemProps {
     selectorOptions?: string[];
 }
 
-const ActionItem: React.FC<ActionItemProps> = memo(({
+const ActionItem: React.FC<ActionItemProps> = ({
     action,
     index,
     status,
@@ -747,6 +747,6 @@ const ActionItem: React.FC<ActionItemProps> = memo(({
             </>)}
         </div >
     );
-});
+};
 
 export default ActionItem;
