@@ -12,3 +12,8 @@
 **Vulnerability:** URL protocol validation bypass when `ALLOW_PRIVATE_NETWORKS` is enabled.
 **Learning:** The `validateUrl` utility implemented an early return for the `ALLOW_PRIVATE_NETWORKS` flag, which bypassed all subsequent checks including the protocol whitelist (only allowing `http:` and `https:`). This enabled attackers to use dangerous protocols like `file://` or `javascript:` even when the intention was only to allow private IP ranges.
 **Prevention:** Whitelist-based security checks (like protocol validation) should always be performed before any conditional bypasses to ensure a secure-by-default posture.
+
+## 2025-05-24 - [Loopback Bypass via Header Spoofing]
+**Vulnerability:** Authentication bypass for internal endpoints using spoofed `X-Forwarded-For` headers.
+**Learning:** The `isLoopback` check in `requireApiKey` relied on `req.ip`. When `TRUST_PROXY` is enabled, `req.ip` is derived from headers like `X-Forwarded-For`, which can be spoofed by external clients to bypass the API key requirement intended for local agents.
+**Prevention:** Use `req.socket.remoteAddress` instead of `req.ip` for security-sensitive loopback checks, as it represents the actual TCP connection source and is not influenced by proxy headers.
