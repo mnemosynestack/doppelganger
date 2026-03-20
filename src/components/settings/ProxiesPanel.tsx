@@ -220,7 +220,9 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                     <button
                         onClick={onRefresh}
                         disabled={loading}
-                        className="px-4 py-2 rounded-xl border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white hover:bg-white/5 transition-all disabled:opacity-50 inline-flex items-center gap-2"
+                        className="px-4 py-2 rounded-xl border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white hover:bg-white/5 transition-all disabled:opacity-50 inline-flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                        title="Refresh proxy list"
+                        aria-label="Refresh proxy list"
                     >
                         <MaterialIcon name="sync" className={`text-base ${loading ? 'animate-spin' : ''}`} />
                         Refresh
@@ -285,19 +287,21 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
             <div className="flex items-center gap-3">
                 <button
                     onClick={submit}
-                    className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest bg-white text-black hover:scale-105 transition-all"
+                    disabled={loading || !server.trim()}
+                    className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest bg-white text-black hover:scale-105 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
+                    {loading && <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin" />}
                     Add Proxy
                 </button>
                 <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest border border-white/10 text-white hover:bg-white/5 transition-all"
+                    className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest border border-white/10 text-white hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                 >
                     Import
                 </button>
                 <button
                     onClick={() => onSetDefault('host')}
-                    className={`px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest border border-white/10 transition-all ${defaultProxyId ? 'text-white hover:bg-white/5' : 'bg-white/10 text-white'}`}
+                    className={`px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest border border-white/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${defaultProxyId ? 'text-white hover:bg-white/5' : 'bg-white/10 text-white'}`}
                 >
                     Use Host IP
                 </button>
@@ -321,7 +325,7 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                     {selectedProxyIds.size > 0 && (
                         <button
                             onClick={handleBulkDelete}
-                            className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-[9px] font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all inline-flex items-center gap-2"
+                            className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-[9px] font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all inline-flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                         >
                             <MaterialIcon name="delete" className="text-base" />
                             Delete Selected
@@ -433,13 +437,17 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={saveEdit}
-                                            className="px-3 py-2 rounded-xl border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white hover:bg-white/5 transition-all"
+                                            className="px-3 py-2 rounded-xl border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                            title="Save proxy changes"
+                                            aria-label="Save proxy changes"
                                         >
                                             Save
                                         </button>
                                         <button
                                             onClick={cancelEdit}
-                                            className="px-3 py-2 rounded-xl border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white/70 hover:bg-white/5 transition-all"
+                                            className="px-3 py-2 rounded-xl border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white/70 hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                            title="Cancel editing"
+                                            aria-label="Cancel editing"
                                         >
                                             Cancel
                                         </button>
@@ -484,6 +492,8 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                                         <button
                                             onClick={() => onSetDefault(proxy.id)}
                                             className={`px-3 py-2 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all inline-flex items-center gap-2 focus:outline-none focus-visible:ring-2 ${isDefault ? 'bg-white text-black border-white focus-visible:ring-blue-500' : 'border-white/10 text-white hover:bg-white/5 focus-visible:ring-white/50'}`}
+                                            title={isDefault ? "Current default proxy" : "Set as default proxy"}
+                                            aria-label={isDefault ? "Current default proxy" : "Set as default proxy"}
                                         >
                                             {isDefault ? <MaterialIcon name="star" className="text-base" /> : <MaterialIcon name="star_outline" className="text-base" />}
                                             {isDefault ? 'Default' : 'Set Default'}
@@ -492,13 +502,17 @@ const ProxiesPanel: React.FC<ProxiesPanelProps> = ({
                                             <>
                                                 <button
                                                     onClick={() => startEdit(proxy)}
-                                                    className="px-3 py-2 rounded-xl border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white hover:bg-white/5 transition-all"
+                                                    className="px-3 py-2 rounded-xl border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                                    title="Edit proxy"
+                                                    aria-label="Edit proxy"
                                                 >
                                                     Edit
                                                 </button>
                                                 <button
                                                     onClick={() => onDelete(proxy.id)}
-                                                    className="px-3 py-2 rounded-xl border border-red-500/20 text-[9px] font-bold uppercase tracking-widest text-red-300 hover:bg-red-500/10 transition-all inline-flex items-center gap-2"
+                                                    className="px-3 py-2 rounded-xl border border-red-500/20 text-[9px] font-bold uppercase tracking-widest text-red-300 hover:bg-red-500/10 transition-all inline-flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                                    title="Delete proxy"
+                                                    aria-label="Delete proxy"
                                                 >
                                                     <MaterialIcon name="delete" className="text-base" />
                                                     Delete

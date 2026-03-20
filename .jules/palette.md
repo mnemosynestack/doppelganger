@@ -9,3 +9,7 @@
 ## 2025-05-22 - [Standardized Accessibility for Global Overlays]
 **Learning:** Global app overlays (alerts, confirmations, and modals) often lack consistent ARIA roles and visible focus indicators, making critical system feedback inaccessible to keyboard and screen reader users. High-contrast elements (like white buttons) require specific ring colors (e.g., `blue-500`) to remain visible against light backgrounds.
 **Action:** Implement `role="alert"` or `role="status"` on notification containers based on severity. Ensure all modal/alert buttons have `focus-visible:ring-2` with context-appropriate colors (`blue-500` for light, `white/50` for dark) and explicit `aria-label` for icon-only actions.
+
+## 2026-03-20 - [Form Submission Feedback and State Validation]
+**Learning:** Destructive or configuration-heavy actions (like proxy management) without clear submission states or input validation can lead to confusing race conditions or invalid data. Standardizing focus rings across all panel actions improves discoverability for keyboard users.
+**Action:** Always implement `disabled` states and loading spinners for async submission buttons (like "Add Proxy"). Ensure focus rings use high-contrast variants (`blue-500`) for solid light backgrounds and standard variants (`white/50`) for dark/glass surfaces. Add `title` and `aria-label` to provide dual context for mouse and screen-reader users.
