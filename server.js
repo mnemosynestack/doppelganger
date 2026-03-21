@@ -73,8 +73,11 @@ const dataRoutes = require('./src/server/routes/data');
 const viewRoutes = require('./src/server/routes/views');
 const scheduleRoutes = require('./src/server/routes/schedules');
 const credentialRoutes = require('./src/server/routes/credentials');
+const healthRoutes = require('./src/server/routes/health');
 const { pushOutput } = require('./src/server/outputProviders');
 const { migrateStorageState } = require('./src/server/migrate-storage');
+const { concurrencyGate } = require('./src/server/execution-queue');
+const { validateUrl } = require('./url-utils');
 
 const app = express();
 app.disable('x-powered-by');
@@ -180,6 +183,7 @@ app.use('/api/executions', executionRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/credentials', credentialRoutes);
+app.use('/api/health', healthRoutes);
 
 // View Routes & Static
 app.use('/', viewRoutes);
@@ -229,6 +233,24 @@ const registerExecution = (req, res, baseMeta = {}) => {
         if (outputConfig && entry.result) {
             pushOutput(outputConfig, entry.result.data, requestId)
                 .catch(err => console.error('[OUTPUT] Unexpected error:', err));
+        }
+
+        // Webhook callback: POST result to caller-provided URL
+        const webhookUrl = res.locals.webhookUrl;
+        if (webhookUrl && entry.result) {
+            const payload = JSON.stringify({
+                executionId: entry.id,
+                taskId: entry.taskId,
+                status: entry.status,
+                durationMs: entry.durationMs,
+                result: entry.result
+            });
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload,
+                signal: AbortSignal.timeout(10000)
+            }).catch(err => console.error('[WEBHOOK] Failed to deliver:', err.message));
         }
     });
 };
@@ -285,6 +307,17 @@ const executeTaskById = async (req, res) => {
         return res.status(404).json({ error: 'TASK_NOT_FOUND' });
     }
 
+    // Webhook: validate and stash for post-execution delivery
+    const webhookUrl = req.body.webhookUrl;
+    if (webhookUrl) {
+        try {
+            await validateUrl(webhookUrl);
+            res.locals.webhookUrl = webhookUrl;
+        } catch (err) {
+            return res.status(400).json({ error: 'INVALID_WEBHOOK_URL', message: err.message });
+        }
+    }
+
     registerExecution(req, res, { mode: task.mode || 'agent', taskId: task.id, taskName: task.name });
 
     const clientVars = req.body.variables || req.body.taskVariables || {};
@@ -333,20 +366,20 @@ const executeTaskById = async (req, res) => {
     }
 };
 
-app.post('/tasks/:id/api', requireApiKey, dataRateLimiter, executeTaskById);
-app.post('/api/tasks/:id/api', requireApiKey, dataRateLimiter, executeTaskById);
+app.post('/tasks/:id/api', requireApiKey, dataRateLimiter, concurrencyGate, executeTaskById);
+app.post('/api/tasks/:id/api', requireApiKey, dataRateLimiter, concurrencyGate, executeTaskById);
 
-app.all('/scrape', requireAuth, dataRateLimiter, (req, res) => {
+app.all('/scrape', requireAuth, dataRateLimiter, concurrencyGate, (req, res) => {
     registerExecution(req, res, { mode: 'scrape' });
     preprocessScrapeRequest(req);
     return handleScrape(req, res);
 });
-app.all('/scraper', requireAuth, dataRateLimiter, (req, res) => {
+app.all('/scraper', requireAuth, dataRateLimiter, concurrencyGate, (req, res) => {
     registerExecution(req, res, { mode: 'scrape' });
     preprocessScrapeRequest(req);
     return handleScrape(req, res);
 });
-app.all('/agent', requireAuth, dataRateLimiter, (req, res) => {
+app.all('/agent', requireAuth, dataRateLimiter, concurrencyGate, (req, res) => {
     registerExecution(req, res, { mode: 'agent' });
     try {
         const runId = String((req.body && req.body.runId) || req.query.runId || '').trim();
@@ -358,7 +391,7 @@ app.all('/agent', requireAuth, dataRateLimiter, (req, res) => {
     }
     return handleAgent(req, res);
 });
-app.post('/headful', requireAuth, dataRateLimiter, (req, res) => {
+app.post('/headful', requireAuth, dataRateLimiter, concurrencyGate, (req, res) => {
     registerExecution(req, res, { mode: 'headful' });
     if (req.body) {
         // Flatten variables from {type, value} objects to plain values
@@ -529,6 +562,44 @@ findAvailablePort(port, 20)
             console.error('Server failed to start:', err.message || err);
             process.exit(1);
         });
+
+        // Graceful shutdown handler
+        let shutdownInProgress = false;
+        const gracefulShutdown = async (signal) => {
+            if (shutdownInProgress) return;
+            shutdownInProgress = true;
+            console.log(`[SHUTDOWN] Received ${signal}, shutting down gracefully...`);
+
+            // Stop accepting new connections
+            server.close(() => {
+                console.log('[SHUTDOWN] HTTP server closed.');
+            });
+
+            // Stop scheduler
+            try {
+                const { stopScheduler } = require('./src/server/scheduler');
+                stopScheduler();
+            } catch { }
+
+            // Flush pending execution writes
+            try {
+                const { flushExecutions } = require('./src/server/storage');
+                if (flushExecutions) await flushExecutions();
+            } catch { }
+
+            // Close database pool
+            try {
+                const { getPool } = require('./src/server/db');
+                const pool = getPool();
+                if (pool) await pool.end();
+            } catch { }
+
+            console.log('[SHUTDOWN] Cleanup complete.');
+            process.exit(0);
+        };
+
+        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
     })
     .catch((err) => {
         console.error('Server failed to start:', err.message || err);

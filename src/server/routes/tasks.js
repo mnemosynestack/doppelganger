@@ -1,5 +1,5 @@
 const express = require('express');
-const { requireAuth, requireApiKey } = require('../middleware');
+const { requireAuth, requireApiKey, requireAuthOrApiKey } = require('../middleware');
 const {
     loadTasks, saveTasks, getTaskById, getTaskIndexById,
     loadGeminiApiKey, loadOpenAiApiKey, loadClaudeApiKey
@@ -10,7 +10,7 @@ const { handleAgent } = require('../../agent/index');
 
 const router = express.Router();
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuthOrApiKey, async (req, res) => {
     res.json(await loadTasks());
 });
 
@@ -23,7 +23,7 @@ router.get('/list', requireApiKey, async (req, res) => {
     res.json({ tasks: summary });
 });
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuthOrApiKey, async (req, res) => {
     await taskMutex.lock();
     try {
         const tasks = await loadTasks();
@@ -65,7 +65,7 @@ router.post('/:id/touch', requireAuth, async (req, res) => {
     }
 });
 
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuthOrApiKey, async (req, res) => {
     await taskMutex.lock();
     try {
         let tasks = await loadTasks();

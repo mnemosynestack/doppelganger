@@ -953,6 +953,28 @@ const getStorageStateFile = () => {
     return STORAGE_STATE_PATH;
 };
 
+/**
+ * Flush any pending debounced execution writes to disk immediately.
+ * Called during graceful shutdown to prevent data loss.
+ */
+async function flushExecutions() {
+    if (executionsSaveTimer) {
+        clearTimeout(executionsSaveTimer);
+        executionsSaveTimer = null;
+    }
+    if (!executionsCache) return;
+
+    const useDB = await ensureDB();
+    if (useDB) return; // DB writes are immediate, nothing to flush
+
+    try {
+        const data = JSON.stringify(executionsCache, null, 2);
+        await performExecutionsWrite(data);
+    } catch (err) {
+        console.error('[STORAGE] Failed to flush executions on shutdown:', err);
+    }
+}
+
 module.exports = {
     loadUsers,
     saveUsers,
@@ -964,6 +986,7 @@ module.exports = {
     saveExecutions,
     getExecutionById,
     appendExecution,
+    flushExecutions,
     loadApiKey,
     saveApiKey,
     loadGeminiApiKey,
