@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const { requireAuthForSettings, csrfProtection, authRateLimiter } = require('../middleware');
+const { requireAuthForSettings, csrfProtection, dataRateLimiter } = require('../middleware');
 const {
     loadApiKey, saveApiKey,
     loadGeminiApiKey, saveGeminiApiKey,
@@ -27,7 +27,7 @@ router.get('/api-key', requireAuthForSettings, async (req, res) => {
     }
 });
 
-router.post('/api-key', authRateLimiter, requireAuthForSettings, async (req, res) => {
+router.post('/api-key', csrfProtection, dataRateLimiter, requireAuthForSettings, async (req, res) => {
     try {
         const bodyKey = req.body && typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : '';
         if (bodyKey.length > 512) return res.status(400).json({ error: 'API_KEY_TOO_LONG' });
@@ -74,7 +74,7 @@ router.get('/gemini-api-key', requireAuthForSettings, async (req, res) => {
     }
 });
 
-router.post('/gemini-api-key', authRateLimiter, requireAuthForSettings, async (req, res) => {
+router.post('/gemini-api-key', csrfProtection, dataRateLimiter, requireAuthForSettings, async (req, res) => {
     try {
         let keys = [];
         if (req.body && Array.isArray(req.body.geminiApiKeys)) {
@@ -103,7 +103,7 @@ router.get('/openai-api-key', requireAuthForSettings, async (req, res) => {
     }
 });
 
-router.post('/openai-api-key', authRateLimiter, requireAuthForSettings, async (req, res) => {
+router.post('/openai-api-key', csrfProtection, dataRateLimiter, requireAuthForSettings, async (req, res) => {
     try {
         let keys = [];
         if (req.body && Array.isArray(req.body.openAiApiKeys)) {
@@ -132,7 +132,7 @@ router.get('/claude-api-key', requireAuthForSettings, async (req, res) => {
     }
 });
 
-router.post('/claude-api-key', authRateLimiter, requireAuthForSettings, async (req, res) => {
+router.post('/claude-api-key', csrfProtection, dataRateLimiter, requireAuthForSettings, async (req, res) => {
     try {
         let keys = [];
         if (req.body && Array.isArray(req.body.claudeApiKeys)) {
@@ -160,7 +160,7 @@ router.get('/proxies', requireAuthForSettings, (_req, res) => {
     }
 });
 
-router.post('/proxies', requireAuthForSettings, (req, res) => {
+router.post('/proxies', csrfProtection, dataRateLimiter, requireAuthForSettings, (req, res) => {
     const { server, username, password, label, isRotatingPool, estimatedPoolSize } = req.body || {};
     if (!server || typeof server !== 'string') {
         return res.status(400).json({ error: 'MISSING_SERVER' });
@@ -175,7 +175,7 @@ router.post('/proxies', requireAuthForSettings, (req, res) => {
     }
 });
 
-router.post('/proxies/import', requireAuthForSettings, (req, res) => {
+router.post('/proxies/import', csrfProtection, dataRateLimiter, requireAuthForSettings, (req, res) => {
     const entries = req.body && Array.isArray(req.body.proxies) ? req.body.proxies : [];
     if (entries.length === 0) {
         return res.status(400).json({ error: 'MISSING_PROXIES' });
@@ -190,7 +190,7 @@ router.post('/proxies/import', requireAuthForSettings, (req, res) => {
     }
 });
 
-router.put('/proxies/:id', requireAuthForSettings, (req, res) => {
+router.put('/proxies/:id', csrfProtection, dataRateLimiter, requireAuthForSettings, (req, res) => {
     const id = String(req.params.id || '').trim();
     if (!id || id === 'host') return res.status(400).json({ error: 'INVALID_ID' });
     const { server, username, password, label, isRotatingPool, estimatedPoolSize } = req.body || {};
@@ -207,7 +207,7 @@ router.put('/proxies/:id', requireAuthForSettings, (req, res) => {
     }
 });
 
-router.delete('/proxies/:id', requireAuthForSettings, (req, res) => {
+router.delete('/proxies/:id', csrfProtection, dataRateLimiter, requireAuthForSettings, (req, res) => {
     const id = String(req.params.id || '').trim();
     if (!id) return res.status(400).json({ error: 'MISSING_ID' });
     try {
@@ -220,7 +220,7 @@ router.delete('/proxies/:id', requireAuthForSettings, (req, res) => {
     }
 });
 
-router.delete('/proxies', requireAuthForSettings, (req, res) => {
+router.delete('/proxies', csrfProtection, dataRateLimiter, requireAuthForSettings, (req, res) => {
     const ids = req.body && Array.isArray(req.body.ids) ? req.body.ids : [];
     if (ids.length === 0) {
         return res.status(400).json({ error: 'MISSING_IDS' });
@@ -235,7 +235,7 @@ router.delete('/proxies', requireAuthForSettings, (req, res) => {
     }
 });
 
-router.post('/proxies/default', requireAuthForSettings, (req, res) => {
+router.post('/proxies/default', csrfProtection, dataRateLimiter, requireAuthForSettings, (req, res) => {
     const id = req.body && req.body.id ? String(req.body.id) : '';
     try {
         const result = setDefaultProxy(id || null);
@@ -247,7 +247,7 @@ router.post('/proxies/default', requireAuthForSettings, (req, res) => {
     }
 });
 
-router.post('/proxies/rotation', requireAuthForSettings, (req, res) => {
+router.post('/proxies/rotation', csrfProtection, dataRateLimiter, requireAuthForSettings, (req, res) => {
     const body = req.body || {};
     const hasIncludeDefault = Object.prototype.hasOwnProperty.call(body, 'includeDefaultInRotation');
     const includeDefaultInRotation = !!body.includeDefaultInRotation;
