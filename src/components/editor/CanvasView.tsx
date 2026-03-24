@@ -266,11 +266,18 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                 <div className="flex flex-col items-center" style={{ paddingTop: '60px', minWidth: '500px' }}>
                     <div className="w-[360px] bg-black border border-white/15 p-5 rounded-2xl shadow-2xl shadow-black/50 select-text cursor-auto relative z-10">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setTriggerExpanded(!triggerExpanded)}>
+                            <button
+                                type="button"
+                                aria-expanded={triggerExpanded}
+                                aria-label={triggerExpanded ? "Collapse trigger settings" : "Expand trigger settings"}
+                                title={triggerExpanded ? "Collapse" : "Expand"}
+                                onClick={() => setTriggerExpanded(!triggerExpanded)}
+                                className="flex items-center gap-3 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg pr-2 transition-all"
+                            >
                                 <MaterialIcon name="bolt" className="text-white/40 text-base" />
                                 <h3 className="text-white/60 font-bold tracking-widest uppercase text-[10px]">On Execution</h3>
                                 <MaterialIcon name={triggerExpanded ? 'expand_less' : 'expand_more'} className="text-xs text-gray-600" />
-                            </div>
+                            </button>
                             <button
                                 onClick={() => onOpenCabinet('mode')}
                                 className="p-2 rounded-lg hover:bg-white/10 text-white/30 hover:text-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"

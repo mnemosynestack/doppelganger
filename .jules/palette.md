@@ -17,3 +17,7 @@
 ## 2026-03-21 - [Password Visibility Toggles and Form Accessibility]
 **Learning:** Password fields without visibility toggles are prone to entry errors, especially in "Confirm Password" flows. Standardizing focus rings (`focus-visible:ring-2`) across all form inputs is critical for keyboard accessibility in dark glass-themed UIs. Toggles must have unique `aria-label` and `title` attributes (e.g., "Show password" vs "Show password confirmation") to ensure they are distinct for screen readers and satisfy strict testing requirements.
 **Action:** Implement visibility toggles as absolute-positioned buttons within relative input containers. Use `pr-12` on the input to prevent text overlap. Always include `focus-visible:ring-white/50` for inputs on dark backgrounds.
+
+## 2026-03-22 - [Interactive Headers as Buttons]
+**Learning:** Structural headers that act as toggles (like "On Execution" in the Canvas) must be implemented as `<button>` elements rather than `<div>` with `onClick`. This ensures they are reachable via keyboard and properly identified by screen readers. Using `aria-expanded` provides necessary state feedback.
+**Action:** Use `<button type="button">` for all interactive section headers. Include `aria-expanded`, `aria-label`, and `title`. Ensure high-contrast focus rings (`focus-visible:ring-white/50` for dark themes) are applied.
