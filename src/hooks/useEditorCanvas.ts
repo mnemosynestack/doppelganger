@@ -30,8 +30,8 @@ export const useEditorCanvas = () => {
         const vp = canvasViewportRef.current;
         if (!vp) return;
         const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
             if (e.ctrlKey || e.metaKey) {
-                e.preventDefault();
                 const rect = vp.getBoundingClientRect();
                 const mouseX = e.clientX - rect.left;
                 const mouseY = e.clientY - rect.top;

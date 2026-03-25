@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, Dispatch, SetStateAction, useRef } from 'react';
 import MaterialIcon from './MaterialIcon';
-import { Task, Action, Results, ConfirmRequest, ViewMode } from '../types';
+import { Task, Action, StickyNote, StickyNoteColor, Results, ConfirmRequest, ViewMode } from '../types';
 import ActionPalette from './editor/ActionPalette';
 import TaskSettingsCabinet from './editor/TaskSettingsCabinet';
 
@@ -77,7 +77,8 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     useEffect(() => { currentTaskRef.current = currentTask; }, [currentTask]);
 
     const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
-    const [, setActionClipboard] = useState<Action | null>(null);
+    const [actionClipboard, setActionClipboard] = useState<Action[]>([]);
+    const [noteClipboard, setNoteClipboard] = useState<StickyNote[]>([]);
     const [actionPaletteOpen, setActionPaletteOpen] = useState(false);
     const [isCabinetOpen, setIsCabinetOpen] = useState(false);
     const [cabinetTab, setCabinetTab] = useState<'mode' | 'variables' | 'behavior' | 'extraction' | 'api' | 'schedule' | 'history'>('mode');
@@ -88,6 +89,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const [actionStatusById, setActionStatusById] = useState<Record<string, 'running' | 'success' | 'error' | 'skipped'>>({});
     const [isResultsOpen, setIsResultsOpen] = useState(false);
     const [triggerExpanded, setTriggerExpanded] = useState(false);
+    const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (!runId || currentTask.mode !== 'agent') return;
@@ -109,6 +111,51 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const handleAutoSave = useCallback((task?: Task) => {
         onSave(task || currentTaskRef.current, false);
     }, [onSave]);
+
+    const handleAddStickyNote = useCallback((x: number, y: number) => {
+        const note: StickyNote = {
+            id: 'note_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            x: x - 100,
+            y: y - 60,
+            width: 220,
+            height: 160,
+            content: '',
+            color: 'default' as StickyNoteColor,
+        };
+        const next = { ...currentTask, stickyNotes: [...(currentTask.stickyNotes || []), note] };
+        setCurrentTask(next);
+        handleAutoSave(next);
+    }, [currentTask, handleAutoSave, setCurrentTask]);
+
+    const handleUpdateStickyNote = useCallback((id: string, updates: Partial<StickyNote>) => {
+        const next = {
+            ...currentTask,
+            stickyNotes: (currentTask.stickyNotes || []).map((n) => n.id === id ? { ...n, ...updates } : n),
+        };
+        setCurrentTask(next);
+        handleAutoSave(next);
+    }, [currentTask, handleAutoSave, setCurrentTask]);
+
+    const handleDuplicateStickyNote = useCallback((note: StickyNote) => {
+        const clone: StickyNote = {
+            ...note,
+            id: 'note_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            x: note.x + 24,
+            y: note.y + 24,
+        };
+        const next = { ...currentTask, stickyNotes: [...(currentTask.stickyNotes || []), clone] };
+        setCurrentTask(next);
+        handleAutoSave(next);
+    }, [currentTask, handleAutoSave, setCurrentTask]);
+
+    const handleDeleteStickyNote = useCallback((id: string) => {
+        const next = {
+            ...currentTask,
+            stickyNotes: (currentTask.stickyNotes || []).filter((n) => n.id !== id),
+        };
+        setCurrentTask(next);
+        handleAutoSave(next);
+    }, [currentTask, handleAutoSave, setCurrentTask]);
 
     const handleOpenCabinet = (tab: typeof cabinetTab = 'mode') => {
         setCabinetTab(tab);
@@ -133,7 +180,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         const handleKeyDown = (e: KeyboardEvent) => {
             if (isInteractiveTarget(e.target as HTMLElement)) return;
             if (e.key === 'Backspace' || e.key === 'Delete') {
-                if (actions.selectedActionIds.size > 0) {
+                if (actions.selectedActionIds.size > 0 || selectedNoteIds.size > 0) {
                     e.preventDefault();
                     let nextActions = [...currentTask.actions];
                     actions.selectedActionIds.forEach(id => {
@@ -154,10 +201,48 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             nextActions.splice(idx, 1);
                         }
                     });
-                    const next = { ...currentTask, actions: nextActions };
+                    const next = {
+                        ...currentTask,
+                        actions: nextActions,
+                        stickyNotes: (currentTask.stickyNotes || []).filter(n => !selectedNoteIds.has(n.id)),
+                    };
                     setCurrentTask(next);
                     handleAutoSave(next);
                     actions.setSelectedActionIds(new Set());
+                    setSelectedNoteIds(new Set());
+                }
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+                if (actions.selectedActionIds.size > 0 || selectedNoteIds.size > 0) {
+                    e.preventDefault();
+                    if (actions.selectedActionIds.size > 0)
+                        setActionClipboard(currentTask.actions.filter(a => actions.selectedActionIds.has(a.id)));
+                    if (selectedNoteIds.size > 0)
+                        setNoteClipboard((currentTask.stickyNotes || []).filter(n => selectedNoteIds.has(n.id)));
+                }
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+                if (actionClipboard.length > 0 || noteClipboard.length > 0) {
+                    e.preventDefault();
+                    let next = { ...currentTask };
+                    let newActionIds: string[] = [];
+                    let newNoteIds: string[] = [];
+                    if (actionClipboard.length > 0) {
+                        const clones = actionClipboard.map(a => ({ ...a, id: 'act_' + Date.now() + '_' + Math.floor(Math.random() * 1000) }));
+                        const lastIdx = Math.max(-1, ...actionClipboard.map(a => next.actions.findIndex(ca => ca.id === a.id)));
+                        const insertAt = lastIdx >= 0 ? lastIdx + 1 : next.actions.length;
+                        const newActions = [...next.actions];
+                        newActions.splice(insertAt, 0, ...clones);
+                        next = { ...next, actions: newActions };
+                        newActionIds = clones.map(c => c.id);
+                    }
+                    if (noteClipboard.length > 0) {
+                        const clones = noteClipboard.map(n => ({ ...n, id: 'note_' + Date.now() + '_' + Math.floor(Math.random() * 1000), x: n.x + 24, y: n.y + 24 }));
+                        next = { ...next, stickyNotes: [...(next.stickyNotes || []), ...clones] };
+                        newNoteIds = clones.map(c => c.id);
+                    }
+                    setCurrentTask(next);
+                    handleAutoSave(next);
+                    if (newActionIds.length > 0) actions.setSelectedActionIds(new Set(newActionIds));
+                    if (newNoteIds.length > 0) setSelectedNoteIds(new Set(newNoteIds));
                 }
             } else if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
                 e.preventDefault();
@@ -169,7 +254,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         };
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [actions, currentTask, handleAutoSave, actionPaletteOpen, openActionPalette, setCurrentTask]);
+    }, [actions, currentTask, handleAutoSave, actionPaletteOpen, openActionPalette, setCurrentTask, selectedNoteIds, actionClipboard, noteClipboard]);
 
     const openContextMenu = useCallback((e: React.MouseEvent, id: string) => {
         e.preventDefault();
@@ -250,8 +335,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                         canvas.startPanning(e);
                     } else if (e.button === 0 && !isInteractiveTarget(e.target as HTMLElement)) {
                         if ((e.target as HTMLElement).closest('[data-action-id]')) return;
+                        if ((e.target as HTMLElement).closest('[data-sticky-note-id]')) return;
                         setSelectionBox({ startX: e.clientX, startY: e.clientY, currentX: e.clientX, currentY: e.clientY });
-                        if (!e.shiftKey && !e.ctrlKey && !e.metaKey) actions.setSelectedActionIds(new Set());
+                        if (!e.shiftKey && !e.ctrlKey && !e.metaKey) { actions.setSelectedActionIds(new Set()); setSelectedNoteIds(new Set()); }
                         (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
                     }
                 }}
@@ -266,19 +352,33 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             top: Math.min(selectionBox.startY, e.clientY),
                             bottom: Math.max(selectionBox.startY, e.clientY)
                         };
-                        const elements = document.querySelectorAll('[data-action-id]');
+                        const actionEls = document.querySelectorAll('[data-action-id]');
                         const newSelected = new Set(e.shiftKey || e.ctrlKey || e.metaKey ? Array.from(actions.selectedActionIds) : []);
-                        elements.forEach(el => {
+                        actionEls.forEach(el => {
                             const rect = el.getBoundingClientRect();
                             const overlap = !(rect.right < boxRect.left || rect.left > boxRect.right || rect.bottom < boxRect.top || rect.top > boxRect.bottom);
                             if (overlap) newSelected.add(el.getAttribute('data-action-id')!);
                         });
                         actions.setSelectedActionIds(newSelected);
+
+                        const noteEls = document.querySelectorAll('[data-sticky-note-id]');
+                        const newNoteSelected = new Set(e.shiftKey || e.ctrlKey || e.metaKey ? Array.from(selectedNoteIds) : []);
+                        noteEls.forEach(el => {
+                            const rect = el.getBoundingClientRect();
+                            const overlap = !(rect.right < boxRect.left || rect.left > boxRect.right || rect.bottom < boxRect.top || rect.top > boxRect.bottom);
+                            if (overlap) newNoteSelected.add(el.getAttribute('data-sticky-note-id')!);
+                        });
+                        setSelectedNoteIds(newNoteSelected);
                     }
                 }}
                 onPointerUp={() => { canvas.stopPanning(); setSelectionBox(null); }}
                 onPointerCancel={() => { canvas.stopPanning(); setSelectionBox(null); }}
                 selectionBox={selectionBox}
+                onAddStickyNote={handleAddStickyNote}
+                onUpdateStickyNote={handleUpdateStickyNote}
+                onDeleteStickyNote={handleDeleteStickyNote}
+                onDuplicateStickyNote={handleDuplicateStickyNote}
+                selectedNoteIds={selectedNoteIds}
             />
 
             {/* Zoom Controls */}
@@ -341,7 +441,10 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             setCurrentTask(next);
                             handleAutoSave(next);
                             setContextMenu(null);
-                        }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">{target.disabled ? 'Enable' : 'Disable'} {isTargetSelected ? 'All' : ''}</button>
+                        }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-2.5">
+                            <MaterialIcon name={target.disabled ? 'visibility' : 'visibility_off'} className="text-sm text-white/40" />
+                            {target.disabled ? 'Enable' : 'Disable'} {isTargetSelected ? 'All' : ''}
+                        </button>
                         <button onClick={() => {
                             const nextActions = currentTask.actions.filter(a => !affectedIds.includes(a.id));
                             const next = { ...currentTask, actions: nextActions };
@@ -349,9 +452,29 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             handleAutoSave(next);
                             setContextMenu(null);
                             actions.setSelectedActionIds(new Set());
-                        }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-red-400">Delete {isTargetSelected ? 'All' : ''}</button>
-                        <button onClick={() => { setActionClipboard(createActionClone(target)); actions.removeAction(target.id); setContextMenu(null); }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">Cut</button>
-                        <button onClick={() => { setActionClipboard(createActionClone(target)); setContextMenu(null); }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">Copy</button>
+                        }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-red-400 flex items-center gap-2.5">
+                            <MaterialIcon name="delete" className="text-sm text-red-400/70" />
+                            Delete {isTargetSelected ? 'All' : ''}
+                        </button>
+                        <button onClick={() => {
+                            const affected = currentTask.actions.filter(a => affectedIds.includes(a.id));
+                            setActionClipboard(affected);
+                            const nextActions = currentTask.actions.filter(a => !affectedIds.includes(a.id));
+                            const next = { ...currentTask, actions: nextActions };
+                            setCurrentTask(next); handleAutoSave(next);
+                            actions.setSelectedActionIds(new Set());
+                            setContextMenu(null);
+                        }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-2.5">
+                            <MaterialIcon name="content_cut" className="text-sm text-white/40" />
+                            Cut {isTargetSelected ? 'All' : ''}
+                        </button>
+                        <button onClick={() => {
+                            setActionClipboard(currentTask.actions.filter(a => affectedIds.includes(a.id)));
+                            setContextMenu(null);
+                        }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-2.5">
+                            <MaterialIcon name="content_copy" className="text-sm text-white/40" />
+                            Copy {isTargetSelected ? 'All' : ''}
+                        </button>
                         <button onClick={() => {
                             const affectedActions = currentTask.actions.filter(a => affectedIds.includes(a.id));
                             const clones = affectedActions.map(a => createActionClone(a));
@@ -361,7 +484,10 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             setCurrentTask(nextTask);
                             handleAutoSave(nextTask);
                             setContextMenu(null);
-                        }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">Duplicate {isTargetSelected ? 'All' : ''}</button>
+                        }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-2.5">
+                            <MaterialIcon name="copy_all" className="text-sm text-white/40" />
+                            Duplicate {isTargetSelected ? 'All' : ''}
+                        </button>
                     </div>
                     </>
                 );

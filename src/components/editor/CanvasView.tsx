@@ -1,8 +1,9 @@
-import React, { useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import MaterialIcon from '../MaterialIcon';
 import RichInput from '../RichInput';
 import ActionItem from './ActionItem';
-import { Task, Action } from '../../types';
+import StickyNote from './StickyNote';
+import { Task, Action, StickyNote as StickyNoteType } from '../../types';
 
 interface CanvasViewProps {
     currentTask: Task;
@@ -32,6 +33,11 @@ interface CanvasViewProps {
     onPointerUp: () => void;
     onPointerCancel: () => void;
     selectionBox: any;
+    onAddStickyNote: (x: number, y: number) => void;
+    onUpdateStickyNote: (id: string, updates: Partial<StickyNoteType>) => void;
+    onDeleteStickyNote: (id: string) => void;
+    onDuplicateStickyNote: (note: StickyNoteType) => void;
+    selectedNoteIds: Set<string>;
 }
 
 const CanvasView: React.FC<CanvasViewProps> = ({
@@ -61,12 +67,37 @@ const CanvasView: React.FC<CanvasViewProps> = ({
     onPointerUp,
     onPointerCancel,
     selectionBox,
+    onAddStickyNote,
+    onUpdateStickyNote,
+    onDeleteStickyNote,
+    onDuplicateStickyNote,
+    selectedNoteIds,
 }) => {
+<<<<<<< HEAD
     const onStartInspect = useCallback((id: string) => {
         if (!isHeadfulOpen) {
             onOpenHeadful?.(currentTask.url || 'https://www.google.com', id, currentTask, currentTask.variables);
         }
     }, [isHeadfulOpen, onOpenHeadful, currentTask.url, currentTask.variables]);
+=======
+    const [canvasContextMenu, setCanvasContextMenu] = useState<{ x: number; y: number; worldX: number; worldY: number } | null>(null);
+
+    const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
+        // Only trigger on the canvas background, not on blocks or sticky notes
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-action-id]') || target.closest('[data-sticky-note-id]') || target.closest('[data-interactive-target="true"]')) return;
+        e.preventDefault();
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const worldX = Math.round((e.clientX - rect.left - canvasOffset.x) / canvasScale);
+        const worldY = Math.round((e.clientY - rect.top - canvasOffset.y) / canvasScale);
+        const padding = 8;
+        const menuW = 180;
+        const menuH = 48;
+        const x = Math.min(Math.max(e.clientX + 12, padding), window.innerWidth - menuW - padding);
+        const y = Math.min(Math.max(e.clientY + 12, padding), window.innerHeight - menuH - padding);
+        setCanvasContextMenu({ x, y, worldX, worldY });
+    }, [canvasOffset, canvasScale]);
+>>>>>>> abef065 (Add sticky notes with markdown, drag, resize, color picker & selection)
 
     const buildAst = (startIndex: number, endIndex: number, _depth: number = 0): React.ReactNode[] => {
         const nodes: React.ReactNode[] = [];
@@ -248,23 +279,40 @@ const CanvasView: React.FC<CanvasViewProps> = ({
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerCancel}
+            onContextMenu={handleCanvasContextMenu}
         >
+            {/* Dot grid — viewport space so backgroundPosition tracks canvas offset directly,
+                preventing the repeating pattern from aliasing on exact-multiple wheel deltas */}
+            <div
+                className="absolute inset-0 pointer-events-none z-0"
+                style={{
+                    backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.3) 0.8px, transparent 0)`,
+                    backgroundSize: `${22 * canvasScale}px ${22 * canvasScale}px`,
+                    backgroundPosition: `${canvasOffset.x}px ${canvasOffset.y}px`,
+                }}
+            />
+
             <div
                 className="absolute origin-top-left"
                 style={{
                     transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`,
                 }}
             >
-                <div
-                    className="absolute pointer-events-none z-0"
-                    style={{
-                        inset: '-1000vw -1000vh',
-                        backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.3) ${0.8 / canvasScale}px, transparent 0)`,
-                        backgroundSize: '20px 20px'
-                    }}
-                />
-                <div className="flex flex-col items-center" style={{ paddingTop: '60px', minWidth: '500px' }}>
-                    <div className="w-[360px] bg-black border border-white/15 p-5 rounded-2xl shadow-2xl shadow-black/50 select-text cursor-auto relative z-10">
+                {/* Sticky notes layer — below blocks (z-5 vs z-10) */}
+                {(currentTask.stickyNotes || []).map((note) => (
+                    <StickyNote
+                        key={note.id}
+                        note={note}
+                        canvasScale={canvasScale}
+                        isSelected={selectedNoteIds.has(note.id)}
+                        onUpdate={onUpdateStickyNote}
+                        onDelete={onDeleteStickyNote}
+                        onDuplicate={onDuplicateStickyNote}
+                    />
+                ))}
+
+                <div className="relative z-10 flex flex-col items-center pointer-events-none" style={{ paddingTop: '60px', minWidth: '500px' }}>
+                    <div className="w-[360px] bg-black border border-white/15 p-5 rounded-2xl shadow-2xl shadow-black/50 select-text cursor-auto relative z-10 pointer-events-auto">
                         <div className="flex items-center justify-between">
                             <button
                                 type="button"
@@ -316,7 +364,7 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                     </div>
                     {currentTask.mode === 'agent' && <div className="w-px h-10 bg-white/25" />}
                     {currentTask.mode === 'agent' && (
-                        <div className="flex flex-col items-center w-full select-text cursor-auto">
+                        <div className="flex flex-col items-center w-full select-text cursor-auto pointer-events-none">
                             <div className="space-y-6 w-full flex flex-col items-center relative">
                                 {buildAst(0, currentTask.actions.length)}
                                 <div className="pt-2 flex flex-col items-center">
@@ -348,6 +396,27 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                         }}
                     />
                 </div>
+            )}
+
+            {canvasContextMenu && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={() => setCanvasContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setCanvasContextMenu(null); }} />
+                    <div
+                        className="fixed z-50 w-[180px] bg-[#0b0b0b] border border-white/10 rounded-xl shadow-2xl p-2 text-[10px] font-bold uppercase tracking-widest text-white/80"
+                        style={{ left: canvasContextMenu.x, top: canvasContextMenu.y }}
+                    >
+                        <button
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-2"
+                            onClick={() => {
+                                onAddStickyNote(canvasContextMenu.worldX, canvasContextMenu.worldY);
+                                setCanvasContextMenu(null);
+                            }}
+                        >
+                            <span className="material-symbols-outlined text-white/50" style={{ fontSize: '14px' }}>sticky_note_2</span>
+                            Add sticky note
+                        </button>
+                    </div>
+                </>
             )}
         </div>
     );

@@ -65,21 +65,19 @@ export const useEditorHistory = (
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
-                const activeEl = document.activeElement;
-                if (activeEl) {
-                    const tagName = activeEl.tagName.toLowerCase();
-                    const isEditable = activeEl.getAttribute('contenteditable') === 'true';
-                    if (tagName === 'input' || tagName === 'textarea' || isEditable) {
-                        return;
-                    }
-                }
+            const activeEl = document.activeElement;
+            if (activeEl) {
+                const tagName = activeEl.tagName.toLowerCase();
+                const isEditable = activeEl.getAttribute('contenteditable') === 'true';
+                if (tagName === 'input' || tagName === 'textarea' || isEditable) return;
+            }
+            const ctrl = e.metaKey || e.ctrlKey;
+            if (ctrl && e.key.toLowerCase() === 'z') {
                 e.preventDefault();
-                if (e.shiftKey) {
-                    redo();
-                } else {
-                    undo();
-                }
+                if (e.shiftKey) redo(); else undo();
+            } else if (ctrl && !e.shiftKey && e.key.toLowerCase() === 'y') {
+                e.preventDefault();
+                redo();
             }
         };
         window.addEventListener('keydown', handleKeyDown);

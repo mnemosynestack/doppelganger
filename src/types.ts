@@ -89,6 +89,18 @@ export interface TaskSchedule {
     nextRun?: number;
 }
 
+export type StickyNoteColor = 'default' | 'yellow' | 'pink' | 'green' | 'purple';
+
+export interface StickyNote {
+    id: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    content: string;
+    color: StickyNoteColor;
+}
+
 export interface Task {
     id?: string;
     name: string;
@@ -102,6 +114,7 @@ export interface Task {
     humanTyping: boolean;
     stealth: StealthConfig;
     actions: Action[];
+    stickyNotes?: StickyNote[];
     variables: Record<string, Variable>;
     last_opened?: number;
     extractionScript?: string;
