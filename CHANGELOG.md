@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.11.3] - 2026-03-25
+
+### Features
+- **Task Descriptions** — Tasks now support an optional `description` field. Edit it in the Task Settings panel (always visible above the tab bar). The description renders on the canvas inside the trigger card and is included in the `GET /api/tasks/list` response so AI agents and operators have context without fetching the full task.
+
+## [0.11.2] - 2026-03-24
+
+### Features
+- **Sticky Notes on Canvas** — Right-click the canvas background to add sticky notes. Notes support full Markdown rendering (headings, bold, italic, code, lists, tables, etc.), are draggable and resizable, and sit on the layer below blocks. Available in five colors: default, yellow, pink, green, and purple. Positions and sizes are stored as integers in canvas world coordinates. Sticky notes participate in the rubber-band selection tool and support Ctrl+C / Ctrl+V copy-paste alongside blocks.
+
+### Improvements
+- **Editor Performance** — Excluded `versions` from task snapshot stringification for a ~23× speedup in change detection. Wrapped `ActionItem` in `React.memo` and stabilized callbacks in `EditorScreen`/`CanvasView` to eliminate unnecessary re-renders.
+- **Agent Execution Loop** — Hoisted static `actionOptions` and `actionContext` construction outside the main execution loop, reducing per-step overhead by ~32% and lowering GC pressure on long-running tasks.
+- **Trigger Header Accessibility** — Converted the "On Execution" trigger header from a `div` to a semantic `<button>` with `aria-expanded`, `aria-label`, `title`, and keyboard focus ring support.
+- **Password Input Accessibility** — Added a visibility toggle to password fields.
+
+### Security
+- **[CRITICAL] Fix Sandbox Escape in Extraction Scripts** — Fixed a proxy bypass in `src/agent/sandbox.js` that allowed extraction scripts to escape the sandbox via unproxied `this` in callbacks.
+- **API Key Endpoint Hardening** — Fixed a missing `await` on `saveApiKey`, added 512-character input length validation, and applied CSRF protection and rate limiting middleware to all state-changing settings endpoints.
+
 ## [0.11.1] - 2026-03-22
 
 ### Security

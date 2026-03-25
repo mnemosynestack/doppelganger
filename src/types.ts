@@ -104,6 +104,7 @@ export interface StickyNote {
 export interface Task {
     id?: string;
     name: string;
+    description?: string;
     url: string;
     mode: TaskMode;
     wait: number;

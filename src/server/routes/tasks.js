@@ -18,7 +18,8 @@ router.get('/list', requireApiKey, async (req, res) => {
     const tasks = await loadTasks();
     const summary = tasks.map((task) => ({
         id: task.id,
-        name: task.name || task.id
+        name: task.name || task.id,
+        ...(task.description ? { description: task.description } : {})
     }));
     res.json({ tasks: summary });
 });

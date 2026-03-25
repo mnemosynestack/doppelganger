@@ -201,6 +201,18 @@ const TaskSettingsCabinet: React.FC<TaskSettingsCabinetProps & {
                         </button>
                     </div>
 
+                    {/* Description — always visible regardless of active tab */}
+                    <div className="mb-6">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] block mb-2">Description</label>
+                        <textarea
+                            value={currentTask.description || ''}
+                            onChange={(e) => onUpdateTask({ description: e.target.value })}
+                            placeholder="What does this task do? Give AI agents and operators context..."
+                            rows={3}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-white/30 resize-none transition-all custom-scrollbar"
+                        />
+                    </div>
+
                     {/* Tabs Nav */}
                     <div role="tablist" className="flex flex-wrap gap-2 mb-8 bg-black/40 p-1 rounded-2xl border border-white/5">
                         {renderTabButton('mode', 'Mode', 'settings_input_component')}

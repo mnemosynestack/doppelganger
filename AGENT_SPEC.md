@@ -9,6 +9,7 @@ This document is a concise, implementation-focused reference for AI agents that 
 ```json
 {
   "name": "My Task",
+  "description": "Optional human-readable description of what this task does. Shown on the canvas and included in the /api/tasks/list response so AI agents and operators have context.",
   "url": "https://example.com",
   "mode": "agent",
   "wait": 2,

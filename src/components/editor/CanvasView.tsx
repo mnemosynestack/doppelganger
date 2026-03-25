@@ -333,6 +333,9 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                                 <MaterialIcon name="settings" className="text-lg" />
                             </button>
                         </div>
+                        {currentTask.description && (
+                            <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">{currentTask.description}</p>
+                        )}
                         {triggerExpanded && (
                             <div className="space-y-4 mt-4 pt-3 border-t border-white/10">
                                 <div className="space-y-1.5">
