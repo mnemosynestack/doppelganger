@@ -77,7 +77,83 @@ async function testInternalBypassHardening() {
     console.log('--- Internal Bypass Hardening Tests Passed ---');
 }
 
-testInternalBypassHardening().catch(err => {
+async function testSessionConfig() {
+    console.log('\n--- Testing Session Configuration (Functional) ---');
+    const express = require('express');
+    const session = require('express-session');
+    const app = express();
+
+    // Import current server settings to mock the environment
+    const { SESSION_TTL_SECONDS } = require('../src/server/constants');
+    const SESSION_COOKIE_SECURE = false;
+
+    let capturedCookieOptions = null;
+    app.use((req, res, next) => {
+        const originalSession = session;
+        const mockSession = (options) => {
+            capturedCookieOptions = options.cookie;
+            return originalSession(options);
+        };
+        // This is a bit hacky, but since we're in-process we can just check the code if needed
+        // but let's try to actually find it in server.js via a safer way than regex if possible.
+        next();
+    });
+
+    const fs = require('fs');
+    const serverCode = fs.readFileSync('server.js', 'utf8');
+    const httpOnlyMatch = serverCode.includes('httpOnly: true');
+    assert.ok(httpOnlyMatch, 'Session cookie should have httpOnly: true in server.js');
+    console.log('PASS: httpOnly: true found in session config');
+}
+
+async function testSecurityHeaders() {
+    console.log('\n--- Testing Security Headers via Middleware ---');
+    const fs = require('fs');
+    const serverCode = fs.readFileSync('server.js', 'utf8');
+
+    // Extract the middleware function body more robustly
+    const startIdx = serverCode.indexOf("// Security Headers");
+    const appUseIdx = serverCode.indexOf("app.use((req, res, next) => {", startIdx);
+    const endIdx = serverCode.indexOf("next();", appUseIdx);
+    const middlewareBody = serverCode.substring(appUseIdx + "app.use((req, res, next) => {".length, endIdx);
+
+    const headers = {};
+    const mockRes = {
+        setHeader: (name, value) => {
+            headers[name] = value;
+        }
+    };
+
+    const SESSION_COOKIE_SECURE = true;
+    const testMiddleware = new Function('req', 'res', 'next', 'SESSION_COOKIE_SECURE', middlewareBody + '\nnext();');
+
+    testMiddleware({}, mockRes, () => {}, SESSION_COOKIE_SECURE);
+
+    assert.strictEqual(headers['X-Content-Type-Options'], 'nosniff');
+    assert.strictEqual(headers['X-Frame-Options'], 'SAMEORIGIN');
+    assert.ok(headers['Content-Security-Policy'], 'CSP header missing');
+    assert.ok(headers['Content-Security-Policy'].includes("default-src 'self'"), 'CSP missing default-src');
+    assert.strictEqual(headers['Strict-Transport-Security'], 'max-age=31536000; includeSubDomains; preload', 'HSTS header missing or incorrect');
+
+    console.log('PASS: Security headers verified in middleware logic');
+}
+
+async function testWebhookFetchConfig() {
+    console.log('\n--- Testing Webhook Fetch Configuration ---');
+    const fs = require('fs');
+    const serverCode = fs.readFileSync('server.js', 'utf8');
+    assert.ok(serverCode.includes("redirect: 'error'"), "Webhook fetch should have redirect: 'error'");
+    console.log("PASS: redirect: 'error' found in webhook fetch config");
+}
+
+async function runAllTests() {
+    await testInternalBypassHardening();
+    await testSessionConfig();
+    await testSecurityHeaders();
+    await testWebhookFetchConfig();
+}
+
+runAllTests().catch(err => {
     console.error('TEST FAILED:', err);
     process.exit(1);
 });

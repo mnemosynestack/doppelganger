@@ -139,6 +139,14 @@ app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+    // Content Security Policy
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' ws: wss: https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com;");
+
+    // Strict-Transport-Security (only if secure cookie is enabled, indicating HTTPS)
+    if (SESSION_COOKIE_SECURE) {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    }
     next();
 });
 
@@ -167,6 +175,7 @@ app.use(session({
     rolling: true,
     saveUninitialized: false,
     cookie: {
+        httpOnly: true,
         secure: SESSION_COOKIE_SECURE,
         sameSite: 'strict',
         maxAge: SESSION_TTL_SECONDS * 1000
@@ -249,6 +258,7 @@ const registerExecution = (req, res, baseMeta = {}) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: payload,
+                redirect: 'error', // Mitigate redirect-based SSRF
                 signal: AbortSignal.timeout(10000)
             }).catch(err => console.error('[WEBHOOK] Failed to deliver:', err.message));
         }
