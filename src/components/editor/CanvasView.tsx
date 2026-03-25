@@ -284,7 +284,7 @@ const CanvasView: React.FC<CanvasViewProps> = ({
             <div
                 className="absolute inset-0 pointer-events-none z-0"
                 style={{
-                    backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.3) 0.8px, transparent 0)`,
+                    backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.12) 0.8px, transparent 0)`,
                     backgroundSize: `${22 * canvasScale}px ${22 * canvasScale}px`,
                     backgroundPosition: `${canvasOffset.x}px ${canvasOffset.y}px`,
                 }}

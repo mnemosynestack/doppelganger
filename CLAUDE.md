@@ -110,7 +110,7 @@ Tailor the list to what was actually touched — don't list every item for every
 
 ## Finalize Convention
 
-When the user says to **finalize** after a task is complete, stage the relevant changed files and create a commit with an appropriate message.
+When the user says to **finalize** after a task is complete, stage **all** modified files using `git add .` (not just the files Claude edited — the user may have made background changes) and create a commit with an appropriate message.
 
 ## Key Environment Variables
 
