@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Task } from '../types';
+import { serializeTaskSnapshot } from '../utils/taskUtils';
 
 export const useEditorHistory = (
     currentTask: Task,
@@ -17,7 +18,9 @@ export const useEditorHistory = (
             return;
         }
 
-        const snapshot = JSON.stringify(currentTask);
+        // ⚡ Bolt: Use optimized serializeTaskSnapshot to exclude large version history from undo/redo state.
+        // This reduces serialization complexity from O(N * V) to O(N).
+        const snapshot = serializeTaskSnapshot(currentTask);
         if (snapshot === lastSavedSnapshotRef.current) {
             return;
         }
@@ -44,24 +47,29 @@ export const useEditorHistory = (
     const undo = useCallback(() => {
         if (historyPointerRef.current > 0) {
             historyPointerRef.current -= 1;
-            const prevTask = historyRef.current[historyPointerRef.current];
+            const historyItem = historyRef.current[historyPointerRef.current];
+            // ⚡ Bolt: Re-inject current versions into the restored task to prevent data loss.
+            // Items are stored as objects in historyRef via JSON.parse(serializeTaskSnapshot(currentTask)).
+            const restoredTask = { ...historyItem, versions: currentTask.versions, last_opened: Date.now() };
             isUndoRedoActionRef.current = true;
-            lastSavedSnapshotRef.current = JSON.stringify(prevTask);
-            setCurrentTask(prevTask);
-            onSave(prevTask, false);
+            lastSavedSnapshotRef.current = serializeTaskSnapshot(restoredTask);
+            setCurrentTask(restoredTask);
+            onSave(restoredTask, false);
         }
-    }, [setCurrentTask, onSave]);
+    }, [setCurrentTask, onSave, currentTask.versions]);
 
     const redo = useCallback(() => {
         if (historyPointerRef.current < historyRef.current.length - 1) {
             historyPointerRef.current += 1;
-            const nextTask = historyRef.current[historyPointerRef.current];
+            const historyItem = historyRef.current[historyPointerRef.current];
+            // ⚡ Bolt: Re-inject current versions into the restored task to prevent data loss.
+            const restoredTask = { ...historyItem, versions: currentTask.versions, last_opened: Date.now() };
             isUndoRedoActionRef.current = true;
-            lastSavedSnapshotRef.current = JSON.stringify(nextTask);
-            setCurrentTask(nextTask);
-            onSave(nextTask, false);
+            lastSavedSnapshotRef.current = serializeTaskSnapshot(restoredTask);
+            setCurrentTask(restoredTask);
+            onSave(restoredTask, false);
         }
-    }, [setCurrentTask, onSave]);
+    }, [setCurrentTask, onSave, currentTask.versions]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
