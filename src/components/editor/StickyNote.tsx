@@ -1,7 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { StickyNote as StickyNoteType, StickyNoteColor } from '../../types';
 
 interface StickyNoteProps {
@@ -174,7 +172,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({ note, canvasScale, isSelected, 
                     onPointerCancel={handleDragPointerUp}
                 >
                     {/* Color swatches */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1" style={{ opacity: isEditing ? 1 : 0, pointerEvents: isEditing ? 'auto' : 'none', transition: 'opacity 0.15s' }}>
                         {ALL_COLORS.map((c) => (
                             <button
                                 key={c}
@@ -185,6 +183,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({ note, canvasScale, isSelected, 
                                     outline: note.color === c ? `1.5px solid ${COLOR_DOT[c]}` : 'none',
                                     outlineOffset: '1px',
                                 }}
+                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                                 onPointerDown={(e) => e.stopPropagation()}
                                 onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { color: c }); }}
                                 title={c}
@@ -236,15 +235,9 @@ const StickyNote: React.FC<StickyNoteProps> = ({ note, canvasScale, isSelected, 
                         />
                     ) : (
                         <div
-                            className="px-3 py-2 text-xs text-white/75 leading-relaxed overflow-auto h-full sticky-note-markdown cursor-text custom-scrollbar"
+                            className="px-3 py-2 text-xs text-white/75 leading-relaxed overflow-auto h-full cursor-text custom-scrollbar font-mono whitespace-pre-wrap"
                         >
-                            {note.content ? (
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {note.content}
-                                </ReactMarkdown>
-                            ) : (
-                                <span className="text-white/20 italic">Double-click to edit...</span>
-                            )}
+                            {note.content || <span className="text-white/20 italic">Double-click to edit...</span>}
                         </div>
                     )}
                 </div>

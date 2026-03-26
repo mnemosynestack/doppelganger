@@ -128,13 +128,34 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     }, [currentTask, handleAutoSave, setCurrentTask]);
 
     const handleUpdateStickyNote = useCallback((id: string, updates: Partial<StickyNote>) => {
+        const isPositionMove = (updates.x !== undefined || updates.y !== undefined) &&
+            updates.color === undefined && updates.content === undefined &&
+            updates.width === undefined && updates.height === undefined;
+        if (isPositionMove && selectedNoteIds.has(id) && selectedNoteIds.size > 1) {
+            const source = (currentTask.stickyNotes || []).find(n => n.id === id);
+            if (source) {
+                const dx = (updates.x ?? source.x) - source.x;
+                const dy = (updates.y ?? source.y) - source.y;
+                const next = {
+                    ...currentTask,
+                    stickyNotes: (currentTask.stickyNotes || []).map(n => {
+                        if (n.id === id) return { ...n, ...updates };
+                        if (selectedNoteIds.has(n.id)) return { ...n, x: n.x + dx, y: n.y + dy };
+                        return n;
+                    }),
+                };
+                setCurrentTask(next);
+                handleAutoSave(next);
+                return;
+            }
+        }
         const next = {
             ...currentTask,
             stickyNotes: (currentTask.stickyNotes || []).map((n) => n.id === id ? { ...n, ...updates } : n),
         };
         setCurrentTask(next);
         handleAutoSave(next);
-    }, [currentTask, handleAutoSave, setCurrentTask]);
+    }, [currentTask, handleAutoSave, setCurrentTask, selectedNoteIds]);
 
     const handleDuplicateStickyNote = useCallback((note: StickyNote) => {
         const clone: StickyNote = {
