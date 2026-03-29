@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { requireAuthOrApiKey } = require('../middleware');
 const { loadCredentials, saveCredentials } = require('../storage');
-const { validateUrl } = require('../../../url-utils');
+const { validateUrl, fetchWithRedirectValidation } = require('../../../url-utils');
 
 const router = express.Router();
 
@@ -100,7 +100,7 @@ router.get('/:id/proxy/baserow/databases', requireAuthOrApiKey, async (req, res)
         const { baseUrl, token } = credential.config;
         await validateUrl(baseUrl);
         const url = `${baseUrl}/api/applications/`;
-        const resp = await fetch(url, {
+        const resp = await fetchWithRedirectValidation(url, {
             headers: { 'Authorization': `Token ${token}` }
         });
         if (!resp.ok) {
@@ -148,7 +148,7 @@ router.get('/:id/proxy/baserow/databases/:dbId/tables', requireAuthOrApiKey, asy
 
         const { baseUrl, token } = credential.config;
         await validateUrl(baseUrl);
-        const resp = await fetch(`${baseUrl}/api/database/tables/database/${req.params.dbId}/`, {
+        const resp = await fetchWithRedirectValidation(`${baseUrl}/api/database/tables/database/${req.params.dbId}/`, {
             headers: { 'Authorization': `Token ${token}` }
         });
         if (!resp.ok) {

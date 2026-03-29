@@ -7,6 +7,7 @@
  *
  * Uses user_field_names=true so task authors reference actual column names.
  */
+const { fetchWithRedirectValidation } = require('../../../url-utils');
 
 async function push(credential, output, data) {
     const { baseUrl, token } = credential.config;
@@ -34,7 +35,7 @@ async function push(credential, output, data) {
     if (Array.isArray(parsed)) {
         // Batch insert
         const url = `${baseUrl}/api/database/rows/table/${tableId}/batch/?user_field_names=true`;
-        const resp = await fetch(url, {
+        const resp = await fetchWithRedirectValidation(url, {
             method: 'POST',
             headers,
             body: JSON.stringify({ items: parsed })
@@ -47,7 +48,7 @@ async function push(credential, output, data) {
     } else if (typeof parsed === 'object' && parsed !== null) {
         // Single row insert
         const url = `${baseUrl}/api/database/rows/table/${tableId}/?user_field_names=true`;
-        const resp = await fetch(url, {
+        const resp = await fetchWithRedirectValidation(url, {
             method: 'POST',
             headers,
             body: JSON.stringify(parsed)
