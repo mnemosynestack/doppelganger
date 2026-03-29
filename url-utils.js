@@ -172,12 +172,15 @@ async function fetchWithRedirectValidation(urlStr, options = {}, maxRedirects = 
     let redirectCount = 0;
 
     while (redirectCount <= maxRedirects) {
-        const href = currentUrl.href;
-
         // validateUrl respects ALLOW_PRIVATE_NETWORKS internally
-        await validateUrl(href);
+        await validateUrl(currentUrl.href);
 
-        const response = await fetch(href, {
+        // CodeQL mitigation: strictly verify protocol and pass URL object to fetch
+        if (currentUrl.protocol !== 'http:' && currentUrl.protocol !== 'https:') {
+            throw new Error('Only HTTP and HTTPS protocols are allowed');
+        }
+
+        const response = await fetch(currentUrl, {
             ...currentOptions,
             redirect: 'manual'
         });
@@ -190,20 +193,19 @@ async function fetchWithRedirectValidation(urlStr, options = {}, maxRedirects = 
             const nextUrl = new URL(location, currentUrl.href);
             const isCrossOrigin = nextUrl.origin !== currentUrl.origin;
 
-            // Update options for the next request
+            // Update options for the next request (shallow copy)
             const nextOptions = { ...currentOptions };
+            if (nextOptions.headers) {
+                nextOptions.headers = { ...nextOptions.headers };
+            }
 
-            // Strip sensitive headers and body on cross-origin redirects
-            if (isCrossOrigin) {
-                if (nextOptions.headers) {
-                    const headers = { ...nextOptions.headers };
-                    const sensitiveHeaders = ['authorization', 'x-api-key', 'token', 'cookie', 'proxy-authorization'];
-                    for (const h of Object.keys(headers)) {
-                        if (sensitiveHeaders.includes(h.toLowerCase())) {
-                            delete headers[h];
-                        }
+            // Strip sensitive headers on cross-origin redirects
+            if (isCrossOrigin && nextOptions.headers) {
+                const sensitiveHeaders = ['authorization', 'x-api-key', 'token', 'cookie', 'proxy-authorization'];
+                for (const h of Object.keys(nextOptions.headers)) {
+                    if (sensitiveHeaders.includes(h.toLowerCase())) {
+                        delete nextOptions.headers[h];
                     }
-                    nextOptions.headers = headers;
                 }
             }
 
@@ -212,8 +214,11 @@ async function fetchWithRedirectValidation(urlStr, options = {}, maxRedirects = 
                 nextOptions.method = 'GET';
                 delete nextOptions.body;
                 if (nextOptions.headers) {
-                    delete nextOptions.headers['content-type'];
-                    delete nextOptions.headers['content-length'];
+                    for (const h of Object.keys(nextOptions.headers)) {
+                        if (['content-type', 'content-length'].includes(h.toLowerCase())) {
+                            delete nextOptions.headers[h];
+                        }
+                    }
                 }
             }
 

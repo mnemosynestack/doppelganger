@@ -8,8 +8,9 @@ async function testWebhookRedirects() {
     // Mock fetch to simulate redirects
     const originalFetch = global.fetch;
     global.fetch = async (url, options) => {
-        const u = typeof url === 'string' ? url : url.href;
-        if (u.includes('malicious-webhook.com')) {
+        const u = new URL(typeof url === 'string' ? url : url.href);
+        const host = u.hostname;
+        if (host === 'malicious-webhook.com') {
             return {
                 status: 302,
                 ok: false,
@@ -19,7 +20,7 @@ async function testWebhookRedirects() {
                 text: async () => 'Redirecting...'
             };
         }
-        if (u.includes('cross-origin-redirect.com')) {
+        if (host === 'cross-origin-redirect.com') {
             const auth = options.headers?.['Authorization'] || options.headers?.['authorization'];
             const hasAuth = !!auth;
             return {
@@ -31,7 +32,7 @@ async function testWebhookRedirects() {
                 text: async () => `Redirecting... (Auth present: ${hasAuth})`
             };
         }
-        if (u.includes('attacker.com')) {
+        if (host === 'attacker.com') {
             const auth = options.headers?.['Authorization'] || options.headers?.['authorization'];
             const hasAuth = !!auth;
             return {
@@ -40,7 +41,7 @@ async function testWebhookRedirects() {
                 text: async () => JSON.stringify({ hasAuth })
             };
         }
-        if (u.includes('safe-redirect.com')) {
+        if (host === 'safe-redirect.com') {
             return {
                 status: 302,
                 ok: false,
@@ -50,10 +51,10 @@ async function testWebhookRedirects() {
                 text: async () => 'Redirecting...'
             };
         }
-        if (u.includes('google.com')) {
+        if (host === 'www.google.com') {
             return { status: 200, ok: true, text: async () => 'OK' };
         }
-        if (u.includes('127.0.0.1')) {
+        if (host === '127.0.0.1') {
             return { status: 200, ok: true, text: async () => 'Sensitive' };
         }
         return { status: 404, ok: false, text: async () => 'Not Found' };

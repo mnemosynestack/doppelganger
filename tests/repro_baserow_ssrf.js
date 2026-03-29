@@ -8,8 +8,9 @@ async function runRepro() {
     console.log('--- Running SSRF Repro for Baserow Output Provider ---');
 
     global.fetch = async (url, options) => {
-        console.log(`[MOCK FETCH] Request to: ${url}`);
-        if (url.includes('redirect-to-private')) {
+        const u = typeof url === 'string' ? url : url.href;
+        console.log(`[MOCK FETCH] Request to: ${u}`);
+        if (u.includes('redirect-to-private')) {
             return {
                 ok: false,
                 status: 302,
@@ -19,7 +20,7 @@ async function runRepro() {
                 text: async () => 'Redirecting...'
             };
         }
-        if (url.includes('127.0.0.1')) {
+        if (u.includes('127.0.0.1')) {
             console.log('[MOCK FETCH] Hit private IP!');
             return {
                 ok: true,
