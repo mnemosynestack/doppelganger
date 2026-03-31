@@ -85,6 +85,10 @@ function createSafeProxy(target) {
             } catch (e) {
                 throw e;
             }
+        },
+        getPrototypeOf(target) {
+            const realTarget = target[REAL_TARGET] || target;
+            return createSafeProxy(Reflect.getPrototypeOf(realTarget));
         }
     });
 }
