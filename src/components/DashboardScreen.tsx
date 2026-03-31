@@ -15,8 +15,30 @@ interface DashboardScreenProps {
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onEditTask, onDeleteTask, onExportTasks, onImportTasks }) => {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
     const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
     const [selectedTaskIds, setSelectedTaskIds] = React.useState<string[]>([]);
+    const [searchQuery, setSearchQuery] = React.useState('');
+
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    const filteredTasks = React.useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        if (!query) return tasks;
+        return tasks.filter(task =>
+            (task.name || '').toLowerCase().includes(query) ||
+            (task.url || '').toLowerCase().includes(query)
+        );
+    }, [tasks, searchQuery]);
 
     const getFavicon = (url: string) => {
         try {
@@ -51,8 +73,33 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
             <div className="flex-1 overflow-hidden animate-in fade-in duration-500 bg-black">
                 <div className="h-full flex flex-col px-12 py-12 max-w-7xl mx-auto space-y-12 w-full">
                     <div className="flex items-end justify-between">
-                        <div className="space-y-2">
-                            <h2 className="text-2xl font-medium tracking-[0.25em] text-white uppercase">Dashboard</h2>
+                        <div className="flex items-end gap-6 flex-1">
+                            <h2 className="text-2xl font-medium tracking-[0.25em] text-white uppercase shrink-0">Dashboard</h2>
+                            {tasks.length > 0 && (
+                                <div className="relative group/search max-w-md w-full">
+                                    <MaterialIcon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg group-focus-within/search:text-white transition-colors" />
+                                    <input
+                                        ref={searchInputRef}
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Filter tasks... (/)"
+                                        className="w-full bg-white/[0.05] border border-white/10 rounded-2xl py-3 pl-12 pr-10 text-[10px] font-bold uppercase tracking-widest text-white placeholder:text-gray-600 focus:outline-none focus:border-white/30 focus-visible:ring-2 focus-visible:ring-white/20 transition-all"
+                                        aria-label="Filter tasks"
+                                        title="Search tasks by name or URL"
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            onClick={() => setSearchQuery('')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                            aria-label="Clear filter"
+                                            title="Clear filter"
+                                        >
+                                            <MaterialIcon name="cancel" className="text-base" />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div className="flex items-center gap-3">
                             <GithubStarPill />
@@ -99,7 +146,22 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                     <div className="relative flex-1 min-h-0">
                         <div className="pointer-events-none absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-[#050505] via-[#050505]/50 to-transparent z-10" />
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 content-start gap-6 overflow-y-auto custom-scrollbar pb-12 pr-4 h-full">
-                            {tasks.map(task => {
+                            {searchQuery && filteredTasks.length === 0 && (
+                                <div className="col-span-full py-20 flex flex-col items-center justify-center text-center space-y-4">
+                                    <MaterialIcon name="search_off" className="text-5xl text-white/10" />
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">No matching tasks</p>
+                                        <p className="text-[10px] text-gray-600">Try a different search term or clear the filter.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        className="text-[9px] font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+                                    >
+                                        Clear Filter
+                                    </button>
+                                </div>
+                            )}
+                            {filteredTasks.map(task => {
                                 const favicon = getFavicon(task.url);
                                 return (
                                     <div key={task.id} className="bg-[#050505] border border-white/10 p-6 rounded-2xl flex flex-col gap-6 group hover:-translate-y-1 hover:border-white/30 transition-all shadow-xl hover:bg-[#0a0a0a]">
