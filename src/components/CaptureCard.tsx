@@ -1,6 +1,7 @@
 import React from 'react';
 import { CaptureEntry } from '../types';
 import CopyButton from './CopyButton';
+import MaterialIcon from './MaterialIcon';
 
 interface CaptureCardProps {
     capture: CaptureEntry;
@@ -22,7 +23,11 @@ const CaptureCard: React.FC<CaptureCardProps> = ({ capture, onDelete }) => {
     return (
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
             <div className="p-3 border-b border-white/10 flex items-center justify-between">
-                <div className="text-[9px] font-bold text-white uppercase tracking-widest">
+                <div className="text-[9px] font-bold text-white uppercase tracking-widest flex items-center gap-1.5">
+                    <MaterialIcon
+                        name={capture.type === 'recording' ? 'play_circle' : 'photo_camera'}
+                        className="text-xs text-white/50"
+                    />
                     {capture.type === 'recording' ? 'Recording' : 'Screenshot'}
                 </div>
                 <div className="flex items-center gap-2">
@@ -34,18 +39,31 @@ const CaptureCard: React.FC<CaptureCardProps> = ({ capture, onDelete }) => {
                     />
                     <a
                         href={capture.url}
+                        download={capture.name}
+                        className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                        title="Download"
+                        aria-label="Download capture"
+                    >
+                        <MaterialIcon name="download" className="text-sm" />
+                    </a>
+                    <a
+                        href={capture.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[9px] font-bold uppercase tracking-widest text-blue-300 hover:text-blue-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                        className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                        title="Open in new tab"
+                        aria-label="Open capture in new tab"
                     >
-                        Open
+                        <MaterialIcon name="open_in_new" className="text-sm" />
                     </a>
                     {onDelete && (
                         <button
                             onClick={() => onDelete(capture.name)}
-                            className="text-[9px] font-bold uppercase tracking-widest text-red-300 hover:text-red-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                            className="p-1.5 rounded-lg text-red-300 hover:text-red-200 hover:bg-white/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                            title="Delete"
+                            aria-label="Delete capture"
                         >
-                            Delete
+                            <MaterialIcon name="delete" className="text-sm" />
                         </button>
                     )}
                 </div>

@@ -102,7 +102,10 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
 
                 <div className="glass-card rounded-[32px] p-8">
                     {loading && (
-                        <div className="text-[9px] text-gray-500 uppercase tracking-widest">Loading captures...</div>
+                        <div className="text-[9px] text-gray-500 uppercase tracking-widest flex items-center gap-3">
+                            <MaterialIcon name="sync" className="text-base animate-spin" />
+                            Loading captures...
+                        </div>
                     )}
                     {!loading && captures.length === 0 && (
                         <div className="text-[9px] text-gray-600 uppercase tracking-widest">No captures found.</div>

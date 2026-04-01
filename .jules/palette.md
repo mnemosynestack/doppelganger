@@ -33,3 +33,7 @@
 ## 2026-04-10 - [Dashboard Accessibility and Quick Actions]
 **Learning:** High-level overview screens like the Dashboard benefit greatly from "quick actions" (e.g., copying a task URL) that appear on hover/focus, reducing the need to enter the full editor for simple metadata retrieval. Consistent accessibility attributes (title/aria-label) across all primary navigation buttons ensure parity between mouse and screen-reader users.
 **Action:** Implement 'group-hover' and 'focus-within' patterns for secondary actions on list items. Always include dual 'title' and 'aria-label' attributes for parity across all interactive elements in the primary dashboard view.
+
+## 2026-04-15 - [Capture Management UX and Visual Cues]
+**Learning:** Text-heavy action bars in media-centric views (like Captures) create cognitive load and inconsistent hit targets. Replacing text links with standardized icon buttons improves visual density and functional clarity. Providing immediate visual feedback for background data fetching (spinners) and distinct visual cues for different media types (Screenshot vs Recording icons) significantly enhances the "browsing" experience.
+**Action:** Standardize action bars with icon-only buttons that use consistent padding, hover states, and accessibility attributes (`title`/`aria-label`). Always provide specific icons for media types and use destructive color coding (e.g., `red-300`) only for critical actions like deletion.
