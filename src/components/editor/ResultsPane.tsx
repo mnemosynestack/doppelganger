@@ -384,6 +384,17 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
         }
     }, [pinnedResults, resultView]);
 
+    useEffect(() => {
+        if (!capturesOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setCapturesOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [capturesOpen]);
+
 
     const handleCopy = async (text: string, id: string, options?: { skipSizeConfirm?: boolean; truncatedNotice?: boolean }) => {
         if (!text) {

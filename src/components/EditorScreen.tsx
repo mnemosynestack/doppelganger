@@ -271,6 +271,18 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             } else if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();
                 if (!actionPaletteOpen) openActionPalette();
+            } else if (e.key === 'Escape') {
+                if (versioning.versionPreview) {
+                    versioning.setVersionPreview(null);
+                } else if (actionPaletteOpen) {
+                    setActionPaletteOpen(false);
+                } else if (isCabinetOpen) {
+                    setIsCabinetOpen(false);
+                } else if (contextMenu) {
+                    setContextMenu(null);
+                } else if (isResultsOpen) {
+                    setIsResultsOpen(false);
+                }
             }
         };
         document.addEventListener('keydown', handleKeyDown);
