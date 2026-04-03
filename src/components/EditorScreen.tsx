@@ -199,6 +199,12 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     // Keyboard Hotkeys
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                setIsResultsOpen(true);
+                onRun();
+                return;
+            }
             if (isInteractiveTarget(e.target as HTMLElement)) return;
             if (e.key === 'Backspace' || e.key === 'Delete') {
                 if (actions.selectedActionIds.size > 0 || selectedNoteIds.size > 0) {
