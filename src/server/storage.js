@@ -295,6 +295,7 @@ let executionsMap = new Map();
 let executionsLoadPromise = null;
 let executionsSaveTimer = null;
 let executionsWritePromise = Promise.resolve();
+let dbExecutionsCount = null;
 
 function syncExecutionsMap() {
     if (!executionsCache) {
@@ -330,6 +331,10 @@ async function loadExecutions() {
                 // order by timestamp descending in postgres JSONB field
                 const res = await pool.query("SELECT data FROM executions ORDER BY CAST(data->>'timestamp' AS BIGINT) DESC LIMIT $1", [MAX_EXECUTIONS]);
                 executionsCache = res.rows.map(r => r.data);
+                // ⚡ Bolt: Initialize dbExecutionsCount if we retrieved the full set
+                if (executionsCache.length < MAX_EXECUTIONS) {
+                    dbExecutionsCount = executionsCache.length;
+                }
             } catch (e) {
                 executionsCache = [];
             }
@@ -367,6 +372,8 @@ async function saveExecutions(executions) {
             const rows = executions.map(exec => ({ id: exec.id, data: exec }));
             await bulkInsert(client, 'executions', ['id', 'data'], rows);
             await client.query('COMMIT');
+            // ⚡ Bolt: Keep count in sync after bulk save
+            dbExecutionsCount = executions.length;
         } catch (e) {
             await client.query('ROLLBACK');
             throw e;
@@ -398,9 +405,16 @@ async function appendExecution(entry) {
         try {
             await pool.query('INSERT INTO executions (id, data) VALUES ($1, $2)', [entry.id, entry]);
 
+            // ⚡ Bolt: Cold start for executions count tracking
+            if (dbExecutionsCount === null) {
+                const countRes = await pool.query('SELECT COUNT(*) FROM executions');
+                dbExecutionsCount = parseInt(countRes.rows[0].count);
+            } else {
+                dbExecutionsCount++;
+            }
+
             // Delete oldest if we exceed limit
-            const countRes = await pool.query('SELECT COUNT(*) FROM executions');
-            if (parseInt(countRes.rows[0].count) > MAX_EXECUTIONS) {
+            if (dbExecutionsCount > MAX_EXECUTIONS) {
                 // Find oldest id to delete using timestamp from JSONB
                 await pool.query(`
                     DELETE FROM executions 
@@ -410,6 +424,7 @@ async function appendExecution(entry) {
                         LIMIT 1
                     )
                 `);
+                dbExecutionsCount--;
             }
         } catch (e) {
             console.error('[STORAGE] Failed to append execution to DB:', e);
