@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import MaterialIcon from '../MaterialIcon';
 
 interface CenterAlertProps {
     message: string;
@@ -28,17 +29,26 @@ const CenterAlert: React.FC<CenterAlertProps> = ({ message, tone, onClose }) => 
                 role={tone === 'error' ? 'alert' : 'status'}
                 className={`glass-card rounded-2xl border border-white/10 p-4 shadow-2xl flex items-start gap-3 ${closing ? 'animate-out fade-out zoom-out-95 duration-200' : 'animate-in fade-in zoom-in-95 duration-300'}`}
             >
-                <div className={`mt-1 h-2.5 w-2.5 rounded-full ${tone === 'error' ? 'bg-red-400' : 'bg-emerald-400'}`} />
-                <div className="flex-1">
-                    <p className="text-[8px] font-bold uppercase tracking-[0.35em] text-gray-500">Notification</p>
-                    <p className="mt-2 font-mono text-[11px] text-white leading-relaxed">{message}</p>
+                <div className="mt-0.5">
+                    {tone === 'error' ? (
+                        <MaterialIcon name="error" className="text-red-400 text-lg" />
+                    ) : (
+                        <MaterialIcon name="check_circle" className="text-emerald-400 text-lg" />
+                    )}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-[8px] font-bold uppercase tracking-[0.35em] text-gray-500">
+                        {tone === 'error' ? 'Error' : 'Success'}
+                    </p>
+                    <p className="mt-1.5 font-mono text-[11px] text-white leading-relaxed break-words">{message}</p>
                 </div>
                 <button
                     onClick={() => setClosing(true)}
-                    className="px-2 py-1 text-[8px] font-bold uppercase tracking-[0.2em] text-white/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded"
+                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 shrink-0"
                     aria-label="Close notification"
+                    title="Close"
                 >
-                    Close
+                    <MaterialIcon name="close" className="text-base" />
                 </button>
             </div>
         </div>
