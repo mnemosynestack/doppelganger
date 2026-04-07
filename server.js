@@ -139,6 +139,20 @@ app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+    // Content Security Policy
+    const csp = [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob: https://www.google.com https://cdn.jsdelivr.net https://raw.githubusercontent.com",
+        "connect-src 'self' https://api.github.com https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.baserow.io",
+        "media-src 'self' blob:",
+        "frame-src 'self'"
+    ].join('; ');
+    res.setHeader('Content-Security-Policy', csp);
+
     if (SESSION_COOKIE_SECURE) {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
