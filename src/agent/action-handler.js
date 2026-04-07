@@ -551,6 +551,50 @@ const executeAction = async (act, context) => {
             logs.push(`Stop task (${act.value === 'error' ? 'error' : 'success'}).`);
             result = act.value === 'error' ? 'error' : 'success';
             break;
+        case 'http_request': {
+            const targetUrl = resolveMaybe(act.value);
+            try {
+                await validateUrl(targetUrl);
+            } catch (e) {
+                throw new Error(`Access to private network is restricted`);
+            }
+            const method = (resolveMaybe(act.method) || 'GET').toUpperCase();
+            let parsedHeaders = {};
+            if (act.headers) {
+                try {
+                    parsedHeaders = JSON.parse(resolveMaybe(act.headers));
+                } catch (e) {
+                    throw new Error(`Invalid JSON in headers: ${e.message}`);
+                }
+            }
+            const fetchOptions = { method, headers: parsedHeaders };
+            const bodyMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+            if (bodyMethods.includes(method) && act.body) {
+                fetchOptions.body = resolveMaybe(act.body);
+                if (!parsedHeaders['Content-Type'] && !parsedHeaders['content-type']) {
+                    fetchOptions.headers['Content-Type'] = 'application/json';
+                }
+            }
+            logs.push(`HTTP ${method} ${targetUrl}`);
+            const response = await fetch(targetUrl, fetchOptions);
+            const text = await response.text();
+            let parsed;
+            try {
+                parsed = JSON.parse(text);
+            } catch {
+                parsed = text;
+            }
+            if (!response.ok) {
+                throw new Error(`HTTP ${method} failed with status ${response.status}: ${typeof parsed === 'string' ? parsed.slice(0, 200) : JSON.stringify(parsed).slice(0, 200)}`);
+            }
+            if (act.varName) {
+                const targetName = normalizeVarRef(act.varName);
+                runtimeVars[String(targetName)] = parsed;
+            }
+            logs.push(`HTTP ${method} ${targetUrl} → ${response.status}`);
+            result = parsed;
+            break;
+        }
         case 'start': {
             const rawTaskId = resolveMaybe(act.value);
             if (!rawTaskId) throw new Error('Missing task id.');

@@ -365,7 +365,7 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                     </div>
                     {currentTask.mode === 'agent' && <div className="w-px h-10 bg-white/25" />}
                     {currentTask.mode === 'agent' && (
-                        <div className="flex flex-col items-center w-full select-text cursor-auto pointer-events-none">
+                        <div className="flex flex-col items-center w-full select-text cursor-auto pointer-events-auto">
                             <div className="space-y-6 w-full flex flex-col items-center relative">
                                 {buildAst(0, currentTask.actions.length)}
                                 <div className="pt-2 flex flex-col items-center">

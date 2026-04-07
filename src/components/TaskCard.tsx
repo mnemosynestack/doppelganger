@@ -1,7 +1,6 @@
 import React, { memo } from 'react';
 import { Task } from '../types';
 import MaterialIcon from './MaterialIcon';
-import CopyButton from './CopyButton';
 
 interface TaskCardProps {
     task: Task;
@@ -39,13 +38,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEditTask, onDeleteTask }) =
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    <CopyButton
-                        text={task.url}
-                        title="Copy URL"
-                        label=""
-                        className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity p-2 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10"
-                        iconClassName="text-[12px]"
-                    />
                     <div className="px-3 py-1 rounded-lg bg-white/5 text-[7px] font-bold uppercase tracking-widest text-white/60">{task.mode}</div>
                 </div>
             </div>

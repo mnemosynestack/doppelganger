@@ -61,7 +61,8 @@ export interface Action {
     | 'on_error'
     | 'navigate'
     | 'wait_downloads'
-    | 'start';
+    | 'start'
+    | 'http_request';
     selector?: string;
     value?: string;
     key?: string;
@@ -72,6 +73,9 @@ export interface Action {
     conditionOp?: string;
     conditionValue?: string;
     typeMode?: 'append' | 'replace';
+    method?: string;
+    headers?: string;
+    body?: string;
 }
 
 export interface TaskSchedule {

@@ -23,5 +23,6 @@ export const ACTION_CATALOG: { type: Action['type']; label: string; description:
     { type: 'set', label: 'Set Variable', description: 'Update variable value', icon: 'data_object' },
     { type: 'stop', label: 'Stop Task', description: 'Stop task with status', icon: 'stop' },
     { type: 'on_error', label: 'On Error', description: 'Run on failure', icon: 'warning' },
-    { type: 'start', label: 'Start Task', description: 'Run another task', icon: 'play_circle' }
+    { type: 'start', label: 'Start Task', description: 'Run another task', icon: 'play_circle' },
+    { type: 'http_request', label: 'HTTP Request', description: 'Make an API call', icon: 'language' }
 ];

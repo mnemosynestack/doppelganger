@@ -266,7 +266,26 @@ exists('.load-more') && text('.count') !== ''
 { "id": "act_start", "type": "start", "value": "task_id_here" }
 ```
 
-## 14) Notes for AI agents
+## 14) HTTP Request
+Make an arbitrary HTTP API call. The response is automatically parsed as JSON (falls back to text). Throws on non-2xx status.
+```json
+{
+  "id": "act_http",
+  "type": "http_request",
+  "method": "POST",
+  "value": "https://api.example.com/endpoint",
+  "headers": "{\"Authorization\": \"Bearer {$token}\"}",
+  "body": "{\"key\": \"{$value}\"}",
+  "varName": "apiResponse"
+}
+```
+- `method`: HTTP verb — `GET`, `POST`, `PUT`, `PATCH`, or `DELETE` (default: `GET`).
+- `value`: The request URL. Supports variable templating. Validated against SSRF rules.
+- `headers`: Optional JSON string of request headers. Supports variable templating.
+- `body`: Optional request body (for POST/PUT/PATCH/DELETE). Supports variable templating.
+- `varName`: Optional variable name to store the parsed response for use in later actions.
+
+## 15) Notes for AI agents
 - `javascript` actions are page-context only (no `page` object).
 - Prefer structured conditions for selectors (`exists` with selector).
 - Keep waits short; use 1-2s unless the target site is slow.

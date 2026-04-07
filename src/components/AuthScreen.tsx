@@ -32,9 +32,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ status, onSubmit, error, busy =
             <div className="w-[400px] glass-card p-10 rounded-[48px] space-y-8 relative">
                 <div className="text-center space-y-3">
                     <img src="/figranium_logo.svg" alt="Figranium" className="h-24 mx-auto object-contain" />
-                    <p className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] leading-relaxed max-w-[200px] mx-auto">
-                        Deterministic Control for an Agentic World
-                    </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-8">

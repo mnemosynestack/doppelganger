@@ -67,6 +67,9 @@ const getActionSummary = (action: Action) => {
         summary = action.value || '';
     } else if (action.type === 'set' || action.type === 'foreach' || action.type === 'merge') {
         summary = action.varName || '';
+    } else if (action.type === 'http_request') {
+        const m = action.method || 'GET';
+        summary = action.value ? `[${m}] ${action.value}` : m;
     } else if (action.type === 'press') {
         summary = action.key || '';
     } else if (action.type === 'if' || action.type === 'while') {
@@ -170,6 +173,7 @@ const ActionItem: React.FC<ActionItemProps> = React.memo(({
         if (type === 'screenshot') return <MaterialIcon name="photo_camera" className={`${iconClass} text-white`} />;
         if (type === 'start') return <MaterialIcon name="play_circle" className={`${iconClass} text-white`} />;
         if (type === 'navigate') return <MaterialIcon name="navigation" className={`${iconClass} text-white`} />;
+        if (type === 'http_request') return <MaterialIcon name="language" className={`${iconClass} text-white`} />;
         return <span className="text-[9px] text-white/20">|</span>;
     };
 
@@ -195,6 +199,7 @@ const ActionItem: React.FC<ActionItemProps> = React.memo(({
                 if (isInteractiveTarget(e.target)) return;
                 if (e.button !== 0) return;
                 e.preventDefault();
+                e.stopPropagation();
                 onPointerDown(e, action.id, index);
             }}
             onContextMenu={(e) => onOpenContextMenu(e, action.id)}
@@ -712,6 +717,86 @@ const ActionItem: React.FC<ActionItemProps> = React.memo(({
                             </select>
                         </div>
                     )
+                }
+
+                {
+                    action.type === 'http_request' && (() => {
+                        const method = action.method || 'GET';
+                        const bodyMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+                        const showBody = bodyMethods.includes(method);
+                        return (
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Method</label>
+                                        <select
+                                            value={method}
+                                            onChange={(e) => onUpdate(action.id, { method: e.target.value }, true)}
+                                            className="custom-select w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-[0.1em] text-white/70 focus:outline-none"
+                                        >
+                                            {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((m) => (
+                                                <option key={m} value={m}>{m}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="col-span-2 space-y-1.5">
+                                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">URL</label>
+                                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                            <RichInput
+                                                value={action.value || ''}
+                                                onChange={(v) => onUpdate(action.id, { value: v })}
+                                                onBlur={() => onAutoSave()}
+                                                variables={variables}
+                                                placeholder="https://api.example.com/data"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Headers (JSON, Optional)</label>
+                                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                        <CodeEditor
+                                            value={action.headers || ''}
+                                            onChange={(v) => onUpdate(action.id, { headers: v })}
+                                            onBlur={() => onAutoSave()}
+                                            language="json"
+                                            variables={variables}
+                                            className="min-h-[60px]"
+                                            placeholder={'{"Authorization": "Bearer {$token}"}'}
+                                        />
+                                    </div>
+                                </div>
+                                {showBody && (
+                                    <div className="space-y-1.5">
+                                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Body</label>
+                                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                            <CodeEditor
+                                                value={action.body || ''}
+                                                onChange={(v) => onUpdate(action.id, { body: v })}
+                                                onBlur={() => onAutoSave()}
+                                                language="json"
+                                                variables={variables}
+                                                className="min-h-[80px]"
+                                                placeholder={'{"key": "value"}'}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="space-y-1.5">
+                                    <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Store Response In Variable (Optional)</label>
+                                    <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2 text-[11px] focus-within:border-white/20 transition-all">
+                                        <RichInput
+                                            value={action.varName || ''}
+                                            onChange={(v) => onUpdate(action.id, { varName: v })}
+                                            onBlur={() => onAutoSave()}
+                                            variables={variables}
+                                            placeholder="apiResponse"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()
                 }
 
                 {

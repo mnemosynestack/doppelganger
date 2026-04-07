@@ -146,7 +146,7 @@ app.use((req, res, next) => {
         "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data: blob: https://www.google.com https://cdn.jsdelivr.net https://raw.githubusercontent.com",
+        "img-src 'self' data: blob: https://www.google.com https://*.gstatic.com https://cdn.jsdelivr.net https://raw.githubusercontent.com",
         "connect-src 'self' https://api.github.com https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.baserow.io",
         "media-src 'self' blob:",
         "frame-src 'self'"

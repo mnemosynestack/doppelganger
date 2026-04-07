@@ -1,7 +1,6 @@
 import React, { useRef, memo } from 'react';
 import { Task } from '../types';
 import MaterialIcon from './MaterialIcon';
-import GithubStarPill from './GithubStarPill';
 import TaskCard from './TaskCard';
 
 interface DashboardScreenProps {
@@ -62,43 +61,40 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
         <>
             <div className="flex-1 overflow-hidden animate-in fade-in duration-500 bg-black">
                 <div className="h-full flex flex-col px-12 py-12 max-w-7xl mx-auto space-y-12 w-full">
-                    <div className="flex items-end justify-between">
-                        <div className="flex items-end gap-6 flex-1">
-                            <h2 className="text-2xl font-medium tracking-[0.25em] text-white uppercase shrink-0">Dashboard</h2>
-                            {tasks.length > 0 && (
-                                <div className="relative group/search max-w-md w-full">
-                                    <MaterialIcon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg group-focus-within/search:text-white transition-colors" />
-                                    <input
-                                        ref={searchInputRef}
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder="Filter tasks... (/)"
-                                        className="w-full bg-white/[0.05] border border-white/10 rounded-2xl py-3 pl-12 pr-10 text-[10px] font-bold uppercase tracking-widest text-white placeholder:text-gray-600 focus:outline-none focus:border-white/30 focus-visible:ring-2 focus-visible:ring-white/20 transition-all"
-                                        aria-label="Filter tasks"
-                                        title="Search tasks by name or URL"
-                                    />
-                                    {searchQuery && (
-                                        <button
-                                            onClick={() => setSearchQuery('')}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-                                            aria-label="Clear filter"
-                                            title="Clear filter"
-                                        >
-                                            <MaterialIcon name="cancel" className="text-base" />
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <GithubStarPill />
+                    <div className="relative flex items-center justify-between">
+                        <h2 className="text-2xl font-medium tracking-[0.25em] text-white uppercase shrink-0">Dashboard</h2>
+                        {tasks.length > 0 && (
+                            <div className="absolute left-1/2 -translate-x-1/2 group/search w-[260px]">
+                                <MaterialIcon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg group-focus-within/search:text-white transition-colors" />
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Filter tasks... (/)"
+                                    className="w-full bg-white/[0.05] border border-white/10 rounded-2xl py-3 pl-12 pr-10 text-[10px] font-bold uppercase tracking-widest text-white placeholder:text-gray-600 focus:outline-none focus:border-white/30 focus-visible:ring-2 focus-visible:ring-white/20 transition-all"
+                                    aria-label="Filter tasks"
+                                    title="Search tasks by name or URL"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                        aria-label="Clear filter"
+                                        title="Clear filter"
+                                    >
+                                        <MaterialIcon name="cancel" className="text-base" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                        <div className="flex items-center gap-5">
                             <button
                                 onClick={() => {
                                     setSelectedTaskIds([]);
                                     setIsExportModalOpen(true);
                                 }}
-                                className="px-4 py-3 rounded-2xl border border-white/10 text-white text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                className="px-5 py-3 rounded-2xl border border-white/10 text-white text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                 title="Export tasks"
                                 aria-label="Export tasks"
                             >
@@ -107,7 +103,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                             </button>
                             <button
                                 onClick={handleImportClick}
-                                className="px-4 py-3 rounded-2xl border border-white/10 text-white text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                className="px-5 py-3 rounded-2xl border border-white/10 text-white text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                                 title="Import tasks"
                                 aria-label="Import tasks"
                             >
@@ -116,7 +112,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                             </button>
                             <button
                                 onClick={onNewTask}
-                                className="shine-effect bg-white text-black px-8 py-3 rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase transition-all hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                className="shine-effect bg-white text-black px-9 py-3 rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase transition-all hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 aria-label="Create new task"
                                 title="Create new task"
                             >
