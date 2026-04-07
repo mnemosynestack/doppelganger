@@ -2,10 +2,16 @@ const { JSDOM } = require('jsdom');
 const vm = require('vm');
 
 const REAL_TARGET = Symbol('REAL_TARGET');
+const proxyMap = new WeakMap();
+const targetMap = new WeakMap();
 
 function createSafeProxy(target) {
     if (target === null || (typeof target !== 'object' && typeof target !== 'function')) {
         return target;
+    }
+
+    if (targetMap.has(target)) {
+        return targetMap.get(target);
     }
 
     let shadowTarget = target;
@@ -17,9 +23,9 @@ function createSafeProxy(target) {
         shadowTarget[REAL_TARGET] = target;
     }
 
-    return new Proxy(shadowTarget, {
-        get(target, prop, receiver) {
-            const realTarget = target[REAL_TARGET] || target;
+    const proxy = new Proxy(shadowTarget, {
+        get(t, prop, receiver) {
+            const realTarget = t[REAL_TARGET] || t;
             if (prop === 'constructor' || prop === '__proto__') {
                 return undefined;
             }
@@ -30,7 +36,7 @@ function createSafeProxy(target) {
             if (typeof value === 'function') {
                 return function (...args) {
                     const wrappedArgs = args.map(arg => {
-                        const raw = (arg && arg[REAL_TARGET]) ? arg[REAL_TARGET] : arg;
+                        const raw = proxyMap.get(arg) || (arg && arg[REAL_TARGET]) || arg;
                         if (typeof raw === 'function') {
                             return function (...cbArgs) {
                                 return raw.apply(createSafeProxy(this), cbArgs.map(a => createSafeProxy(a)));
@@ -48,11 +54,11 @@ function createSafeProxy(target) {
             }
             return createSafeProxy(value);
         },
-        apply(target, thisArg, argList) {
-             const realTarget = target[REAL_TARGET] || target;
-             const realThis = (thisArg && thisArg[REAL_TARGET]) ? thisArg[REAL_TARGET] : thisArg;
+        apply(t, thisArg, argList) {
+             const realTarget = t[REAL_TARGET] || t;
+             const realThis = proxyMap.get(thisArg) || (thisArg && thisArg[REAL_TARGET]) || thisArg;
              const wrappedArgs = argList.map(arg => {
-                 const raw = (arg && arg[REAL_TARGET]) ? arg[REAL_TARGET] : arg;
+                 const raw = proxyMap.get(arg) || (arg && arg[REAL_TARGET]) || arg;
                  if (typeof raw === 'function') {
                       return function (...cbArgs) {
                            return raw.apply(createSafeProxy(this), cbArgs.map(a => createSafeProxy(a)));
@@ -68,10 +74,10 @@ function createSafeProxy(target) {
                  throw e;
              }
         },
-        construct(target, argumentsList, newTarget) {
-            const realTarget = target[REAL_TARGET] || target;
+        construct(t, argumentsList, newTarget) {
+            const realTarget = t[REAL_TARGET] || t;
             const wrappedArgs = argumentsList.map(arg => {
-                const raw = (arg && arg[REAL_TARGET]) ? arg[REAL_TARGET] : arg;
+                const raw = proxyMap.get(arg) || (arg && arg[REAL_TARGET]) || arg;
                 if (typeof raw === 'function') {
                     return function (...cbArgs) {
                         return raw.apply(createSafeProxy(this), cbArgs.map(a => createSafeProxy(a)));
@@ -86,11 +92,15 @@ function createSafeProxy(target) {
                 throw e;
             }
         },
-        getPrototypeOf(target) {
-            const realTarget = target[REAL_TARGET] || target;
+        getPrototypeOf(t) {
+            const realTarget = t[REAL_TARGET] || t;
             return createSafeProxy(Reflect.getPrototypeOf(realTarget));
         }
     });
+
+    targetMap.set(target, proxy);
+    proxyMap.set(proxy, target);
+    return proxy;
 }
 
 const runExtractionScript = async (script, html, pageUrl, includeShadowDom) => {
