@@ -25,6 +25,7 @@ const EditorTopBar: React.FC<EditorTopBarProps> = ({
                         onChange={(e) => onUpdateTaskName(e.target.value)}
                         onBlur={() => onAutoSave()}
                         placeholder="Task name"
+                        aria-label="Task name"
                         className="bg-transparent border-none text-[11px] font-bold text-white uppercase tracking-[0.25em] focus:outline-none w-full max-w-[400px] text-center placeholder:text-white/20 py-1"
                     />
                 </div>

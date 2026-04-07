@@ -198,6 +198,50 @@ export default function App() {
         logout(requestConfirm);
     }, [logout, requestConfirm]);
 
+    // Global keyboard shortcuts for sidebar navigation
+    useEffect(() => {
+        if (authStatus !== 'authenticated') return;
+
+        const handleShortcuts = (e: KeyboardEvent) => {
+            if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                // Skip if user is typing in an input
+                if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA' || (document.activeElement as HTMLElement)?.isContentEditable) {
+                    return;
+                }
+
+                switch (e.key.toLowerCase()) {
+                    case '1':
+                        e.preventDefault();
+                        handleNavigate('dashboard');
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        handleNavigate('settings');
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        handleNavigate('executions');
+                        break;
+                    case '4':
+                        e.preventDefault();
+                        handleNavigate('captures');
+                        break;
+                    case 'n':
+                        e.preventDefault();
+                        handleNewTask();
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        handleLogout();
+                        break;
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleShortcuts);
+        return () => window.removeEventListener('keydown', handleShortcuts);
+    }, [handleNavigate, handleNewTask, handleLogout]);
+
     let content: React.ReactNode;
     if (authStatus === 'login' || authStatus === 'setup') {
         content = <AuthScreen status={authStatus} onSubmit={handleAuthSubmit} error={authError} busy={authBusy} />;
