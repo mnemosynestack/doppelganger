@@ -2,7 +2,8 @@ const express = require('express');
 const { requireAuth, requireApiKey, requireAuthOrApiKey } = require('../middleware');
 const {
     loadTasks, saveTasks, getTaskById, getTaskIndexById,
-    loadGeminiApiKey, loadOpenAiApiKey, loadClaudeApiKey, loadOllamaApiKey
+    loadGeminiApiKey, loadOpenAiApiKey, loadClaudeApiKey, loadOllamaApiKey,
+    loadAiModels
 } = require('../storage');
 const { taskMutex } = require('../state');
 const { appendTaskVersion, cloneTaskForVersion } = require('../utils');
@@ -194,6 +195,7 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
         const openAiKeys = await loadOpenAiApiKey();
         const claudeKeys = await loadClaudeApiKey();
         const ollamaBaseUrls = await loadOllamaApiKey();
+        const aiModels = await loadAiModels();
 
         const hasAnyKeys = geminiKeys.length > 0 || openAiKeys.length > 0 || claudeKeys.length > 0 || ollamaBaseUrls.length > 0;
         if (!hasAnyKeys) {
@@ -208,7 +210,7 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
         // Try Gemini
         for (const key of geminiKeys) {
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${aiModels.gemini}:generateContent?key=${key}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -238,7 +240,7 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
                             'Authorization': `Bearer ${key}`
                         },
                         body: JSON.stringify({
-                            model: 'gpt-4o-mini',
+                            model: aiModels.openai,
                             messages: [{ role: 'user', content: llmPrompt }]
                         })
                     });
@@ -267,7 +269,7 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
                             'anthropic-version': '2023-06-01'
                         },
                         body: JSON.stringify({
-                            model: 'claude-3-5-haiku-20241022',
+                            model: aiModels.claude,
                             max_tokens: 1024,
                             messages: [{ role: 'user', content: llmPrompt }]
                         })
@@ -289,11 +291,11 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
         if (!selector) {
             for (const raw of ollamaBaseUrls) {
                 try {
-                    const { url: baseUrl, model } = parseOllamaEntry(raw);
+                    const { url: baseUrl } = parseOllamaEntry(raw);
                     const response = await fetch(baseUrl + '/v1/chat/completions', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ollama' },
-                        body: JSON.stringify({ model, messages: [{ role: 'user', content: llmPrompt }] })
+                        body: JSON.stringify({ model: aiModels.ollama, messages: [{ role: 'user', content: llmPrompt }] })
                     });
                     if (response.ok) {
                         const data = await response.json();
@@ -341,6 +343,7 @@ router.post('/generate-script', requireAuth, async (req, res) => {
     const openAiKeys = await loadOpenAiApiKey();
     const claudeKeys = await loadClaudeApiKey();
     const ollamaBaseUrls = await loadOllamaApiKey();
+    const aiModels = await loadAiModels();
 
     const hasAnyKeys = geminiKeys.length > 0 || openAiKeys.length > 0 || claudeKeys.length > 0 || ollamaBaseUrls.length > 0;
     if (!hasAnyKeys) {
@@ -365,7 +368,7 @@ Only reply with the raw JavaScript code, no markdown, no backticks, no explanati
 
     for (const key of geminiKeys) {
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${aiModels.gemini}:generateContent?key=${key}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ parts: [{ text: llmPrompt }] }] })
@@ -386,7 +389,7 @@ Only reply with the raw JavaScript code, no markdown, no backticks, no explanati
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-                    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: llmPrompt }] })
+                    body: JSON.stringify({ model: aiModels.openai, messages: [{ role: 'user', content: llmPrompt }] })
                 });
                 if (response.ok) {
                     const data = await response.json();
@@ -405,7 +408,7 @@ Only reply with the raw JavaScript code, no markdown, no backticks, no explanati
                 const response = await fetch('https://api.anthropic.com/v1/messages', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-                    body: JSON.stringify({ model: 'claude-3-5-haiku-20241022', max_tokens: 1024, messages: [{ role: 'user', content: llmPrompt }] })
+                    body: JSON.stringify({ model: aiModels.claude, max_tokens: 1024, messages: [{ role: 'user', content: llmPrompt }] })
                 });
                 if (response.ok) {
                     const data = await response.json();

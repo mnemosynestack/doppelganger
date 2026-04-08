@@ -162,7 +162,7 @@ const runExtractionScript = async (script, html, pageUrl, includeShadowDom) => {
             return { shadowQueryAll, shadowText };
         })();
 
-        const $$data = {
+        const data = {
             html: () => html || '',
             url: () => pageUrl || '',
             window,
@@ -177,7 +177,9 @@ const runExtractionScript = async (script, html, pageUrl, includeShadowDom) => {
         sandbox.document = createSafeProxy(window.document);
         sandbox.DOMParser = createSafeProxy(window.DOMParser);
         sandbox.console = createSafeProxy(consoleProxy);
-        sandbox.$$data = createSafeProxy($$data);
+        const proxiedData = createSafeProxy(data);
+        sandbox.data = proxiedData;
+        sandbox.$$data = proxiedData;
 
         // Pass the script as a variable to avoid string interpolation (CodeQL: Code Injection)
         sandbox.$$userScript = script;
@@ -191,8 +193,8 @@ const runExtractionScript = async (script, html, pageUrl, includeShadowDom) => {
             "use strict";
             (async () => {
                 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-                const fn = new AsyncFunction('$$data', 'window', 'document', 'DOMParser', 'console', $$userScript);
-                return fn($$data, window, document, DOMParser, console);
+                const fn = new AsyncFunction('data', '$$data', 'window', 'document', 'DOMParser', 'console', $$userScript);
+                return fn(data, $$data, window, document, DOMParser, console);
             })();
         `;
 

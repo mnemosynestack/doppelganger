@@ -47,7 +47,7 @@ This document is a concise, implementation-focused reference for AI agents that 
 Supported action `type` values:
 ```
 navigate, click, type, wait, wait_selector, wait_downloads, press, scroll, javascript, csv, hover, merge,
-screenshot, if, else, end, while, repeat, foreach, stop, set, on_error, start
+screenshot, if, else, end, while, repeat, foreach, stop, set, on_error, start, http_request, get_content
 ```
 
 Common fields:
@@ -285,7 +285,20 @@ Make an arbitrary HTTP API call. The response is automatically parsed as JSON (f
 - `body`: Optional request body (for POST/PUT/PATCH/DELETE). Supports variable templating.
 - `varName`: Optional variable name to store the parsed response for use in later actions.
 
-## 15) Notes for AI agents
+## 15) Get Content
+Extract the visible text content (`innerText`) of a page or a specific element and optionally store it in a variable.
+```json
+{
+  "id": "act_content",
+  "type": "get_content",
+  "selector": ".article-body",
+  "varName": "pageContent"
+}
+```
+- `selector`: Optional CSS selector. If omitted, returns the full page body text.
+- `varName`: Optional variable name to store the result. Also available as `{$block.output}` in the next action.
+
+## 16) Notes for AI agents
 - `javascript` actions are page-context only (no `page` object).
 - Prefer structured conditions for selectors (`exists` with selector).
 - Keep waits short; use 1-2s unless the target site is slow.

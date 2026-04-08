@@ -506,14 +506,14 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
         );
     }
 
-    const containerClassName = fullWidth ? 'space-y-12 relative z-10 w-full' : 'space-y-12 relative z-10 max-w-5xl mx-auto';
+    const containerClassName = fullWidth ? 'space-y-8 relative z-10 w-full' : 'space-y-12 relative z-10 max-w-5xl mx-auto';
 
     return (
         <div className={containerClassName}>
-            <div className="flex items-end justify-between border-b border-white/5 pb-10">
-                <div className="space-y-4">
+            <div className="flex items-end justify-between border-b border-white/5 pb-4">
+                <div className="space-y-2 min-w-0 mr-3">
                     <p className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.3em]">Preview</p>
-                    <h2 className="text-xl font-mono text-white truncate max-w-xl tracking-tight italic">
+                    <h2 className="text-sm font-mono text-white truncate tracking-tight italic">
                         {activeResults?.finalUrl || activeResults?.url || ''}
                     </h2>
                 </div>
@@ -527,9 +527,9 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                <div className="glass-card rounded-[32px] overflow-hidden flex flex-col min-h-[400px]">
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+            <div className={`grid grid-cols-1 ${fullWidth ? 'gap-6' : 'xl:grid-cols-2 gap-8'}`}>
+                <div className={`glass-card overflow-hidden flex flex-col ${fullWidth ? 'rounded-2xl min-h-[260px]' : 'rounded-[32px] min-h-[400px]'}`}>
+                    <div className={`border-b border-white/5 flex items-center justify-between text-[8px] font-bold text-gray-500 uppercase tracking-widest ${fullWidth ? 'p-4' : 'p-6'}`}>
                         <span>Screenshot</span>
                         <div className="flex items-center gap-2">
                             <span className="text-white/20">{activeResults?.timestamp || '--:--:--'}</span>
@@ -556,8 +556,8 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                         )}
                     </div>
                 </div>
-                <div className="glass-card rounded-[32px] p-8 flex flex-col h-[400px]">
-                    <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
+                <div className={`glass-card flex flex-col ${fullWidth ? 'rounded-2xl p-4 h-[240px]' : 'rounded-[32px] p-8 h-[400px]'}`}>
+                    <div className={`flex items-center justify-between border-b border-white/5 ${fullWidth ? 'mb-4 pb-3' : 'mb-6 pb-4'}`}>
                         <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Activity Log</span>
                         <button
                             onClick={() => handleCopy((activeResults?.logs || []).join('\n'), 'logs')}
@@ -623,8 +623,8 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                 </div>
             )}
 
-            <div className="glass-card rounded-[32px] p-8 flex flex-col relative">
-                <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
+            <div className={`glass-card flex flex-col relative ${fullWidth ? 'rounded-2xl p-4' : 'rounded-[32px] p-8'}`}>
+                <div className={`flex items-center justify-between border-b border-white/5 ${fullWidth ? 'flex-wrap gap-2 pb-4 mb-4' : 'pb-4 mb-6'}`}>
                     <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
                         {mainView === 'downloads' ? 'Downloads' : 'Data'}
                     </span>

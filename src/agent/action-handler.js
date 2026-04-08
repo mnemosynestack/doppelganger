@@ -595,6 +595,21 @@ const executeAction = async (act, context) => {
             result = parsed;
             break;
         }
+        case 'get_content': {
+            const selectorValue = resolveMaybe(act.selector || '');
+            logs.push(`Getting content${selectorValue ? `: ${selectorValue}` : ' (full page)'}`);
+            const content = await page.evaluate((selector) => {
+                if (!selector) return document.body.innerText;
+                const el = document.querySelector(selector);
+                return el ? el.innerText : null;
+            }, selectorValue);
+            if (act.varName) {
+                const targetName = normalizeVarRef(act.varName);
+                runtimeVars[String(targetName)] = content;
+            }
+            result = content;
+            break;
+        }
         case 'start': {
             const rawTaskId = resolveMaybe(act.value);
             if (!rawTaskId) throw new Error('Missing task id.');

@@ -13,12 +13,14 @@ interface ExtractionScriptBlockProps {
     task: Task;
     onUpdate: (updates: Partial<Task>) => void;
     onAutoSave: () => void;
+    onDelete: () => void;
 }
 
-const ExtractionScriptBlock: React.FC<ExtractionScriptBlockProps> = ({ task, onUpdate, onAutoSave }) => {
+const ExtractionScriptBlock: React.FC<ExtractionScriptBlockProps> = ({ task, onUpdate, onAutoSave, onDelete }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [showAiPrompt, setShowAiPrompt] = useState(false);
     const [aiDescription, setAiDescription] = useState('');
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const [aiLoading, setAiLoading] = useState(false);
     const [aiError, setAiError] = useState<string | null>(null);
 
@@ -35,7 +37,7 @@ const ExtractionScriptBlock: React.FC<ExtractionScriptBlockProps> = ({ task, onU
                 body: JSON.stringify({ description: aiDescription.trim() })
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Generation failed');
+            if (!res.ok) throw new Error(data.details ? `${data.error}: ${data.details}` : (data.error || 'Generation failed'));
             onUpdate({ extractionScript: data.script });
             setShowAiPrompt(false);
             setAiDescription('');
@@ -136,10 +138,35 @@ const ExtractionScriptBlock: React.FC<ExtractionScriptBlockProps> = ({ task, onU
         document.body
     ) : null;
 
+    const contextMenuPortal = contextMenu ? createPortal(
+        <div
+            className="fixed inset-0 z-[200]"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
+        >
+            <div
+                className="absolute bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[140px]"
+                style={{ top: contextMenu.y, left: contextMenu.x }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <button
+                    onClick={() => { setContextMenu(null); onDelete(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-[10px] text-red-400 hover:bg-white/5 transition-colors"
+                >
+                    <MaterialIcon name="delete" className="text-sm" />
+                    Remove extraction script
+                </button>
+            </div>
+        </div>,
+        document.body
+    ) : null;
+
     return (
         <>
             <div
                 onClick={() => setIsOpen(true)}
+                onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY }); }}
+                data-interactive-target="true"
                 className="bg-black min-w-[280px] w-full max-w-sm mx-auto border border-white/20 p-5 rounded-2xl group/item relative transition-all duration-150 select-none touch-none cursor-pointer hover:border-white/40 hover:bg-white/[0.02]"
             >
                 <div className="flex items-center gap-3 min-w-0">
@@ -155,6 +182,7 @@ const ExtractionScriptBlock: React.FC<ExtractionScriptBlockProps> = ({ task, onU
                 </div>
             </div>
             {modal}
+            {contextMenuPortal}
         </>
     );
 };
@@ -233,6 +261,24 @@ const CanvasView: React.FC<CanvasViewProps> = ({
         }
     }, [isHeadfulOpen, onOpenHeadful, currentTask.url, currentTask.variables]);
 
+    const handleCreateVariable = useCallback((name: string) => {
+        const nextVars = { ...currentTask.variables };
+        if (name in nextVars) return;
+        nextVars[name] = { type: 'string', value: '', autoCreated: true };
+        const updated = { ...currentTask, variables: nextVars };
+        setCurrentTask(updated);
+        handleAutoSave(updated);
+    }, [currentTask, setCurrentTask, handleAutoSave]);
+
+    const handleDeleteVariable = useCallback((name: string) => {
+        const nextVars = { ...currentTask.variables };
+        if (!(name in nextVars) || !nextVars[name].autoCreated) return;
+        delete nextVars[name];
+        const updated = { ...currentTask, variables: nextVars };
+        setCurrentTask(updated);
+        handleAutoSave(updated);
+    }, [currentTask, setCurrentTask, handleAutoSave]);
+
     const [canvasContextMenu, setCanvasContextMenu] = useState<{ x: number; y: number; worldX: number; worldY: number } | null>(null);
 
     const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
@@ -304,6 +350,8 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                                 onOpenContextMenu={openContextMenu}
                                 onPointerDown={handleActionPointerDown}
                                 onStartInspect={onStartInspect}
+                                onCreateVariable={handleCreateVariable}
+                                onDeleteVariable={handleDeleteVariable}
                             />
                         </div>
                         <div className="flex gap-16 mt-4 relative">
@@ -398,6 +446,8 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                                 onOpenContextMenu={openContextMenu}
                                 onPointerDown={handleActionPointerDown}
                                 onStartInspect={onStartInspect}
+                                onCreateVariable={handleCreateVariable}
+                                onDeleteVariable={handleDeleteVariable}
                             />
                         </div>
                         {i < endIndex - 1 && currentTask.actions[i + 1]?.type !== 'end' && (
@@ -520,11 +570,23 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                     {(currentTask.mode === 'agent' || currentTask.mode === 'scrape') && <div className="w-px h-10 bg-white/25" />}
                     {currentTask.mode === 'scrape' && (
                         <div className="w-[360px] pointer-events-auto">
-                            <ExtractionScriptBlock
-                                task={currentTask}
-                                onUpdate={(updates) => { const merged = { ...currentTask, ...updates }; setCurrentTask(merged); handleAutoSave(merged); }}
-                                onAutoSave={() => handleAutoSave()}
-                            />
+                            {currentTask.extractionScript !== undefined ? (
+                                <ExtractionScriptBlock
+                                    task={currentTask}
+                                    onUpdate={(updates) => { const merged = { ...currentTask, ...updates }; setCurrentTask(merged); handleAutoSave(merged); }}
+                                    onAutoSave={() => handleAutoSave()}
+                                    onDelete={() => { const t = { ...currentTask, extractionScript: undefined, extractionFormat: undefined }; setCurrentTask(t); handleAutoSave(t); }}
+                                />
+                            ) : (
+                                <button
+                                    onClick={() => { const t = { ...currentTask, extractionScript: '' }; setCurrentTask(t); handleAutoSave(t); }}
+                                    data-interactive-target="true"
+                                    className="w-full border border-dashed border-white/15 rounded-2xl p-5 hover:border-white/30 hover:bg-white/[0.03] transition-all flex items-center justify-center gap-2 group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                >
+                                    <MaterialIcon name="add" className="text-lg text-gray-500 group-hover:text-white transition-colors" />
+                                    <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 group-hover:text-gray-300 transition-colors">Add Extraction Script</span>
+                                </button>
+                            )}
                         </div>
                     )}
                     {currentTask.mode === 'agent' && (
@@ -547,11 +609,23 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                                 </div>
                                 <div className="w-px h-6 bg-white/25" />
                                 <div className="w-[360px]">
-                                    <ExtractionScriptBlock
-                                        task={currentTask}
-                                        onUpdate={(updates) => { const merged = { ...currentTask, ...updates }; setCurrentTask(merged); handleAutoSave(merged); }}
-                                        onAutoSave={() => handleAutoSave()}
-                                    />
+                                    {currentTask.extractionScript !== undefined ? (
+                                        <ExtractionScriptBlock
+                                            task={currentTask}
+                                            onUpdate={(updates) => { const merged = { ...currentTask, ...updates }; setCurrentTask(merged); handleAutoSave(merged); }}
+                                            onAutoSave={() => handleAutoSave()}
+                                            onDelete={() => { const t = { ...currentTask, extractionScript: undefined, extractionFormat: undefined }; setCurrentTask(t); handleAutoSave(t); }}
+                                        />
+                                    ) : (
+                                        <button
+                                            onClick={() => { const t = { ...currentTask, extractionScript: '' }; setCurrentTask(t); handleAutoSave(t); }}
+                                            data-interactive-target="true"
+                                            className="w-full border border-dashed border-white/15 rounded-2xl p-5 hover:border-white/30 hover:bg-white/[0.03] transition-all flex items-center justify-center gap-2 group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                                        >
+                                            <MaterialIcon name="add" className="text-lg text-gray-500 group-hover:text-white transition-colors" />
+                                            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 group-hover:text-gray-300 transition-colors">Add Extraction Script</span>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

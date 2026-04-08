@@ -153,16 +153,19 @@ const runExtraction = async (data) => {
             return { shadowQueryAll, shadowText };
         })();
 
+        const proxiedData = createSafeProxy({
+            html: () => html || '',
+            url: () => url || '',
+            window,
+            document: window.document,
+            shadowQueryAll: includeShadowDom ? shadowHelpers.shadowQueryAll : undefined,
+            shadowText: includeShadowDom ? shadowHelpers.shadowText : undefined
+        });
+
         const sandbox = Object.create(null);
         Object.assign(sandbox, {
-            $$data: createSafeProxy({
-                html: () => html || '',
-                url: () => url || '',
-                window,
-                document: window.document,
-                shadowQueryAll: includeShadowDom ? shadowHelpers.shadowQueryAll : undefined,
-                shadowText: includeShadowDom ? shadowHelpers.shadowText : undefined
-            }),
+            data: proxiedData,
+            $$data: proxiedData,
             window: createSafeProxy(window),
             document: createSafeProxy(window.document),
             DOMParser: createSafeProxy(window.DOMParser),
@@ -175,8 +178,8 @@ const runExtraction = async (data) => {
             "use strict";
             (async () => {
                 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-                const fn = new AsyncFunction('$$data', 'window', 'document', 'DOMParser', 'console', $$userScript);
-                return fn($$data, window, document, DOMParser, console);
+                const fn = new AsyncFunction('data', '$$data', 'window', 'document', 'DOMParser', 'console', $$userScript);
+                return fn(data, $$data, window, document, DOMParser, console);
             })();
         `;
 

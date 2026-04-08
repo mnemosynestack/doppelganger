@@ -90,7 +90,7 @@ const ActionPalette: React.FC<ActionPaletteProps> = ({ open, query, onQueryChang
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                        className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                         aria-label="Close"
                         title="Close palette"
                     >

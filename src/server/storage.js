@@ -10,6 +10,8 @@ const {
     OPENAI_API_KEY_FILE,
     CLAUDE_API_KEY_FILE,
     OLLAMA_API_KEY_FILE,
+    AI_MODELS_FILE,
+    DEFAULT_AI_MODELS,
     ALLOWED_IPS_FILE,
     STORAGE_STATE_PATH,
     MAX_EXECUTIONS,
@@ -188,6 +190,28 @@ function getTaskIndexById(id) {
     return entry !== undefined ? entry.index : -1;
 }
 
+function migrateExtractionScript(script) {
+    if (!script || typeof script !== 'string' || !script.includes('$$data')) return script;
+    // Replace $$data.html / $$data.url accessed without parens → data.html() / data.url()
+    let s = script.replace(/\$\$data\.html(?!\s*\()/g, 'data.html()');
+    s = s.replace(/\$\$data\.url(?!\s*\()/g, 'data.url()');
+    // Replace any remaining $$data → data
+    return s.replace(/\$\$data/g, 'data');
+}
+
+function migrateTaskScripts(tasks) {
+    let changed = false;
+    const migrated = tasks.map(task => {
+        const newScript = migrateExtractionScript(task.extractionScript);
+        if (newScript !== task.extractionScript) {
+            changed = true;
+            return { ...task, extractionScript: newScript };
+        }
+        return task;
+    });
+    return { tasks: migrated, changed };
+}
+
 async function loadTasks() {
     const useDB = await ensureDB();
     const now = Date.now();
@@ -203,9 +227,12 @@ async function loadTasks() {
             try {
                 const pool = getPool();
                 const res = await pool.query('SELECT data FROM tasks');
-                tasksCache = res.rows.map(r => r.data);
+                const raw = res.rows.map(r => r.data);
+                const { tasks: migrated, changed } = migrateTaskScripts(raw);
+                tasksCache = migrated;
                 tasksLastCheck = Date.now();
                 syncTasksMap();
+                if (changed) saveTasks(migrated).catch(e => console.error('[MIGRATE] Failed to save migrated tasks:', e));
             } catch (e) {
                 tasksCache = tasksCache || [];
                 syncTasksMap();
@@ -242,10 +269,13 @@ async function loadTasks() {
     tasksLoadPromise = (async () => {
         try {
             const data = await fs.promises.readFile(TASKS_FILE, 'utf8');
-            tasksCache = JSON.parse(data);
+            const raw = JSON.parse(data);
+            const { tasks: migrated, changed } = migrateTaskScripts(raw);
+            tasksCache = migrated;
             tasksMtime = stat.mtimeMs;
             tasksLastCheck = Date.now();
             syncTasksMap();
+            if (changed) saveTasks(migrated).catch(e => console.error('[MIGRATE] Failed to save migrated tasks:', e));
         } catch (e) {
             tasksCache = tasksCache || [];
             tasksMtime = 0;
@@ -1058,6 +1088,25 @@ async function flushExecutions() {
     }
 }
 
+// AI Models Storage
+let aiModelsCache = null;
+
+async function loadAiModels() {
+    if (aiModelsCache) return aiModelsCache;
+    try {
+        const raw = await fs.promises.readFile(AI_MODELS_FILE, 'utf8');
+        aiModelsCache = { ...DEFAULT_AI_MODELS, ...JSON.parse(raw) };
+    } catch {
+        aiModelsCache = { ...DEFAULT_AI_MODELS };
+    }
+    return aiModelsCache;
+}
+
+async function saveAiModels(models) {
+    aiModelsCache = { ...DEFAULT_AI_MODELS, ...models };
+    await fs.promises.writeFile(AI_MODELS_FILE, JSON.stringify(aiModelsCache, null, 2));
+}
+
 module.exports = {
     loadUsers,
     saveUsers,
@@ -1084,5 +1133,7 @@ module.exports = {
     saveCredentials,
     saveSession,
     loadAllowedIps,
-    getStorageStateFile
+    getStorageStateFile,
+    loadAiModels,
+    saveAiModels
 };

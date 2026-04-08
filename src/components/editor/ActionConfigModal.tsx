@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Action, Task, Variable, VarType } from '../../types';
 import MaterialIcon from '../MaterialIcon';
@@ -79,6 +79,8 @@ interface ActionConfigModalProps {
     onAutoSave: () => void;
     onClose: () => void;
     onStartInspect?: (id: string) => void;
+    onCreateVariable?: (name: string) => void;
+    onDeleteVariable?: (name: string) => void;
 }
 
 const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
@@ -90,6 +92,8 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
     onAutoSave,
     onClose,
     onStartInspect,
+    onCreateVariable,
+    onDeleteVariable,
 }) => {
     const label = ACTION_CATALOG.find((i) => i.type === action.type)?.label || action.type;
 
@@ -109,7 +113,7 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                 body: JSON.stringify({ description: aiDescription.trim() })
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Generation failed');
+            if (!res.ok) throw new Error(data.details ? `${data.error}: ${data.details}` : (data.error || 'Generation failed'));
             onUpdate(action.id, { value: data.script });
             setShowAiPrompt(false);
             setAiDescription('');
@@ -119,7 +123,6 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
             setAiLoading(false);
         }
     };
-
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -127,6 +130,40 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
+
+    const autoCreatedInSession = useRef(new Set<string>());
+
+    useEffect(() => {
+        const fieldsToScan = [
+            action.selector, action.value, action.key, action.varName,
+            action.conditionValue, action.headers, action.body
+        ];
+        const regex = /\{\$([\w.]+)\}/g;
+        const referenced = new Set<string>();
+        for (const text of fieldsToScan) {
+            if (!text) continue;
+            regex.lastIndex = 0;
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                const name = match[1];
+                if (name !== 'now' && name !== 'block.output') referenced.add(name);
+            }
+        }
+        // Create missing variables
+        for (const name of referenced) {
+            if (!(name in variables)) {
+                onCreateVariable?.(name);
+                autoCreatedInSession.current.add(name);
+            }
+        }
+        // Delete auto-created variables that are no longer referenced
+        for (const name of autoCreatedInSession.current) {
+            if (!referenced.has(name) && variables[name]?.autoCreated) {
+                onDeleteVariable?.(name);
+                autoCreatedInSession.current.delete(name);
+            }
+        }
+    }, [action]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const field = (labelText: string, children: React.ReactNode) => (
         <div className="space-y-1.5">
@@ -617,6 +654,28 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                         />
                     ))}
                 </>}
+
+                {/* Get Content */}
+                {action.type === 'get_content' && <>
+                    {field('Selector (Optional)', inputWrap(
+                        <RichInput
+                            value={action.selector || ''}
+                            onChange={(v) => onUpdate(action.id, { selector: v })}
+                            onBlur={() => onAutoSave()}
+                            variables={variables}
+                            placeholder=".article-body or leave empty for full page"
+                        />
+                    ))}
+                    {field('Store In Variable (Optional)', inputWrap(
+                        <RichInput
+                            value={action.varName || ''}
+                            onChange={(v) => onUpdate(action.id, { varName: v })}
+                            onBlur={() => onAutoSave()}
+                            variables={variables}
+                            placeholder="pageContent"
+                        />
+                    ))}
+                </>}
             </div>
         );
     };
@@ -624,7 +683,11 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
     return createPortal(
         <div
             className="fixed inset-0 z-[190] flex items-center justify-center bg-black/70 backdrop-blur-sm px-6"
-            onClick={onClose}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
         >
             <div
                 className="glass-card w-full max-w-lg rounded-[28px] border border-white/10 p-7 shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col gap-10 max-h-[85vh]"

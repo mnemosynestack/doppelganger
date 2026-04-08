@@ -19,6 +19,8 @@ const getActionSummary = (action: Action) => {
     } else if (action.type === 'http_request') {
         const m = action.method || 'GET';
         summary = action.value ? `[${m}] ${action.value}` : m;
+    } else if (action.type === 'get_content') {
+        summary = action.varName ? `→ ${action.varName}` : action.selector || '';
     }
     return summary.trim();
 };
@@ -47,6 +49,7 @@ const renderBlockMarker = (type: Action['type']) => {
     if (type === 'navigate') return <MaterialIcon name="navigation" className={`${iconClass} text-white`} />;
     if (type === 'http_request') return <MaterialIcon name="language" className={`${iconClass} text-white`} />;
     if (type === 'wait_downloads') return <MaterialIcon name="download" className={`${iconClass} text-white`} />;
+    if (type === 'get_content') return <MaterialIcon name="article" className={`${iconClass} text-white`} />;
     return <span className="text-[9px] text-white/20">|</span>;
 };
 
@@ -69,6 +72,8 @@ interface ActionItemProps {
     onPointerDown: (e: React.PointerEvent, id: string, index: number) => void;
     dragTransformY?: number;
     onStartInspect?: (id: string) => void;
+    onCreateVariable?: (name: string) => void;
+    onDeleteVariable?: (name: string) => void;
     isSelected?: boolean;
     selectorOptions?: string[];
 }
@@ -89,6 +94,8 @@ const ActionItem: React.FC<ActionItemProps> = React.memo(({
     onPointerDown,
     dragTransformY,
     onStartInspect,
+    onCreateVariable,
+    onDeleteVariable,
     isSelected,
     selectorOptions
 }) => {
@@ -186,6 +193,8 @@ const ActionItem: React.FC<ActionItemProps> = React.memo(({
                     onAutoSave={onAutoSave}
                     onClose={() => setIsModalOpen(false)}
                     onStartInspect={onStartInspect}
+                    onCreateVariable={onCreateVariable}
+                    onDeleteVariable={onDeleteVariable}
                 />
             )}
         </>

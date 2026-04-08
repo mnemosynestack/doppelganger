@@ -23,6 +23,7 @@ export type VarType = 'string' | 'number' | 'boolean';
 export interface Variable {
     type: VarType;
     value: any;
+    autoCreated?: boolean;
 }
 
 export interface StealthConfig {
@@ -62,7 +63,8 @@ export interface Action {
     | 'navigate'
     | 'wait_downloads'
     | 'start'
-    | 'http_request';
+    | 'http_request'
+    | 'get_content';
     selector?: string;
     value?: string;
     key?: string;

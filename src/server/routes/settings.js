@@ -6,7 +6,8 @@ const {
     loadGeminiApiKey, saveGeminiApiKey,
     loadOpenAiApiKey, saveOpenAiApiKey,
     loadClaudeApiKey, saveClaudeApiKey,
-    loadOllamaApiKey, saveOllamaApiKey
+    loadOllamaApiKey, saveOllamaApiKey,
+    loadAiModels, saveAiModels
 } = require('../storage');
 const { getUserAgentConfig, setUserAgentSelection } = require('../../../user-agent-settings');
 const { listProxies, addProxy, addProxies, updateProxy, deleteProxy, deleteProxies, setDefaultProxy, setIncludeDefaultInRotation, setRotationMode } = require('../../../proxy-rotation');
@@ -289,6 +290,34 @@ router.post('/proxies/rotation', csrfProtection, dataRateLimiter, requireAuthFor
     } catch (e) {
         console.error('[PROXIES] Rotation toggle failed:', e);
         res.status(500).json({ error: 'PROXY_ROTATION_FAILED' });
+    }
+});
+
+// AI Models
+router.get('/ai-models', requireAuthForSettings, async (req, res) => {
+    try {
+        res.json(await loadAiModels());
+    } catch (e) {
+        console.error('[AI_MODELS] Load failed:', e);
+        res.status(500).json({ error: 'AI_MODELS_LOAD_FAILED' });
+    }
+});
+
+router.post('/ai-models', csrfProtection, dataRateLimiter, requireAuthForSettings, async (req, res) => {
+    try {
+        const { gemini, openai, claude, ollama } = req.body || {};
+        const current = await loadAiModels();
+        const updated = {
+            gemini: typeof gemini === 'string' && gemini.trim() ? gemini.trim() : current.gemini,
+            openai: typeof openai === 'string' && openai.trim() ? openai.trim() : current.openai,
+            claude: typeof claude === 'string' && claude.trim() ? claude.trim() : current.claude,
+            ollama: typeof ollama === 'string' && ollama.trim() ? ollama.trim() : current.ollama,
+        };
+        await saveAiModels(updated);
+        res.json(updated);
+    } catch (e) {
+        console.error('[AI_MODELS] Save failed:', e);
+        res.status(500).json({ error: 'AI_MODELS_SAVE_FAILED' });
     }
 });
 

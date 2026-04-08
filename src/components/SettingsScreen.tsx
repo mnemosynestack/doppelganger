@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import GithubStarPill from './GithubStarPill';
 import { ConfirmRequest, Credential } from '../types';
 import ApiKeysPanel, { ApiKeyConfig, ProviderConfig, DbProviderConfig } from './settings/ApiKeysPanel';
@@ -10,6 +10,117 @@ import ProxiesPanel from './settings/ProxiesPanel';
 import UserAgentPanel from './settings/UserAgentPanel';
 import VersionPanel from './settings/VersionPanel';
 import { APP_VERSION } from '@/utils/appInfo';
+import MaterialIcon from './MaterialIcon';
+
+// ── AI Models Panel ──────────────────────────────────────────────────────────
+
+const AI_MODEL_OPTIONS = {
+    gemini: ['gemini-3-flash-preview', 'gemini-2.5-flash-preview-05-20', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'],
+    openai: ['gpt-5-nano', 'gpt-4.5-nano', 'gpt-4o-mini', 'gpt-4o', 'gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4.1'],
+    claude: ['claude-haiku-4-6', 'claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022', 'claude-sonnet-4-5', 'claude-opus-4-5'],
+    ollama: ['llama3.2', 'llama3.1', 'llama3', 'gemma3', 'gemma4:e2b', 'mistral', 'codellama', 'qwen2.5'],
+};
+
+const MODEL_PROVIDERS = [
+    { key: 'gemini' as const, label: 'Gemini', iconUrl: 'https://www.google.com/s2/favicons?domain=gemini.google.com&sz=128' },
+    { key: 'openai' as const, label: 'OpenAI', iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/openai.svg' },
+    { key: 'claude' as const, label: 'Anthropic', iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/claude.svg' },
+    { key: 'ollama' as const, label: 'Ollama', iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/ollama.svg' },
+];
+
+type AiModelKey = 'gemini' | 'openai' | 'claude' | 'ollama';
+
+interface AiModelsPanelProps {
+    models: Record<AiModelKey, string>;
+    loading: boolean;
+    saving: boolean;
+    onSave: (provider: AiModelKey, value: string) => Promise<void>;
+}
+
+const ModelRow: React.FC<{
+    providerKey: AiModelKey;
+    label: string;
+    iconUrl: string;
+    value: string;
+    saving: boolean;
+    loading: boolean;
+    onSave: (value: string) => Promise<void>;
+}> = ({ providerKey, label, iconUrl, value, saving, loading, onSave }: { providerKey: AiModelKey; label: string; iconUrl: string; value: string; saving: boolean; loading: boolean; onSave: (value: string) => Promise<void> }) => {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(value);
+
+    const handleEdit = () => { setDraft(value); setEditing(true); };
+    const handleCancel = () => { setEditing(false); setDraft(value); };
+    const handleSave = async () => { await onSave(draft.trim() || value); setEditing(false); };
+
+    return (
+        <div className="flex flex-col gap-3 py-4 border-b border-white/5 last:border-0">
+            <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
+                    <img src={iconUrl} alt={label} className="w-6 h-6 object-contain" />
+                </div>
+                <div className="flex-1">
+                    <h4 className="text-sm font-bold text-white uppercase tracking-widest">{label}</h4>
+                </div>
+            </div>
+            {!editing ? (
+                <div className="flex items-center gap-3">
+                    <div className="flex-1 rounded-2xl bg-black/40 border border-white/10 px-4 py-3 font-mono text-[10px] text-blue-200/80 min-h-[44px] flex items-center">
+                        {loading ? <span className="opacity-50">Loading…</span> : <span>{value}</span>}
+                    </div>
+                    <button onClick={handleEdit} disabled={loading || saving} className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 transition-all disabled:opacity-50 flex items-center gap-2">
+                        <MaterialIcon name="edit" className="text-base" />
+                        Edit
+                    </button>
+                </div>
+            ) : (
+                <div className="flex items-center gap-3">
+                    <div className="flex-1 rounded-2xl bg-black/40 border border-white/30 focus-within:border-white px-4 py-3 transition-all">
+                        <input
+                            list={`model-list-${providerKey}`}
+                            value={draft}
+                            onChange={e => setDraft(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') handleCancel(); }}
+                            className="w-full bg-transparent text-[10px] text-white font-mono focus:outline-none"
+                            autoFocus
+                        />
+                        <datalist id={`model-list-${providerKey}`}>
+                            {AI_MODEL_OPTIONS[providerKey].map(m => <option key={m} value={m} />)}
+                        </datalist>
+                    </div>
+                    <button onClick={handleCancel} disabled={saving} className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest border border-white/20 text-white hover:bg-white/10 transition-all disabled:opacity-50">Cancel</button>
+                    <button onClick={handleSave} disabled={saving || !draft.trim()} className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest bg-blue-500 text-white hover:bg-blue-400 transition-all disabled:opacity-50 flex items-center gap-2">
+                        <MaterialIcon name="save" className="text-base" />
+                        {saving ? 'Saving…' : 'Save'}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const AiModelsPanel: React.FC<AiModelsPanelProps> = ({ models, loading, saving, onSave }) => (
+    <div className="glass-card p-8 rounded-[40px]">
+        <div className="mb-6">
+            <h3 className="text-lg font-bold text-white uppercase tracking-widest">AI Models</h3>
+            <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Preferred model for each AI provider</p>
+        </div>
+        <div className="flex flex-col">
+            {MODEL_PROVIDERS.map(p => (
+                <ModelRow
+                    key={p.key}
+                    providerKey={p.key}
+                    label={p.label}
+                    iconUrl={p.iconUrl}
+                    value={models[p.key]}
+                    loading={loading}
+                    saving={saving}
+                    onSave={(v) => onSave(p.key, v)}
+                />
+            ))}
+        </div>
+    </div>
+);
 
 interface SettingsScreenProps {
     onClearStorage: (type: 'screenshots' | 'cookies') => void;
@@ -45,6 +156,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     const [ollamaApiKeys, setOllamaApiKeys] = useState<string[]>([]);
     const [ollamaApiKeyLoading, setOllamaApiKeyLoading] = useState(true);
     const [ollamaApiKeySaving, setOllamaApiKeySaving] = useState(false);
+    const [aiModels, setAiModels] = useState({ gemini: 'gemini-3-flash-preview', openai: 'gpt-5-nano', claude: 'claude-haiku-4-6', ollama: 'llama3.2' });
+    const [aiModelsLoading, setAiModelsLoading] = useState(false);
+    const [aiModelsSaving, setAiModelsSaving] = useState(false);
     const [proxies, setProxies] = useState<{ id: string; server: string; username?: string; password?: string; label?: string; isRotatingPool?: boolean; estimatedPoolSize?: number }[]>([]);
     const [defaultProxyId, setDefaultProxyId] = useState<string | null>(null);
     const [includeDefaultInRotation, setIncludeDefaultInRotation] = useState(false);
@@ -669,6 +783,39 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
     };
 
+    const loadAiModelsFromServer = useCallback(async () => {
+        setAiModelsLoading(true);
+        try {
+            const res = await fetch('/api/settings/ai-models', { credentials: 'include' });
+            if (res.ok) setAiModels(await res.json());
+        } catch { /* keep defaults */ } finally {
+            setAiModelsLoading(false);
+        }
+    }, []);
+
+    const saveAiModel = useCallback(async (provider: AiModelKey, value: string) => {
+        setAiModelsSaving(true);
+        try {
+            const next = { ...aiModels, [provider]: value };
+            const res = await fetch('/api/settings/ai-models', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(next)
+            });
+            if (res.ok) {
+                setAiModels(await res.json());
+                onNotify('Model saved.', 'success');
+            } else {
+                onNotify('Failed to save model.', 'error');
+            }
+        } catch {
+            onNotify('Failed to save model.', 'error');
+        } finally {
+            setAiModelsSaving(false);
+        }
+    }, [aiModels, onNotify]);
+
     // Load system data on mount and when tab changes to system
     useEffect(() => {
         if (tab === 'data') loadData();
@@ -680,6 +827,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             loadOllamaApiKeys();
             loadUserAgent();
             loadCredentials();
+            loadAiModelsFromServer();
         }
         if (tab === 'proxies') loadProxies();
     }, [tab]);
@@ -693,6 +841,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             loadClaudeApiKeys();
             loadOllamaApiKeys();
             loadCredentials();
+            loadAiModelsFromServer();
         }
     }, []);
 
@@ -959,7 +1108,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         apiKeysConfig.push({
             id: `ollama_api_key_${idx}`,
             name: 'Ollama',
-            description: 'Local Ollama instance URL and model',
+            description: 'Local Ollama instance base URL',
             iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/ollama.svg',
             value: keyVal,
             saving: ollamaApiKeySaving,
@@ -983,7 +1132,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         apiKeysConfig.push({
             id: `ollama_api_key_unsaved_${i}`,
             name: 'Ollama',
-            description: 'Local Ollama instance URL and model',
+            description: 'Local Ollama instance base URL',
             iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/ollama.svg',
             value: null,
             saving: ollamaApiKeySaving,
@@ -1052,6 +1201,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
                             dbProviders={dbProviders}
                             onAddDbCredential={handleAddDbCredential}
                             onConfirm={onConfirm}
+                        />
+                        <AiModelsPanel
+                            models={aiModels}
+                            loading={aiModelsLoading}
+                            saving={aiModelsSaving}
+                            onSave={saveAiModel}
                         />
                         <UserAgentPanel
                             selection={userAgentSelection}

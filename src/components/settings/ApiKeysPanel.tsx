@@ -66,13 +66,10 @@ const ApiKeyRow: React.FC<{
     const [showPlaintext, setShowPlaintext] = useState(false);
     // urlModel-specific state
     const [editUrl, setEditUrl] = useState('');
-    const [editModel, setEditModel] = useState('');
 
     const handleEditStart = () => {
         if (config.urlModel) {
-            const parsed = parseUrlModel(config.value);
-            setEditUrl(parsed.url);
-            setEditModel(parsed.model);
+            setEditUrl(parseUrlModel(config.value).url);
         } else {
             setEditValue(config.value || '');
             setShowPlaintext(false);
@@ -84,14 +81,12 @@ const ApiKeyRow: React.FC<{
         setIsEditing(false);
         setEditValue('');
         setEditUrl('');
-        setEditModel('');
         setShowPlaintext(false);
     };
 
     const handleSave = async () => {
         if (config.urlModel) {
-            const val = JSON.stringify({ url: editUrl.trim(), model: editModel.trim() });
-            await config.onSave(val);
+            await config.onSave(editUrl.trim());
         } else {
             await config.onSave(editValue.trim());
         }
@@ -156,14 +151,11 @@ const ApiKeyRow: React.FC<{
 
                 {!isEditing ? (
                     <div className="flex items-center gap-3">
-                        <div className="flex-1 rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-[10px] text-blue-200/80 min-h-[44px] flex flex-col justify-center gap-1">
+                        <div className="flex-1 rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-[10px] text-blue-200/80 min-h-[44px] flex items-center">
                             {config.loading ? (
                                 <span className="opacity-50">Loading...</span>
                             ) : config.value ? (
-                                <>
-                                    <span className="font-mono">{parsed.url || <span className="opacity-40">No URL</span>}</span>
-                                    <span className="text-white/40">{parsed.model || <span className="italic">No model set</span>}</span>
-                                </>
+                                <span className="font-mono">{parsed.url || <span className="opacity-40">No URL</span>}</span>
                             ) : (
                                 <span className="opacity-40">Not configured</span>
                             )}
@@ -178,30 +170,16 @@ const ApiKeyRow: React.FC<{
                     </div>
                 ) : (
                     <div className="flex flex-col gap-3">
-                        <div className="flex flex-col gap-2 rounded-2xl bg-black/40 border border-white/30 focus-within:border-white px-4 py-3 transition-all">
-                            <div className="flex flex-col gap-1">
-                                <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Base URL</label>
-                                <input
-                                    type="text"
-                                    value={editUrl}
-                                    onChange={e => setEditUrl(e.target.value)}
-                                    disabled={config.saving}
-                                    placeholder="http://localhost:11434"
-                                    className="bg-transparent text-[11px] text-white font-mono focus:outline-none"
-                                    autoFocus
-                                />
-                            </div>
-                            <div className="border-t border-white/10 pt-2 flex flex-col gap-1">
-                                <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Model</label>
-                                <input
-                                    type="text"
-                                    value={editModel}
-                                    onChange={e => setEditModel(e.target.value)}
-                                    disabled={config.saving}
-                                    placeholder="gemma4:e2b"
-                                    className="bg-transparent text-[11px] text-white font-mono focus:outline-none"
-                                />
-                            </div>
+                        <div className="flex items-center gap-3 rounded-2xl bg-black/40 border border-white/30 focus-within:border-white px-4 py-3 transition-all">
+                            <input
+                                type="text"
+                                value={editUrl}
+                                onChange={e => setEditUrl(e.target.value)}
+                                disabled={config.saving}
+                                placeholder="http://localhost:11434"
+                                className="flex-1 bg-transparent text-[11px] text-white font-mono focus:outline-none"
+                                autoFocus
+                            />
                         </div>
                         <div className="flex items-center gap-3">
                             <button onClick={handleCancel} disabled={config.saving} className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest bg-transparent border border-white/20 text-white hover:bg-white/10 transition-all disabled:opacity-50">Cancel</button>

@@ -34,7 +34,7 @@ const ResultsDrawer: React.FC<ResultsDrawerProps> = ({
 }) => {
     return (
         <div
-            className={`fixed top-0 right-0 h-full w-[600px] max-w-[90vw] bg-[#080808] border-l border-white/10 shadow-2xl transition-transform duration-500 ease-in-out z-40 transform ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+            className={`fixed top-0 right-0 h-full w-[420px] max-w-[90vw] bg-[#080808] border-l border-white/10 shadow-2xl transition-transform duration-500 ease-in-out z-40 transform ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
         >
             <button
                 onClick={onToggle}
@@ -44,7 +44,7 @@ const ResultsDrawer: React.FC<ResultsDrawerProps> = ({
             >
                 <MaterialIcon name="drag_indicator" className={`text-white/30 text-xl transition-transform duration-500 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
-            <div className="h-full w-full overflow-y-auto custom-scrollbar p-6">
+            <div className="h-full w-full overflow-y-auto custom-scrollbar p-4">
                 <ResultsPane
                     results={results}
                     pinnedResults={pinnedResults}

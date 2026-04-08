@@ -36,7 +36,7 @@ async function testOptimizationLogic() {
     // Case 2: Task with extraction script
     const res2 = await runSimulation({
         actions: [],
-        extractionScript: 'return $$data.url()'
+        extractionScript: 'return data.url()'
     });
     assert.strictEqual(res2.evaluateCalled, true, 'Case 2: Should run evaluate');
     assert.strictEqual(res2.cleanedHtml, '<html>cleaned</html>', 'Case 2: cleanedHtml should be populated');
