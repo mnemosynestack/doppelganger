@@ -216,7 +216,7 @@ If enabled, provide the `x-api-key` header or `Authorization: Bearer <key>`. For
 ### Data Management API
 *   **`GET /api/data/captures`**: List generated screenshots, videos, and downloads.
 *   **`DELETE /api/data/captures/:name`**: Delete a specific capture.
-*   **`POST /api/clear-screenshots`**: Removes all files in `public/captures`.
+*   **`POST /api/clear-screenshots`**: Removes all files in `public/captures` and `data/recordings`.
 *   **`POST /api/clear-cookies`**: Clears stored browser session cookies.
 
 # Task Scripting Tips

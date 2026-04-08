@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { requireAuth, dataRateLimiter } = require('../middleware');
 const { getStorageStateFile } = require('../storage');
+const { DATA_DIR } = require('../constants');
 
 const router = express.Router();
 // We need to resolve public/captures relative to where server.js runs usually, or use absolute path logic
@@ -76,7 +77,7 @@ router.get('/screenshots', requireAuth, dataRateLimiter, async (_req, res) => {
     res.json({ screenshots: entries });
 });
 
-router.delete('/captures/:name', requireAuth, (req, res) => {
+router.delete('/captures/:name', requireAuth, dataRateLimiter, (req, res) => {
     const name = req.params.name;
     if (name.includes('..') || name.includes('/') || name.includes('\\')) {
         return res.status(400).json({ error: 'INVALID_NAME' });
@@ -88,7 +89,7 @@ router.delete('/captures/:name', requireAuth, (req, res) => {
     res.json({ success: true });
 });
 
-router.get('/cookies', requireAuth, (req, res) => {
+router.get('/cookies', requireAuth, dataRateLimiter, (req, res) => {
     const storageStateFile = getStorageStateFile();
     if (!fs.existsSync(storageStateFile)) return res.json({ cookies: [], origins: [] });
     try {
@@ -102,7 +103,7 @@ router.get('/cookies', requireAuth, (req, res) => {
     }
 });
 
-router.post('/cookies/delete', requireAuth, (req, res) => {
+router.post('/cookies/delete', requireAuth, dataRateLimiter, (req, res) => {
     const { name, domain, path: cookiePath } = req.body || {};
     if (!name) return res.status(400).json({ error: 'MISSING_NAME' });
     const storageStateFile = getStorageStateFile();
@@ -125,13 +126,32 @@ router.post('/cookies/delete', requireAuth, (req, res) => {
 });
 
 // Also handle the clear screenshots/cookies which were separate POSTs in server.js
-router.post('/clear-screenshots', requireAuth, async (req, res) => {
+router.post('/clear-screenshots', requireAuth, dataRateLimiter, async (req, res) => {
     try {
-        const exists = await fs.promises.access(CAPTURES_DIR).then(() => true).catch(() => false);
-        if (exists) {
+        // 1. Clear public/captures (screenshots and finalized recordings)
+        const capturesExist = await fs.promises.access(CAPTURES_DIR).then(() => true).catch(() => false);
+        if (capturesExist) {
             const entries = await fs.promises.readdir(CAPTURES_DIR);
             await Promise.all(entries.map(async (entry) => {
                 const entryPath = path.join(CAPTURES_DIR, entry);
+                try {
+                    const stat = await fs.promises.stat(entryPath);
+                    if (stat.isFile()) {
+                        await fs.promises.unlink(entryPath);
+                    }
+                } catch (e) {
+                    // Ignore individual file errors
+                }
+            }));
+        }
+
+        // 2. Clear data/recordings (temporary recordings)
+        const recordingsDir = path.join(DATA_DIR, 'recordings');
+        const recordingsExist = await fs.promises.access(recordingsDir).then(() => true).catch(() => false);
+        if (recordingsExist) {
+            const entries = await fs.promises.readdir(recordingsDir);
+            await Promise.all(entries.map(async (entry) => {
+                const entryPath = path.join(recordingsDir, entry);
                 try {
                     const stat = await fs.promises.stat(entryPath);
                     if (stat.isFile()) {
@@ -148,7 +168,7 @@ router.post('/clear-screenshots', requireAuth, async (req, res) => {
     res.json({ success: true });
 });
 
-router.post('/clear-cookies', requireAuth, (req, res) => {
+router.post('/clear-cookies', requireAuth, dataRateLimiter, (req, res) => {
     const storageStateFile = getStorageStateFile();
     if (fs.existsSync(storageStateFile)) {
         fs.unlinkSync(storageStateFile);
