@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.12.1] - 2026-04-08
+
+### Security
+- **Block `host.docker.internal` in SSRF protection** (#275) — `url-utils.js` updated to explicitly reject this host even when `ALLOW_PRIVATE_NETWORKS` is enabled, preventing potential internal network probes via Docker bridges.
+- **Stricter network defaults** — `ALLOW_PRIVATE_NETWORKS` is now disabled by default.
+
+### Features
+- **Global AI model settings** — Added support for configuring default AI providers (OpenAI, Anthropic, Gemini, etc.) site-wide in system settings.
+- **`get_content` action** — New built-in action to extract full page content (HTML, text, or markdown) directly without custom extraction scripts.
+- **Extractor worker migration** — Extraction scripts now run in a dedicated worker for better isolation and performance.
+
+### Performance
+- **Vite Upgrade** — Upgraded to Vite 7.3.2 for improved build performance and security.
+
+### Improvements
+- **Capture cleanup** (#276) — Recordings are now automatically deleted when clearing captures in system settings.
+- **Code health** (#272) — Reduced scheduler log noise by removing unnecessary startup/shutdown logs.
+- **Environment consistency** — Renamed internal environment variables for Playwright installation for improved clarity.
+
+### Tests
+- Added comprehensive test suite for the **Execution Queue Limiter** (#271).
+
+## [0.12.0] - 2026-04-07
+
+### Performance
+- **PostgreSQL Optimization** (#264) — Implemented in-memory counters for execution logging to significantly reduce DB pressure during high-concurrency workloads.
+- **Finalization Optimization** (#262) — Streamlined agent execution finalization process to reduce overhead and latency.
+- **Dashboard Rendering** (#259) — Extracted and memoized `TaskCard` components to improve Dashboard responsiveness with large task libraries.
+
+### Improvements
+- **Shortcuts & Navigation** (#257, #260) — Added `Ctrl+Enter` shortcut to run tasks directly from the editor or action palette.
+- **UI Consistency** (#255) — Implemented standardized `Escape` key dismissal for all major editor overlays (Settings, Palette, Context Menus, etc.).
+- **Capture Management** (#253) — Enhanced the captures UI with icon-only action bars, visual type indicators (photo/video), and background loading states.
+
 ## [0.11.4] - 2026-04-01
 
 ### Security
