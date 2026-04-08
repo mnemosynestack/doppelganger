@@ -68,8 +68,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onNewTask, onLogout, curr
             <button
                 onClick={onLogout}
                 className="w-12 h-12 rounded-2xl flex items-center justify-center text-gray-500 hover:bg-red-500/10 hover:text-red-500 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-                title="Logout (Alt + L)"
-                aria-label="Logout (Alt + L)"
+                title="Logout"
+                aria-label="Logout"
             >
                 <MaterialIcon name="logout" className="text-2xl" />
             </button>

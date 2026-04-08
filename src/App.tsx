@@ -228,11 +228,6 @@ export default function App() {
                         e.preventDefault();
                         handleNewTask();
                         break;
-                    case 'l':
-                    case 'L':
-                        e.preventDefault();
-                        handleLogout();
-                        break;
                 }
             }
         };
