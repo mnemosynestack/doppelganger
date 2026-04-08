@@ -4,6 +4,30 @@ const { ALLOW_PRIVATE_NETWORKS } = require('./src/server/constants');
 
 /**
  * Checks if an IP address is private.
+ *
+ * Qualifies as a private network/blocked destination:
+ *
+ * IPv4 Ranges:
+ * - 0.0.0.0/8 (Current network)
+ * - 10.0.0.0/8 (Private-Use Networks - RFC 1918)
+ * - 100.64.0.0/10 (Shared Address Space - RFC 6598)
+ * - 127.0.0.0/8 (Loopback)
+ * - 169.254.0.0/16 (Link-Local)
+ * - 172.16.0.0/12 (Private-Use Networks - RFC 1918)
+ * - 192.168.0.0/16 (Private-Use Networks - RFC 1918)
+ *
+ * IPv6 Ranges:
+ * - ::/128 (Unspecified)
+ * - ::1/128 (Loopback)
+ * - fc00::/7 (Unique Local Address)
+ * - fe80::/10 (Link-Local Unicast)
+ * - IPv4-mapped/compatible addresses pointing to the above IPv4 ranges
+ *
+ * Hostnames:
+ * - localhost
+ * - *.localhost
+ * - host.docker.internal
+ *
  * @param {string} ip The IP address to check.
  * @returns {boolean} True if the IP is private.
  */
@@ -119,7 +143,11 @@ async function validateUrl(urlStr) {
     }
 
     // Direct check for common private hostnames
-    if (lowerHost === 'localhost' || lowerHost.endsWith('.localhost')) {
+    if (
+        lowerHost === 'localhost' ||
+        lowerHost.endsWith('.localhost') ||
+        lowerHost === 'host.docker.internal'
+    ) {
         INVALID_HOSTNAME_CACHE.add(lowerHost);
         throw new Error('Access to private network is restricted');
     }

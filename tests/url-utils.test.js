@@ -70,6 +70,7 @@ async function testValidateUrl() {
         { url: 'http://[0:0:0:0:0:ffff:127.0.0.1]', expectedBlock: true },
         { url: 'http://[::127.0.0.1]', expectedBlock: true },
         { url: 'http://0.0.0.0', expectedBlock: true },
+        { url: 'http://host.docker.internal', expectedBlock: true },
         { url: 'https://www.google.com', expectedBlock: false },
     ];
 
