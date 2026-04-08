@@ -13,6 +13,12 @@ const createSafeProxy = (target) => {
     if (target === null || (typeof target !== 'object' && typeof target !== 'function')) {
         return target;
     }
+
+    // ⚡ Bolt: Return immediately if target is already a proxy to prevent redundant nesting
+    if (proxyMap.has(target)) {
+        return target;
+    }
+
     if (targetMap.has(target)) {
         return targetMap.get(target);
     }

@@ -10,6 +10,11 @@ function createSafeProxy(target) {
         return target;
     }
 
+    // ⚡ Bolt: Return immediately if target is already a proxy to prevent redundant nesting
+    if (proxyMap.has(target)) {
+        return target;
+    }
+
     if (targetMap.has(target)) {
         return targetMap.get(target);
     }
@@ -32,26 +37,7 @@ function createSafeProxy(target) {
             if (prop === REAL_TARGET) return realTarget;
 
             const value = Reflect.get(realTarget, prop, realTarget);
-
-            if (typeof value === 'function') {
-                return function (...args) {
-                    const wrappedArgs = args.map(arg => {
-                        const raw = proxyMap.get(arg) || (arg && arg[REAL_TARGET]) || arg;
-                        if (typeof raw === 'function') {
-                            return function (...cbArgs) {
-                                return raw.apply(createSafeProxy(this), cbArgs.map(a => createSafeProxy(a)));
-                            };
-                        }
-                        return raw;
-                    });
-                    try {
-                        const result = value.apply(realTarget, wrappedArgs);
-                        return createSafeProxy(result);
-                    } catch (e) {
-                        throw e;
-                    }
-                };
-            }
+            // ⚡ Bolt: Let createSafeProxy handle function wrapping to ensure identity consistency (p.fn === p.fn)
             return createSafeProxy(value);
         },
         apply(t, thisArg, argList) {
