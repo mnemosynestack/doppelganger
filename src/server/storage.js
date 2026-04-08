@@ -9,6 +9,7 @@ const {
     GEMINI_API_KEY_FILE,
     OPENAI_API_KEY_FILE,
     CLAUDE_API_KEY_FILE,
+    OLLAMA_API_KEY_FILE,
     ALLOWED_IPS_FILE,
     STORAGE_STATE_PATH,
     MAX_EXECUTIONS,
@@ -869,6 +870,73 @@ async function saveClaudeApiKey(keysArg) {
     }
 }
 
+// Ollama API Key Storage (stores base URLs, e.g. http://localhost:11434)
+let ollamaKeysCache = null;
+let ollamaKeysMtime = 0;
+let ollamaKeysLastCheck = 0;
+let ollamaKeysLoadPromise = null;
+
+async function loadOllamaApiKey() {
+    const now = Date.now();
+    if (ollamaKeysCache && (now - ollamaKeysLastCheck < STORAGE_CACHE_TTL)) return ollamaKeysCache;
+    if (ollamaKeysLoadPromise) return await ollamaKeysLoadPromise;
+
+    let stat;
+    try {
+        stat = await fs.promises.stat(OLLAMA_API_KEY_FILE);
+    } catch {
+        ollamaKeysCache = [];
+        ollamaKeysMtime = 0;
+        return [];
+    }
+
+    if (ollamaKeysCache && ollamaKeysMtime === stat.mtimeMs) {
+        ollamaKeysLastCheck = now;
+        return ollamaKeysCache;
+    }
+
+    if (ollamaKeysLoadPromise) return await ollamaKeysLoadPromise;
+
+    ollamaKeysLoadPromise = (async () => {
+        try {
+            const raw = await fs.promises.readFile(OLLAMA_API_KEY_FILE, 'utf8');
+            const data = JSON.parse(raw);
+            if (Array.isArray(data.ollamaApiKeys)) {
+                ollamaKeysCache = data.ollamaApiKeys.map(k => typeof k === 'string' ? k.trim() : '').filter(k => k);
+            } else {
+                ollamaKeysCache = [];
+            }
+            ollamaKeysMtime = stat.mtimeMs;
+            ollamaKeysLastCheck = Date.now();
+        } catch (e) {
+            console.error('[STORAGE] Failed to load Ollama keys from file:', e.message);
+            ollamaKeysCache = ollamaKeysCache || [];
+            ollamaKeysMtime = 0;
+        }
+        ollamaKeysLoadPromise = null;
+        return ollamaKeysCache;
+    })();
+
+    return await ollamaKeysLoadPromise;
+}
+
+async function saveOllamaApiKey(keysArg) {
+    const keys = (Array.isArray(keysArg) ? keysArg : (keysArg ? [keysArg] : []))
+        .map(k => typeof k === 'string' ? k.trim() : '')
+        .filter(k => k);
+
+    ollamaKeysCache = keys;
+    ollamaKeysLastCheck = Date.now();
+
+    try {
+        await fs.promises.writeFile(OLLAMA_API_KEY_FILE, JSON.stringify({ ollamaApiKeys: keys }, null, 2));
+        const stat = await fs.promises.stat(OLLAMA_API_KEY_FILE);
+        ollamaKeysMtime = stat.mtimeMs;
+    } catch (e) {
+        console.error('[STORAGE] Failed to save Ollama keys to file:', e.message);
+    }
+}
+
 // Credentials Storage
 let credentialsCache = null;
 
@@ -1010,6 +1078,8 @@ module.exports = {
     saveOpenAiApiKey,
     loadClaudeApiKey,
     saveClaudeApiKey,
+    loadOllamaApiKey,
+    saveOllamaApiKey,
     loadCredentials,
     saveCredentials,
     saveSession,

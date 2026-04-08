@@ -542,8 +542,8 @@ async function runAgent(data, options = {}) {
         const includeHtml = !!(data.includeHtml ?? (data.taskSnapshot && data.taskSnapshot.includeHtml));
 
         let cleanedHtml = '';
-        // ⚡ Bolt: Only perform expensive DOM cleaning if we actually need the HTML for extraction or output
         if (extractionScriptRaw || includeHtml) {
+            // Full DOM cleaning needed for extraction or explicit HTML output
             for (let attempt = 0; attempt < 3; attempt++) {
                 try {
                     await page.waitForLoadState('domcontentloaded').catch(() => { });
@@ -554,7 +554,6 @@ async function runAgent(data, options = {}) {
                         await page.waitForTimeout(1000);
                         continue;
                     }
-                    // Final fallback: raw page content
                     try {
                         cleanedHtml = await page.content();
                     } catch {
@@ -562,6 +561,14 @@ async function runAgent(data, options = {}) {
                     }
                     break;
                 }
+            }
+        } else {
+            // No extraction script — capture raw HTML for display in the results pane
+            try {
+                await page.waitForLoadState('domcontentloaded').catch(() => {});
+                cleanedHtml = await page.content();
+            } catch {
+                cleanedHtml = '';
             }
         }
 

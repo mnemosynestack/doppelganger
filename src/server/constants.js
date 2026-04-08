@@ -12,6 +12,7 @@ const API_KEY_FILE = path.join(DATA_DIR, 'api_key.json');
 const GEMINI_API_KEY_FILE = path.join(DATA_DIR, 'gemini_api_key.json');
 const OPENAI_API_KEY_FILE = path.join(DATA_DIR, 'openai_api_key.json');
 const CLAUDE_API_KEY_FILE = path.join(DATA_DIR, 'claude_api_key.json');
+const OLLAMA_API_KEY_FILE = path.join(DATA_DIR, 'ollama_api_key.json');
 const STORAGE_STATE_PATH = path.join(__dirname, '../../storage_state.json');
 const EXECUTIONS_FILE = path.join(DATA_DIR, 'executions.json');
 const CREDENTIALS_FILE = path.join(DATA_DIR, 'credentials.json');
@@ -40,6 +41,7 @@ module.exports = {
     GEMINI_API_KEY_FILE,
     OPENAI_API_KEY_FILE,
     CLAUDE_API_KEY_FILE,
+    OLLAMA_API_KEY_FILE,
     STORAGE_STATE_PATH,
     EXECUTIONS_FILE,
     CREDENTIALS_FILE,

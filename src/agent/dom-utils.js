@@ -1,7 +1,25 @@
 function cleanHtml(withShadow) {
     const stripUseless = (root) => {
-        const useless = root.querySelectorAll('script, style, svg, link, noscript');
+        // Remove elements that can never be meaningful for extraction
+        const useless = root.querySelectorAll(
+            'script, style, link, meta, noscript, svg, canvas, ' +
+            'iframe, object, embed, applet, param, source, track, ' +
+            'head > *:not(title)'
+        );
         useless.forEach(node => node.remove());
+
+        // Strip all attributes except those useful for extraction
+        const keepAttrs = new Set(['id', 'class', 'href', 'src', 'alt', 'title', 'name', 'value', 'type', 'placeholder', 'aria-label', 'data-id', 'data-key', 'data-value', 'data-name', 'data-url', 'data-href', 'data-src', 'data-index', 'data-type', 'data-page', 'data-price', 'data-sku', 'data-product', 'data-category', 'data-item', 'data-label', 'data-text', 'data-title', 'selected', 'checked', 'disabled', 'multiple', 'for', 'action', 'method', 'content', 'datetime', 'colspan', 'rowspan', 'scope']);
+        const allEls = root.querySelectorAll('*');
+        allEls.forEach(el => {
+            const toRemove = [];
+            for (const attr of el.attributes) {
+                if (!keepAttrs.has(attr.name) && !attr.name.startsWith('data-')) {
+                    toRemove.push(attr.name);
+                }
+            }
+            toRemove.forEach(a => el.removeAttribute(a));
+        });
     };
 
     const cloneWithShadow = (root) => {

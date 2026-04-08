@@ -373,10 +373,8 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
     useEffect(() => {
         if (results) {
             setResultView('latest');
-            return;
         }
-        if (pinnedResults) setResultView('pinned');
-    }, [results, pinnedResults]);
+    }, [results]);
 
     useEffect(() => {
         if (!pinnedResults && resultView === 'pinned') {
@@ -831,7 +829,7 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
                             return <pre className="font-mono text-[10px] text-blue-300/60 whitespace-pre-wrap leading-relaxed">Buffering data stream...</pre>;
                         }
                         if (!activeResults || (!hasData && !hasDownloads)) {
-                            return <pre className="font-mono text-[10px] text-blue-300/60 whitespace-pre-wrap leading-relaxed">No data available.</pre>;
+                            return null;
                         }
                         return (
                             <div className="h-full">

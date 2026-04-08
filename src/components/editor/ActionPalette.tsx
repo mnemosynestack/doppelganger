@@ -14,11 +14,11 @@ interface ActionPaletteProps {
 const ActionPalette: React.FC<ActionPaletteProps> = ({ open, query, onQueryChange, onClose, onSelect }) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-    const [activeIndex, setActiveIndex] = useState(0);
+    const [activeIndex, setActiveIndex] = useState(-1);
 
     useEffect(() => {
         if (open) {
-            setActiveIndex(0);
+            setActiveIndex(-1);
             const timer = setTimeout(() => inputRef.current?.focus(), 50);
             return () => clearTimeout(timer);
         }
@@ -32,7 +32,7 @@ const ActionPalette: React.FC<ActionPaletteProps> = ({ open, query, onQueryChang
     }, [query]);
 
     useEffect(() => {
-        setActiveIndex(0);
+        setActiveIndex(-1);
     }, [query]);
 
     useEffect(() => {
@@ -54,16 +54,16 @@ const ActionPalette: React.FC<ActionPaletteProps> = ({ open, query, onQueryChang
             }
         } else if (e.key === 'ArrowDown') {
             e.preventDefault();
-            setActiveIndex(prev => (prev + 2 < filtered.length ? prev + 2 : prev));
+            setActiveIndex(prev => prev === -1 ? 0 : (prev + 2 < filtered.length ? prev + 2 : prev));
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
-            setActiveIndex(prev => (prev - 2 >= 0 ? prev - 2 : prev));
+            setActiveIndex(prev => prev <= 0 ? -1 : prev - 2);
         } else if (e.key === 'ArrowRight') {
             e.preventDefault();
-            setActiveIndex(prev => (prev + 1 < filtered.length ? prev + 1 : prev));
+            setActiveIndex(prev => prev === -1 ? 0 : (prev + 1 < filtered.length ? prev + 1 : prev));
         } else if (e.key === 'ArrowLeft') {
             e.preventDefault();
-            setActiveIndex(prev => (prev - 1 >= 0 ? prev - 1 : prev));
+            setActiveIndex(prev => prev <= 0 ? -1 : prev - 1);
         } else if (e.key === 'Enter') {
             e.preventDefault();
             if (filtered[activeIndex]) {

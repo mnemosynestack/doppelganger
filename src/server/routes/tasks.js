@@ -2,13 +2,23 @@ const express = require('express');
 const { requireAuth, requireApiKey, requireAuthOrApiKey } = require('../middleware');
 const {
     loadTasks, saveTasks, getTaskById, getTaskIndexById,
-    loadGeminiApiKey, loadOpenAiApiKey, loadClaudeApiKey
+    loadGeminiApiKey, loadOpenAiApiKey, loadClaudeApiKey, loadOllamaApiKey
 } = require('../storage');
 const { taskMutex } = require('../state');
 const { appendTaskVersion, cloneTaskForVersion } = require('../utils');
 const { handleAgent } = require('../../agent/index');
 
 const router = express.Router();
+
+// Parse Ollama config stored as JSON {"url":"...","model":"..."} or plain URL string
+function parseOllamaEntry(raw) {
+    try {
+        const parsed = JSON.parse(raw);
+        return { url: (parsed.url || '').replace(/\/$/, ''), model: parsed.model || 'gemma4:e2b' };
+    } catch {
+        return { url: raw.replace(/\/$/, ''), model: 'gemma4:e2b' };
+    }
+}
 
 router.get('/', requireAuthOrApiKey, async (req, res) => {
     const tasks = await loadTasks();
@@ -183,10 +193,11 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
         const geminiKeys = await loadGeminiApiKey();
         const openAiKeys = await loadOpenAiApiKey();
         const claudeKeys = await loadClaudeApiKey();
+        const ollamaBaseUrls = await loadOllamaApiKey();
 
-        const hasAnyKeys = geminiKeys.length > 0 || openAiKeys.length > 0 || claudeKeys.length > 0;
+        const hasAnyKeys = geminiKeys.length > 0 || openAiKeys.length > 0 || claudeKeys.length > 0 || ollamaBaseUrls.length > 0;
         if (!hasAnyKeys) {
-            return res.status(400).json({ error: 'No AI API keys configured. Please add a Gemini, OpenAI, or Anthropic key in Settings.' });
+            return res.status(400).json({ error: 'No AI API keys configured. Please add a Gemini, OpenAI, Anthropic, or Ollama key in Settings.' });
         }
 
         const llmPrompt = `Given this HTML:\n${agentResult.html}\n\nFind a reliable CSS selector for: "${prompt}"\n\nCRITICAL RULES:\n- Content-based selectors (e.g., using placeholder text, aria-labels, or has-text filters) are the MOST reliable.\n- NEVER use dynamic, numeric, or random-looking IDs (e.g., #APjFqb, #popup-170970, #id-9812).\n- NEVER use auto-generated utility classes that look like hashes (e.g., .css-1h2p).\n- Avoid long, fragile element chains (e.g., body > div > div > span).\n- Prefer specific, semantic, human-readable classes or data attributes (\`[data-testid="xyz"]\`, \`[aria-label="xyz"]\`).\n- If no good class/id exists, prefer structural pseudo-classes (e.g., \`button:nth-of-type(2)\`) or nearby stable anchors.\n\nOnly reply with the exact CSS selector, nothing else. Do not include markdown formatting or backticks.`;
@@ -274,6 +285,29 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
             }
         }
 
+        // Try Ollama if no selector yet
+        if (!selector) {
+            for (const raw of ollamaBaseUrls) {
+                try {
+                    const { url: baseUrl, model } = parseOllamaEntry(raw);
+                    const response = await fetch(baseUrl + '/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ollama' },
+                        body: JSON.stringify({ model, messages: [{ role: 'user', content: llmPrompt }] })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        selector = data.choices?.[0]?.message?.content;
+                        if (selector) break;
+                        errors.push(`Ollama: Success response but no selector found in data.`);
+                    } else {
+                        const text = await response.text();
+                        errors.push(`Ollama (Status ${response.status}): ${text}`);
+                    }
+                } catch (e) { errors.push(`Ollama Error: ${e.message}`); }
+            }
+        }
+
         if (!selector) {
             return res.status(500).json({
                 error: 'Failed to generate selector using configured AI keys.',
@@ -294,6 +328,127 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
         console.error('Generate selector error:', e);
         res.status(500).json({ error: e.message });
     }
+});
+
+router.post('/generate-script', requireAuth, async (req, res) => {
+    const { description } = req.body;
+
+    if (!description || typeof description !== 'string' || !description.trim()) {
+        return res.status(400).json({ error: 'Missing description.' });
+    }
+
+    const geminiKeys = await loadGeminiApiKey();
+    const openAiKeys = await loadOpenAiApiKey();
+    const claudeKeys = await loadClaudeApiKey();
+    const ollamaBaseUrls = await loadOllamaApiKey();
+
+    const hasAnyKeys = geminiKeys.length > 0 || openAiKeys.length > 0 || claudeKeys.length > 0 || ollamaBaseUrls.length > 0;
+    if (!hasAnyKeys) {
+        return res.status(400).json({ error: 'No AI API keys configured. Please add a Gemini, OpenAI, Anthropic, or Ollama key in Settings.' });
+    }
+
+    const llmPrompt = `Write a JavaScript extraction script that runs in a browser page context (via Playwright's page.evaluate). The script must use \`return\` to output structured data.
+
+Task: ${description.trim()}
+
+RULES:
+- Use standard DOM APIs (document.querySelector, document.querySelectorAll, etc.)
+- Always return a value (object, array, or primitive)
+- Keep the script concise and focused
+- Do not use async/await — page.evaluate is already async on the outside
+- Do not wrap in a function definition — write only the script body
+
+Only reply with the raw JavaScript code, no markdown, no backticks, no explanation.`;
+
+    let script = null;
+    let errors = [];
+
+    for (const key of geminiKeys) {
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: llmPrompt }] }] })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                script = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (script) break;
+            } else {
+                errors.push(`Gemini (${response.status}): ${await response.text()}`);
+            }
+        } catch (e) { errors.push(`Gemini Error: ${e.message}`); }
+    }
+
+    if (!script) {
+        for (const key of openAiKeys) {
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: llmPrompt }] })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    script = data.choices?.[0]?.message?.content;
+                    if (script) break;
+                } else {
+                    errors.push(`OpenAI (${response.status}): ${await response.text()}`);
+                }
+            } catch (e) { errors.push(`OpenAI Error: ${e.message}`); }
+        }
+    }
+
+    if (!script) {
+        for (const key of claudeKeys) {
+            try {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+                    body: JSON.stringify({ model: 'claude-3-5-haiku-20241022', max_tokens: 1024, messages: [{ role: 'user', content: llmPrompt }] })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    script = data.content?.[0]?.text;
+                    if (script) break;
+                } else {
+                    errors.push(`Claude (${response.status}): ${await response.text()}`);
+                }
+            } catch (e) { errors.push(`Claude Error: ${e.message}`); }
+        }
+    }
+
+    if (!script) {
+        for (const raw of ollamaBaseUrls) {
+            try {
+                const { url: baseUrl, model } = parseOllamaEntry(raw);
+                const response = await fetch(baseUrl + '/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ollama' },
+                    body: JSON.stringify({ model, messages: [{ role: 'user', content: llmPrompt }] })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    script = data.choices?.[0]?.message?.content;
+                    if (script) break;
+                } else {
+                    errors.push(`Ollama (${response.status}): ${await response.text()}`);
+                }
+            } catch (e) { errors.push(`Ollama Error: ${e.message}`); }
+        }
+    }
+
+    if (!script) {
+        return res.status(502).json({ error: 'All AI providers failed.', details: errors.join(' | ') });
+    }
+
+    // Strip markdown code fences if any provider wrapped the output
+    script = script.trim();
+    if (script.startsWith('```')) {
+        script = script.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
+    }
+
+    res.json({ script });
 });
 
 module.exports = router;

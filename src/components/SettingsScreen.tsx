@@ -42,6 +42,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     const [claudeApiKeys, setClaudeApiKeys] = useState<string[]>([]);
     const [claudeApiKeyLoading, setClaudeApiKeyLoading] = useState(true);
     const [claudeApiKeySaving, setClaudeApiKeySaving] = useState(false);
+    const [ollamaApiKeys, setOllamaApiKeys] = useState<string[]>([]);
+    const [ollamaApiKeyLoading, setOllamaApiKeyLoading] = useState(true);
+    const [ollamaApiKeySaving, setOllamaApiKeySaving] = useState(false);
     const [proxies, setProxies] = useState<{ id: string; server: string; username?: string; password?: string; label?: string; isRotatingPool?: boolean; estimatedPoolSize?: number }[]>([]);
     const [defaultProxyId, setDefaultProxyId] = useState<string | null>(null);
     const [includeDefaultInRotation, setIncludeDefaultInRotation] = useState(false);
@@ -597,6 +600,48 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
     };
 
+    const loadOllamaApiKeys = async () => {
+        setOllamaApiKeyLoading(true);
+        try {
+            const res = await fetch('/api/settings/ollama-api-key', { credentials: 'include' });
+            if (!res.ok) {
+                if (res.status === 401) onNotify('Session expired. Please log in again.', 'error');
+                setOllamaApiKeys([]);
+                return;
+            }
+            const data = await res.json();
+            setOllamaApiKeys(Array.isArray(data.ollamaApiKeys) ? data.ollamaApiKeys : []);
+        } catch {
+            setOllamaApiKeys([]);
+        } finally {
+            setOllamaApiKeyLoading(false);
+        }
+    };
+
+    const saveOllamaApiKeys = async (newKeys: string[]) => {
+        setOllamaApiKeySaving(true);
+        try {
+            const res = await fetch('/api/settings/ollama-api-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ ollamaApiKeys: newKeys })
+            });
+            if (!res.ok) {
+                if (res.status === 401) onNotify('Session expired. Please log in again.', 'error');
+                else onNotify('Failed to save Ollama settings.', 'error');
+                return;
+            }
+            const data = await res.json();
+            setOllamaApiKeys(Array.isArray(data.ollamaApiKeys) ? data.ollamaApiKeys : []);
+            onNotify('Ollama settings saved.', 'success');
+        } catch {
+            onNotify('Failed to save Ollama settings.', 'error');
+        } finally {
+            setOllamaApiKeySaving(false);
+        }
+    };
+
     const saveClaudeApiKeys = async (newKeys: string[]) => {
         setClaudeApiKeySaving(true);
         try {
@@ -632,6 +677,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             loadGeminiApiKeys();
             loadOpenAiApiKeys();
             loadClaudeApiKeys();
+            loadOllamaApiKeys();
             loadUserAgent();
             loadCredentials();
         }
@@ -645,6 +691,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             loadGeminiApiKeys();
             loadOpenAiApiKeys();
             loadClaudeApiKeys();
+            loadOllamaApiKeys();
             loadCredentials();
         }
     }, []);
@@ -672,7 +719,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             id: 'ollama_api_key',
             name: 'Ollama API Key',
             iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/ollama.svg',
-            disabled: true
+            disabled: false
         }
     ];
 
@@ -895,6 +942,70 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             onDelete: async () => {
                 setAddedProviders(prev => {
                     const idx = prev.indexOf('anthropic_api_key');
+                    if (idx !== -1) {
+                        const next = [...prev];
+                        next.splice(idx, 1);
+                        return next;
+                    }
+                    return prev;
+                });
+            }
+        });
+    }
+
+    // Saved Ollama instances
+    const validOllamaKeys = ollamaApiKeys.filter(k => k && k.trim());
+    validOllamaKeys.forEach((keyVal, idx) => {
+        apiKeysConfig.push({
+            id: `ollama_api_key_${idx}`,
+            name: 'Ollama',
+            description: 'Local Ollama instance URL and model',
+            iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/ollama.svg',
+            value: keyVal,
+            saving: ollamaApiKeySaving,
+            loading: ollamaApiKeyLoading,
+            badge: idx === 0 ? 'Primary' : 'Backup',
+            urlModel: true,
+            onSave: async (val) => {
+                const newKeys = [...ollamaApiKeys];
+                newKeys[idx] = val;
+                await saveOllamaApiKeys(newKeys);
+            },
+            onDelete: async () => {
+                const newKeys = ollamaApiKeys.filter((_, i) => i !== idx);
+                await saveOllamaApiKeys(newKeys);
+            }
+        });
+    });
+
+    const numUnsavedOllama = addedProviders.filter(p => p === 'ollama_api_key').length;
+    for (let i = 0; i < numUnsavedOllama; i++) {
+        apiKeysConfig.push({
+            id: `ollama_api_key_unsaved_${i}`,
+            name: 'Ollama',
+            description: 'Local Ollama instance URL and model',
+            iconUrl: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/ollama.svg',
+            value: null,
+            saving: ollamaApiKeySaving,
+            loading: ollamaApiKeyLoading,
+            startEditing: true,
+            urlModel: true,
+            onSave: async (val) => {
+                const newKeys = [...ollamaApiKeys, val];
+                await saveOllamaApiKeys(newKeys);
+                setAddedProviders(prev => {
+                    const idx = prev.indexOf('ollama_api_key');
+                    if (idx !== -1) {
+                        const next = [...prev];
+                        next.splice(idx, 1);
+                        return next;
+                    }
+                    return prev;
+                });
+            },
+            onDelete: async () => {
+                setAddedProviders(prev => {
+                    const idx = prev.indexOf('ollama_api_key');
                     if (idx !== -1) {
                         const next = [...prev];
                         next.splice(idx, 1);

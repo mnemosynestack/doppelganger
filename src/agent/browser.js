@@ -84,7 +84,7 @@ async function createBrowserContext(launchOptions, options = {}) {
     const contextOptions = {
         userAgent: userAgent,
         viewport,
-        deviceScaleFactor: 1,
+        ...(viewport !== null ? { deviceScaleFactor: 1 } : {}),
         locale: 'en-US',
         timezoneId: 'America/New_York',
         colorScheme: 'dark',

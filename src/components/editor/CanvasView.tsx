@@ -1,9 +1,163 @@
 import React, { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import MaterialIcon from '../MaterialIcon';
 import RichInput from '../RichInput';
+import CodeEditor from '../CodeEditor';
 import ActionItem from './ActionItem';
 import StickyNote from './StickyNote';
 import { Task, Action, StickyNote as StickyNoteType } from '../../types';
+
+// ── Extraction Script Block (scrape mode) ────────────────────────────────────
+
+interface ExtractionScriptBlockProps {
+    task: Task;
+    onUpdate: (updates: Partial<Task>) => void;
+    onAutoSave: () => void;
+}
+
+const ExtractionScriptBlock: React.FC<ExtractionScriptBlockProps> = ({ task, onUpdate, onAutoSave }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [showAiPrompt, setShowAiPrompt] = useState(false);
+    const [aiDescription, setAiDescription] = useState('');
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiError, setAiError] = useState<string | null>(null);
+
+    const scriptPreview = (task.extractionScript || '').split('\n').find(l => l.trim()) || '';
+
+    const handleGenerate = async () => {
+        if (!aiDescription.trim()) return;
+        setAiLoading(true);
+        setAiError(null);
+        try {
+            const res = await fetch('/api/tasks/generate-script', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description: aiDescription.trim() })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Generation failed');
+            onUpdate({ extractionScript: data.script });
+            setShowAiPrompt(false);
+            setAiDescription('');
+        } catch (e: any) {
+            setAiError(e.message);
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
+    const modal = isOpen ? createPortal(
+        <div className="fixed inset-0 z-[190] flex items-center justify-center bg-black/70 backdrop-blur-sm px-6" onClick={() => { setIsOpen(false); setShowAiPrompt(false); setAiError(null); }}>
+            <div className="glass-card w-full max-w-lg rounded-[28px] border border-white/10 p-7 shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col gap-8 max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="flex items-center justify-between shrink-0">
+                    <div>
+                        <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-gray-500">Extraction Script</p>
+                        <p className="text-xs text-gray-400 mt-1">Runs after page actions. Return data to capture it.</p>
+                    </div>
+                    <button onClick={() => { setIsOpen(false); setShowAiPrompt(false); setAiError(null); }} className="p-2 rounded-xl text-white/40 hover:text-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+                        <MaterialIcon name="close" className="text-base" />
+                    </button>
+                </div>
+
+                {/* Scrollable body */}
+                <div className="overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-6">
+                    {/* AI prompt row */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Script</label>
+                            <button
+                                onClick={() => { setShowAiPrompt(v => !v); setAiError(null); }}
+                                className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/60 hover:text-white transition-colors"
+                                title="Generate with AI"
+                            >
+                                <MaterialIcon name="auto_awesome" className="text-sm" />
+                                Generate
+                            </button>
+                        </div>
+                        {showAiPrompt && (
+                            <div className="flex flex-col gap-2 p-3 rounded-xl bg-white/5 border border-white/10">
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    value={aiDescription}
+                                    onChange={e => setAiDescription(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter' && !aiLoading) handleGenerate(); }}
+                                    placeholder="e.g. extract all article titles and links"
+                                    className="bg-transparent text-[11px] text-white placeholder-gray-600 focus:outline-none"
+                                />
+                                {aiError && <p className="text-[9px] text-red-400">{aiError}</p>}
+                                <div className="flex justify-end gap-2">
+                                    <button onClick={() => { setShowAiPrompt(false); setAiError(null); }} className="text-[8px] font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-colors">Cancel</button>
+                                    <button
+                                        onClick={handleGenerate}
+                                        disabled={aiLoading || !aiDescription.trim()}
+                                        className="px-3 py-1 rounded-lg bg-white text-black text-[8px] font-bold uppercase tracking-widest hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                    >
+                                        {aiLoading && <MaterialIcon name="autorenew" className="text-xs animate-spin" />}
+                                        {aiLoading ? 'Generating…' : 'Generate'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 focus-within:border-white/20 transition-all">
+                            <CodeEditor
+                                value={task.extractionScript || ''}
+                                onChange={v => onUpdate({ extractionScript: v })}
+                                onBlur={onAutoSave}
+                                language="javascript"
+                                className="min-h-[180px]"
+                                placeholder="// Example: return { title: document.title };"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Format */}
+                    <div className="space-y-1.5">
+                        <label className="text-[7px] font-bold text-gray-600 uppercase tracking-widest pl-1">Output Format</label>
+                        <div className="bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 focus-within:border-white/20 transition-all">
+                            <select
+                                value={task.extractionFormat || 'json'}
+                                onChange={e => { onUpdate({ extractionFormat: e.target.value as 'json' | 'csv' }); }}
+                                className="custom-select w-full bg-transparent border-none px-0 py-0 text-[11px] text-white"
+                            >
+                                <option value="json">JSON</option>
+                                <option value="csv">CSV</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button onClick={() => { setIsOpen(false); setShowAiPrompt(false); setAiError(null); onAutoSave(); }} className="shrink-0 w-full py-3 rounded-2xl bg-white text-black text-[10px] font-bold uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-[0.98] transition-all focus:outline-none">
+                    Done
+                </button>
+            </div>
+        </div>,
+        document.body
+    ) : null;
+
+    return (
+        <>
+            <div
+                onClick={() => setIsOpen(true)}
+                className="bg-black min-w-[280px] w-full max-w-sm mx-auto border border-white/20 p-5 rounded-2xl group/item relative transition-all duration-150 select-none touch-none cursor-pointer hover:border-white/40 hover:bg-white/[0.02]"
+            >
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                        <MaterialIcon name="data_object" className="text-[12px] text-white" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white shrink-0">Extraction Script</span>
+                    {scriptPreview && (
+                        <span className="text-white/40 text-[9px] font-mono truncate min-w-0 pointer-events-none">
+                            {scriptPreview.trim()}
+                        </span>
+                    )}
+                </div>
+            </div>
+            {modal}
+        </>
+    );
+};
 
 interface CanvasViewProps {
     currentTask: Task;
@@ -363,7 +517,16 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                             </div>
                         )}
                     </div>
-                    {currentTask.mode === 'agent' && <div className="w-px h-10 bg-white/25" />}
+                    {(currentTask.mode === 'agent' || currentTask.mode === 'scrape') && <div className="w-px h-10 bg-white/25" />}
+                    {currentTask.mode === 'scrape' && (
+                        <div className="w-[360px] pointer-events-auto">
+                            <ExtractionScriptBlock
+                                task={currentTask}
+                                onUpdate={(updates) => { const merged = { ...currentTask, ...updates }; setCurrentTask(merged); handleAutoSave(merged); }}
+                                onAutoSave={() => handleAutoSave()}
+                            />
+                        </div>
+                    )}
                     {currentTask.mode === 'agent' && (
                         <div className="flex flex-col items-center w-full select-text cursor-auto pointer-events-auto">
                             <div className="space-y-6 w-full flex flex-col items-center relative">
@@ -381,6 +544,14 @@ const CanvasView: React.FC<CanvasViewProps> = ({
                                         </div>
                                         <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 group-hover:text-gray-300 transition-colors">Add Action</span>
                                     </button>
+                                </div>
+                                <div className="w-px h-6 bg-white/25" />
+                                <div className="w-[360px]">
+                                    <ExtractionScriptBlock
+                                        task={currentTask}
+                                        onUpdate={(updates) => { const merged = { ...currentTask, ...updates }; setCurrentTask(merged); handleAutoSave(merged); }}
+                                        onAutoSave={() => handleAutoSave()}
+                                    />
                                 </div>
                             </div>
                         </div>

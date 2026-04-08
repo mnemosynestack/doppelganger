@@ -35,6 +35,7 @@ export interface ApiKeyConfig {
     readOnly?: boolean;
     startEditing?: boolean;
     badge?: string;
+    urlModel?: boolean; // treat value as JSON {url, model} — shows plain text fields instead of password
 }
 
 interface ApiKeysPanelProps {
@@ -46,6 +47,16 @@ interface ApiKeysPanelProps {
     onConfirm?: (msg: string) => Promise<boolean>;
 }
 
+const parseUrlModel = (raw: string | null): { url: string; model: string } => {
+    if (!raw) return { url: '', model: '' };
+    try {
+        const parsed = JSON.parse(raw);
+        return { url: parsed.url || '', model: parsed.model || '' };
+    } catch {
+        return { url: raw, model: '' };
+    }
+};
+
 const ApiKeyRow: React.FC<{
     config: ApiKeyConfig;
     onConfirm?: (msg: string) => Promise<boolean>;
@@ -53,47 +64,163 @@ const ApiKeyRow: React.FC<{
     const [isEditing, setIsEditing] = useState(config.startEditing || false);
     const [editValue, setEditValue] = useState(config.startEditing ? (config.value || '') : '');
     const [showPlaintext, setShowPlaintext] = useState(false);
+    // urlModel-specific state
+    const [editUrl, setEditUrl] = useState('');
+    const [editModel, setEditModel] = useState('');
 
     const handleEditStart = () => {
-        setEditValue(config.value || '');
-        setShowPlaintext(false);
+        if (config.urlModel) {
+            const parsed = parseUrlModel(config.value);
+            setEditUrl(parsed.url);
+            setEditModel(parsed.model);
+        } else {
+            setEditValue(config.value || '');
+            setShowPlaintext(false);
+        }
         setIsEditing(true);
     };
 
     const handleCancel = () => {
         setIsEditing(false);
         setEditValue('');
+        setEditUrl('');
+        setEditModel('');
         setShowPlaintext(false);
     };
 
     const handleSave = async () => {
-        const val = editValue.trim();
-        await config.onSave(val);
+        if (config.urlModel) {
+            const val = JSON.stringify({ url: editUrl.trim(), model: editModel.trim() });
+            await config.onSave(val);
+        } else {
+            await config.onSave(editValue.trim());
+        }
         setIsEditing(false);
     };
 
     const handleRegenerate = async () => {
-        if (config.onRegenerate) {
-            await config.onRegenerate();
-        }
+        if (config.onRegenerate) await config.onRegenerate();
     };
 
     const displayValue = config.loading
         ? 'Loading...'
         : (config.value ? '••••••••••••••••••••••••••••••••••••••••' : 'No key set');
 
+    const icon = (
+        <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-blue-400 overflow-hidden shrink-0">
+            {config.iconUrl ? (
+                <img src={config.iconUrl} alt={config.name} className="w-6 h-6 object-contain" />
+            ) : config.iconComponent ? (
+                <config.iconComponent className="w-5 h-5" />
+            ) : (
+                <MaterialIcon name={config.icon || 'key'} className="text-xl" />
+            )}
+        </div>
+    );
+
+    const deleteBtn = config.onDelete && (
+        <button
+            onClick={async () => {
+                const confirmed = onConfirm
+                    ? await onConfirm(`Are you sure you want to delete the ${config.name}?`)
+                    : confirm(`Are you sure you want to delete the ${config.name}?`);
+                if (confirmed) await config.onDelete?.();
+            }}
+            disabled={config.loading || config.saving}
+            className="p-3 rounded-2xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            title="Delete"
+            aria-label="Delete"
+        >
+            <MaterialIcon name="delete" className="text-base" />
+        </button>
+    );
+
+    // ── URL + Model variant (Ollama) ─────────────────────────────────────────
+    if (config.urlModel) {
+        const parsed = parseUrlModel(config.value);
+
+        return (
+            <div className="flex flex-col gap-4 py-4 border-b border-white/5 last:border-0">
+                <div className="flex items-center gap-4">
+                    {icon}
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-white uppercase tracking-widest">{config.name}</h4>
+                            {config.badge && (
+                                <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${config.badge === 'Primary' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-white/10 text-white/50 border border-white/10'}`}>{config.badge}</span>
+                            )}
+                        </div>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{config.description}</p>
+                    </div>
+                </div>
+
+                {!isEditing ? (
+                    <div className="flex items-center gap-3">
+                        <div className="flex-1 rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-[10px] text-blue-200/80 min-h-[44px] flex flex-col justify-center gap-1">
+                            {config.loading ? (
+                                <span className="opacity-50">Loading...</span>
+                            ) : config.value ? (
+                                <>
+                                    <span className="font-mono">{parsed.url || <span className="opacity-40">No URL</span>}</span>
+                                    <span className="text-white/40">{parsed.model || <span className="italic">No model set</span>}</span>
+                                </>
+                            ) : (
+                                <span className="opacity-40">Not configured</span>
+                            )}
+                        </div>
+                        {!config.readOnly && (
+                            <button onClick={handleEditStart} disabled={config.loading || config.saving} className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shrink-0">
+                                <MaterialIcon name="edit" className="text-base" />
+                                Edit
+                            </button>
+                        )}
+                        {deleteBtn}
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-2 rounded-2xl bg-black/40 border border-white/30 focus-within:border-white px-4 py-3 transition-all">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Base URL</label>
+                                <input
+                                    type="text"
+                                    value={editUrl}
+                                    onChange={e => setEditUrl(e.target.value)}
+                                    disabled={config.saving}
+                                    placeholder="http://localhost:11434"
+                                    className="bg-transparent text-[11px] text-white font-mono focus:outline-none"
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="border-t border-white/10 pt-2 flex flex-col gap-1">
+                                <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Model</label>
+                                <input
+                                    type="text"
+                                    value={editModel}
+                                    onChange={e => setEditModel(e.target.value)}
+                                    disabled={config.saving}
+                                    placeholder="gemma4:e2b"
+                                    className="bg-transparent text-[11px] text-white font-mono focus:outline-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button onClick={handleCancel} disabled={config.saving} className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest bg-transparent border border-white/20 text-white hover:bg-white/10 transition-all disabled:opacity-50">Cancel</button>
+                            <button onClick={handleSave} disabled={config.saving || !editUrl.trim()} className="px-6 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest bg-blue-500 text-white hover:bg-blue-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                                <MaterialIcon name="save" className="text-base" />
+                                {config.saving ? 'Saving...' : 'Save'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // ── Standard API key variant ─────────────────────────────────────────────
     return (
         <div className="flex flex-col gap-4 py-4 border-b border-white/5 last:border-0">
             <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-blue-400 overflow-hidden">
-                    {config.iconUrl ? (
-                        <img src={config.iconUrl} alt={config.name} className="w-6 h-6 object-contain" />
-                    ) : config.iconComponent ? (
-                        <config.iconComponent className="w-5 h-5" />
-                    ) : (
-                        <MaterialIcon name={config.icon || "key"} className="text-xl" />
-                    )}
-                </div>
+                {icon}
                 <div>
                     <div className="flex items-center gap-2">
                         <h4 className="text-sm font-bold text-white uppercase tracking-widest">{config.name}</h4>
@@ -142,24 +269,7 @@ const ApiKeyRow: React.FC<{
                             iconClassName="text-base"
                         />
                     )}
-                    {config.onDelete && (
-                        <button
-                            onClick={async () => {
-                                const confirmed = onConfirm
-                                    ? await onConfirm(`Are you sure you want to delete the ${config.name}?`)
-                                    : confirm(`Are you sure you want to delete the ${config.name}?`);
-                                if (confirmed) {
-                                    await config.onDelete?.();
-                                }
-                            }}
-                            disabled={config.loading || config.saving}
-                            className="p-3 rounded-2xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Delete Key"
-                            aria-label="Delete Key"
-                        >
-                            <MaterialIcon name="delete" className="text-base" />
-                        </button>
-                    )}
+                    {deleteBtn}
                 </div>
             ) : (
                 <div className="flex items-center gap-3">

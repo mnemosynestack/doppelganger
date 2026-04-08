@@ -5,7 +5,8 @@ const {
     loadApiKey, saveApiKey,
     loadGeminiApiKey, saveGeminiApiKey,
     loadOpenAiApiKey, saveOpenAiApiKey,
-    loadClaudeApiKey, saveClaudeApiKey
+    loadClaudeApiKey, saveClaudeApiKey,
+    loadOllamaApiKey, saveOllamaApiKey
 } = require('../storage');
 const { getUserAgentConfig, setUserAgentSelection } = require('../../../user-agent-settings');
 const { listProxies, addProxy, addProxies, updateProxy, deleteProxy, deleteProxies, setDefaultProxy, setIncludeDefaultInRotation, setRotationMode } = require('../../../proxy-rotation');
@@ -147,6 +148,35 @@ router.post('/claude-api-key', csrfProtection, dataRateLimiter, requireAuthForSe
     } catch (e) {
         console.error('[CLAUDE_API_KEY] Save failed:', e);
         res.status(500).json({ error: 'CLAUDE_API_KEY_SAVE_FAILED', message: e.message });
+    }
+});
+
+// Ollama API Key (stores base URLs)
+router.get('/ollama-api-key', requireAuthForSettings, async (req, res) => {
+    try {
+        const keys = await loadOllamaApiKey();
+        res.json({ ollamaApiKeys: keys || [] });
+    } catch (e) {
+        console.error('[OLLAMA_API_KEY] Load failed:', e);
+        res.status(500).json({ error: 'OLLAMA_API_KEY_LOAD_FAILED' });
+    }
+});
+
+router.post('/ollama-api-key', csrfProtection, dataRateLimiter, requireAuthForSettings, async (req, res) => {
+    try {
+        let keys = [];
+        if (req.body && Array.isArray(req.body.ollamaApiKeys)) {
+            keys = req.body.ollamaApiKeys.map(k => typeof k === 'string' ? k.trim() : '').filter(k => k);
+        } else if (req.body && typeof req.body.ollamaApiKey === 'string') {
+            const bodyKey = req.body.ollamaApiKey.trim();
+            if (bodyKey) keys.push(bodyKey);
+        }
+        if (keys.some(k => k.length > 512)) return res.status(400).json({ error: 'URL_TOO_LONG' });
+        await saveOllamaApiKey(keys);
+        res.json({ ollamaApiKeys: keys });
+    } catch (e) {
+        console.error('[OLLAMA_API_KEY] Save failed:', e);
+        res.status(500).json({ error: 'OLLAMA_API_KEY_SAVE_FAILED', message: e.message });
     }
 });
 
