@@ -14,8 +14,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onNewTask, onLogout, curr
             <button
                 onClick={() => onNavigate('dashboard')}
                 className="mb-12 hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg"
-                aria-label="Go to Dashboard"
-                title="Go to Dashboard"
+                aria-label="Go to Dashboard (Alt + 1)"
+                title="Go to Dashboard (Alt + 1)"
             >
                 <img src="/figranium_icon.svg" alt="Figranium Logo" className="w-10 h-10" onError={(e) => { e.currentTarget.src = '/figranium_icon.svg' }} />
             </button>
@@ -24,8 +24,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onNewTask, onLogout, curr
                 <button
                     onClick={onNewTask}
                     className="w-12 h-12 rounded-2xl flex items-center justify-center text-white bg-white/5 hover:bg-white/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-                    title="New Task"
-                    aria-label="New Task"
+                    title="New Task (Alt + N)"
+                    aria-label="New Task (Alt + N)"
                 >
                     <MaterialIcon name="add" className="text-2xl" />
                 </button>
@@ -33,8 +33,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onNewTask, onLogout, curr
                 <button
                     onClick={() => onNavigate('dashboard')}
                     className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${currentScreen === 'dashboard' ? 'bg-white/10 text-white' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
-                    title="Dashboard"
-                    aria-label="Dashboard"
+                    title="Dashboard (Alt + 1)"
+                    aria-label="Dashboard (Alt + 1)"
                 >
                     <MaterialIcon name="home" className="text-2xl" />
                 </button>
@@ -42,24 +42,24 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onNewTask, onLogout, curr
                 <button
                     onClick={() => onNavigate('settings')}
                     className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${currentScreen === 'settings' ? 'bg-white/10 text-white' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
-                    title="Settings"
-                    aria-label="Settings"
+                    title="Settings (Alt + 2)"
+                    aria-label="Settings (Alt + 2)"
                 >
                     <MaterialIcon name="settings" className="text-2xl" />
                 </button>
                 <button
                     onClick={() => onNavigate('executions')}
                     className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${currentScreen === 'executions' ? 'bg-white/10 text-white' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
-                    title="Executions"
-                    aria-label="Executions"
+                    title="Executions (Alt + 3)"
+                    aria-label="Executions (Alt + 3)"
                 >
                     <MaterialIcon name="history" className="text-2xl" />
                 </button>
                 <button
                     onClick={() => onNavigate('captures')}
                     className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${currentScreen === 'captures' ? 'bg-white/10 text-white' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
-                    title="Captures"
-                    aria-label="Captures"
+                    title="Captures (Alt + 4)"
+                    aria-label="Captures (Alt + 4)"
                 >
                     <MaterialIcon name="photo_camera" className="text-2xl" />
                 </button>
@@ -68,8 +68,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onNewTask, onLogout, curr
             <button
                 onClick={onLogout}
                 className="w-12 h-12 rounded-2xl flex items-center justify-center text-gray-500 hover:bg-red-500/10 hover:text-red-500 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-                title="Logout"
-                aria-label="Logout"
+                title="Logout (Alt + L)"
+                aria-label="Logout (Alt + L)"
             >
                 <MaterialIcon name="logout" className="text-2xl" />
             </button>

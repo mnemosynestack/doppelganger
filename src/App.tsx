@@ -198,6 +198,49 @@ export default function App() {
         logout(requestConfirm);
     }, [logout, requestConfirm]);
 
+    useEffect(() => {
+        const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                return;
+            }
+
+            if (e.altKey) {
+                switch (e.key) {
+                    case '1':
+                        e.preventDefault();
+                        handleNavigate('dashboard');
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        handleNavigate('settings');
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        handleNavigate('executions');
+                        break;
+                    case '4':
+                        e.preventDefault();
+                        handleNavigate('captures');
+                        break;
+                    case 'n':
+                    case 'N':
+                        e.preventDefault();
+                        handleNewTask();
+                        break;
+                    case 'l':
+                    case 'L':
+                        e.preventDefault();
+                        handleLogout();
+                        break;
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [handleNavigate, handleNewTask, handleLogout]);
+
     let content: React.ReactNode;
     if (authStatus === 'login' || authStatus === 'setup') {
         content = <AuthScreen status={authStatus} onSubmit={handleAuthSubmit} error={authError} busy={authBusy} />;
