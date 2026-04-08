@@ -265,7 +265,6 @@ async function executeScheduledTask(taskId) {
 async function startScheduler() {
     if (running) return;
     running = true;
-    console.log('[SCHEDULER] Starting scheduler...');
 
     try {
         await loadSchedules();
@@ -305,7 +304,6 @@ function stopScheduler() {
         schedulerTimer = null;
     }
     scheduledTasks.clear();
-    console.log('[SCHEDULER] Stopped.');
 }
 
 /**
