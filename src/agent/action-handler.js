@@ -1,4 +1,4 @@
-const { validateUrl } = require('../../url-utils');
+const { validateUrl, fetchWithRedirectValidation } = require('../../url-utils');
 const { parseCoords, parseValue, parseCsv, sanitizeRunId } = require('../../common-utils');
 const { moveMouseHumanlike, idleMouse, overshootScroll, humanType } = require('./human-interaction');
 const { loadApiKey } = require('../server/storage'); // Need to access server storage for internal API key loading
@@ -576,7 +576,7 @@ const executeAction = async (act, context) => {
                 }
             }
             logs.push(`HTTP ${method} ${targetUrl}`);
-            const response = await fetch(targetUrl, fetchOptions);
+            const response = await fetchWithRedirectValidation(targetUrl, fetchOptions);
             const text = await response.text();
             let parsed;
             try {
