@@ -13,6 +13,10 @@ const createSafeProxy = (target) => {
     if (target === null || (typeof target !== 'object' && typeof target !== 'function')) {
         return target;
     }
+    // ⚡ Bolt: Prevent redundant nested proxying to ensure identity consistency
+    if (proxyMap.has(target)) {
+        return target;
+    }
     if (targetMap.has(target)) {
         return targetMap.get(target);
     }
