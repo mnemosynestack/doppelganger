@@ -74,7 +74,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                                     placeholder="Filter tasks... (/)"
                                     className="w-full bg-white/[0.05] border border-white/10 rounded-2xl py-3 pl-12 pr-10 text-[10px] font-bold uppercase tracking-widest text-white placeholder:text-gray-600 focus:outline-none focus:border-white/30 focus-visible:ring-2 focus-visible:ring-white/20 transition-all"
                                     aria-label="Filter tasks"
-                                    title="Search tasks by name or URL"
+                                    title="Filter tasks by name or URL (/)"
                                 />
                                 {searchQuery && (
                                     <button
