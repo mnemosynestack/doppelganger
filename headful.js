@@ -32,6 +32,11 @@ const headfulEventEmitter = new EventEmitter();
 
 let activeSession = null;
 
+function setActiveHeadfulPage(nextPage) {
+    if (!activeSession || !nextPage || nextPage.isClosed()) return;
+    activeSession.page = nextPage;
+}
+
 const teardownActiveSession = async () => {
     if (!activeSession) return;
     try {
@@ -461,16 +466,28 @@ async function runHeadful(data, options = {}) {
             } catch (e) { }
         }
 
-        const closeIfExtra = async (extraPage) => {
-            if (!extraPage || extraPage === page) return;
-            try { await extraPage.close(); } catch { }
+        const attachPageTracking = (trackedPage) => {
+            if (!trackedPage) return;
+
+            trackedPage.on('popup', (popup) => {
+                setActiveHeadfulPage(popup);
+                attachPageTracking(popup);
+            });
+
+            trackedPage.on('close', () => {
+                if (!activeSession || activeSession.page !== trackedPage) return;
+                const remainingPage = activeSession.context?.pages().find((candidate) => candidate !== trackedPage && !candidate.isClosed());
+                if (remainingPage) {
+                    setActiveHeadfulPage(remainingPage);
+                }
+            });
         };
 
-        context.on('page', closeIfExtra);
-        page.on('popup', async (popup) => {
-            try { popup.close().catch(() => { }); } catch { }
-            await closeIfExtra(popup);
+        context.on('page', (newPage) => {
+            setActiveHeadfulPage(newPage);
+            attachPageTracking(newPage);
         });
+        attachPageTracking(page);
 
         if (!navigated && url) {
             await page.goto(url).catch(() => { });
@@ -482,8 +499,6 @@ async function runHeadful(data, options = {}) {
             }
         }, 30000);
         activeSession = { browser, context, page, status: 'running', startedAt: activeSession.startedAt, inspectModeEnabled: activeSession.inspectModeEnabled, statelessExecution, interval: syncInterval };
-
-        page.on('close', async () => { });
 
         const responseData = {
             message: 'Headful session started.',

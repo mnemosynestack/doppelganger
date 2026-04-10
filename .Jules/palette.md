@@ -1,3 +1,0 @@
-## 2025-05-14 - Global Keyboard Shortcut Pattern
-**Learning:** A standardized micro-UX pattern for keyboard shortcut discoverability: Primary action buttons (e.g., Run, Add Action) and Sidebar navigation buttons include shortcut hints (like 'Alt + 1' or 'Alt + N') within both their `title` and `aria-label` attributes. Note: Destructive or sensitive actions like 'Logout' should generally NOT have shortcuts to prevent accidental triggers.
-**Action:** Always include shortcut hints in `title` and `aria-label` when implementing keyboard shortcuts. Avoid adding shortcuts for sensitive actions like Logout.
