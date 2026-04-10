@@ -25,6 +25,14 @@ const ipv4Cases = [
     { ip: '8.8.8.8', expected: false },
     { ip: '1.1.1.1', expected: false },
     { ip: '172.32.0.1', expected: false },
+    { ip: '192.0.0.1', expected: true }, // 192.0.0.0/24
+    { ip: '192.0.2.1', expected: true }, // 192.0.2.0/24
+    { ip: '198.18.0.1', expected: true }, // 198.18.0.0/15
+    { ip: '198.51.100.1', expected: true }, // 198.51.100.0/24
+    { ip: '203.0.113.1', expected: true }, // 203.0.113.0/24
+    { ip: '224.0.0.1', expected: true }, // 224.0.0.0/4
+    { ip: '240.0.0.1', expected: true }, // 240.0.0.0/4
+    { ip: '255.255.255.255', expected: true }, // 240.0.0.0/4 range end
 ];
 
 for (const { ip, expected } of ipv4Cases) {
@@ -51,6 +59,8 @@ const ipv6Cases = [
     { ip: '::ffff:8.8.8.8', expected: false },
     { ip: '2606:4700:4700::1111', expected: false },
     { ip: '2001:4860:4860::8888', expected: false },
+    { ip: 'ff00::1', expected: true }, // ff00::/8
+    { ip: '0:0:0:0:0:0:0:1', expected: true }, // IPv6 loopback long form
 ];
 
 for (const { ip, expected } of ipv6Cases) {

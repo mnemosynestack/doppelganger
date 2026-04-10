@@ -14,13 +14,21 @@ const { ALLOW_PRIVATE_NETWORKS } = require('./src/server/constants');
  * - 127.0.0.0/8 (Loopback)
  * - 169.254.0.0/16 (Link-Local)
  * - 172.16.0.0/12 (Private-Use Networks - RFC 1918)
+ * - 192.0.0.0/24 (IETF Protocol Assignments)
+ * - 192.0.2.0/24 (TEST-NET-1)
  * - 192.168.0.0/16 (Private-Use Networks - RFC 1918)
+ * - 198.18.0.0/15 (Benchmarking)
+ * - 198.51.100.0/24 (TEST-NET-2)
+ * - 203.0.113.0/24 (TEST-NET-3)
+ * - 224.0.0.0/4 (Multicast)
+ * - 240.0.0.0/4 (Reserved)
  *
  * IPv6 Ranges:
  * - ::/128 (Unspecified)
  * - ::1/128 (Loopback)
  * - fc00::/7 (Unique Local Address)
  * - fe80::/10 (Link-Local Unicast)
+ * - ff00::/8 (Multicast)
  * - IPv4-mapped/compatible addresses pointing to the above IPv4 ranges
  *
  * Hostnames:
@@ -41,7 +49,13 @@ function isPrivateIP(ip) {
             (parts[0] === 192 && parts[1] === 168) ||
             parts[0] === 127 ||
             (parts[0] === 169 && parts[1] === 254) ||
-            (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127)
+            (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) ||
+            (parts[0] === 192 && parts[1] === 0 && parts[2] === 0) || // 192.0.0.0/24
+            (parts[0] === 192 && parts[1] === 0 && parts[2] === 2) || // 192.0.2.0/24
+            (parts[0] === 198 && parts[1] >= 18 && parts[1] <= 19) || // 198.18.0.0/15
+            (parts[0] === 198 && parts[1] === 51 && parts[2] === 100) || // 198.51.100.0/24
+            (parts[0] === 203 && parts[1] === 0 && parts[2] === 113) || // 203.0.113.0/24
+            parts[0] >= 224 // 224.0.0.0/4 (Multicast) and 240.0.0.0/4 (Reserved)
         );
     }
     if (net.isIPv6(ip)) {
@@ -80,17 +94,19 @@ function isPrivateIP(ip) {
             }
         }
 
-        // ::1 loopback, :: unspecified
-        if (lower === '::1' || lower === '::' || lower === '0:0:0:0:0:0:0:0' || lower === '0:0:0:0:0:0:0:1') {
-            return true;
-        }
+        // Native IPv6 checks (Unspecified, Loopback, Link-Local, Unique Local, Multicast)
+        const isUnspecified = parts.every(p => p === '0' || p === '0000' || p === '');
+        const isLoopback = parts.slice(0, -1).every(p => p === '0' || p === '0000' || p === '') &&
+            (parts[parts.length - 1] === '1' || parts[parts.length - 1] === '0001');
 
-        // fe80:: link-local, fc00::/fd00:: unique local
-        return (
-            lower.startsWith('fe80:') ||
-            lower.startsWith('fc') ||
-            lower.startsWith('fd')
-        );
+        if (isUnspecified || isLoopback) return true;
+
+        const firstHex = parseInt(parts[0], 16);
+        if (!isNaN(firstHex)) {
+            if (firstHex >= 0xff00) return true; // ff00::/8 Multicast
+            if (firstHex >= 0xfe80 && firstHex <= 0xfebf) return true; // fe80::/10 Link-local
+            if (firstHex >= 0xfc00 && firstHex <= 0xfdff) return true; // fc00::/7 Unique local
+        }
     }
     return false;
 }
