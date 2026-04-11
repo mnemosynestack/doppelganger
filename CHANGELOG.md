@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.12.2] - 2026-04-11
+
+### Security
+- **Ollama SSRF hardening** (#284) â€” Settings and task routes now validate Ollama configuration and API targets more strictly, preventing unsafe outbound requests to internal hosts.
+
+### Performance
+- **Cron next-run calculation** (#285) â€” `src/server/cron-parser.js` now calculates the next execution time more efficiently, with a dedicated regression/perf test added in `tests/cron-perf.test.js`.
+- **Sandbox proxy optimization** (#282) â€” Browser sandbox proxy handling was streamlined for better identity handling and lower overhead in extraction flows.
+
+### Improvements
+- **Block editing interactions** â€” Blocks now open their settings on double-click, while the block type label uses a short click delay so a second click can switch from the action palette to block settings. The tweaked interaction keeps single-click type changes responsive without stealing the double-click path.
+- **Shortcut discoverability and task card actions** (#283) â€” Task card and sidebar keyboard cues were polished to make action discovery more obvious from the dashboard.
+- **TypeScript config cleanup** â€” `tsconfig.json` was adjusted to resolve a lint/type-check issue uncovered during the release cycle.
+
+### Tests
+- Added `tests/cron-perf.test.js` to guard the cron scheduler optimization.
+
 ## [0.12.1] - 2026-04-08
 
 ### Security
