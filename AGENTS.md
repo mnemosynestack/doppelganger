@@ -112,6 +112,8 @@ Tailor the list to what was actually touched — don't list every item for every
 
 When the user says to **finalize** after a task is complete, stage **all** modified files using `git add .` (not just the files the agent edited — the user may have made background changes) and create a commit with an appropriate message.
 
+When publishing finished work, prefer committing and pushing directly on the `main` branch unless the user explicitly asks for a separate feature branch.
+
 ## Key Environment Variables
 
 - `PORT` / `HOST` — Express listen address (default: 11345 / 0.0.0.0)

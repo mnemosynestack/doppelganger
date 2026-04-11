@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Action, Task, Variable } from '../../types';
 import MaterialIcon from '../MaterialIcon';
 import { ACTION_CATALOG } from './actionCatalog';
@@ -101,6 +101,7 @@ const ActionItem: React.FC<ActionItemProps> = React.memo(({
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
+    const paletteOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const statusClass = status === 'running'
         ? 'border-yellow-400/60'
@@ -126,6 +127,31 @@ const ActionItem: React.FC<ActionItemProps> = React.memo(({
     const summary = getActionSummary(action);
     const hasConfig = !NO_CONFIG_TYPES.includes(action.type);
 
+    useEffect(() => {
+        return () => {
+            if (paletteOpenTimer.current) {
+                clearTimeout(paletteOpenTimer.current);
+                paletteOpenTimer.current = null;
+            }
+        };
+    }, []);
+
+    const openActionPaletteWithDelay = () => {
+        if (paletteOpenTimer.current) {
+            clearTimeout(paletteOpenTimer.current);
+            paletteOpenTimer.current = null;
+            if (hasConfig) {
+                setIsModalOpen(true);
+            }
+            return;
+        }
+
+        paletteOpenTimer.current = setTimeout(() => {
+            paletteOpenTimer.current = null;
+            onOpenPalette(action.id);
+        }, 180);
+    };
+
     return (
         <>
             <div
@@ -138,14 +164,10 @@ const ActionItem: React.FC<ActionItemProps> = React.memo(({
                     e.stopPropagation();
                     onPointerDown(e, action.id, index);
                 }}
-                onClick={(e) => {
+                onDoubleClick={(e) => {
                     if (!hasConfig) return;
                     if (isInteractiveTarget(e.target)) return;
-                    if (pointerDownPos.current) {
-                        const dx = e.clientX - pointerDownPos.current.x;
-                        const dy = e.clientY - pointerDownPos.current.y;
-                        if (Math.sqrt(dx * dx + dy * dy) > 5) return;
-                    }
+                    e.stopPropagation();
                     setIsModalOpen(true);
                 }}
                 onContextMenu={(e) => onOpenContextMenu(e, action.id)}
@@ -158,7 +180,17 @@ const ActionItem: React.FC<ActionItemProps> = React.memo(({
                         {renderBlockMarker(action.type)}
                     </div>
                     <button
-                        onClick={(e) => { e.stopPropagation(); onOpenPalette(action.id); }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            openActionPaletteWithDelay();
+                        }}
+                        onDoubleClick={(e) => {
+                            if (!hasConfig) return;
+                            if (isInteractiveTarget(e.target)) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsModalOpen(true);
+                        }}
                         className="action-type-select text-[10px] font-bold uppercase tracking-[0.2em] text-white focus:outline-none cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-white/50 shrink-0"
                         aria-label={`Change action type: ${action.type}`}
                     >
