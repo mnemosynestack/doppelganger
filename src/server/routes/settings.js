@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const { requireAuthForSettings, csrfProtection, dataRateLimiter } = require('../middleware');
+const { validateUrl } = require('../../../url-utils');
 const {
     loadApiKey, saveApiKey,
     loadGeminiApiKey, saveGeminiApiKey,
@@ -173,6 +174,25 @@ router.post('/ollama-api-key', csrfProtection, dataRateLimiter, requireAuthForSe
             if (bodyKey) keys.push(bodyKey);
         }
         if (keys.some(k => k.length > 512)) return res.status(400).json({ error: 'URL_TOO_LONG' });
+
+        // Validate URLs to prevent SSRF
+        for (const raw of keys) {
+            let baseUrl = raw;
+            try {
+                const parsed = JSON.parse(raw);
+                baseUrl = parsed.url || '';
+            } catch {
+                // Not JSON, treat as plain URL
+            }
+            if (baseUrl) {
+                try {
+                    await validateUrl(baseUrl);
+                } catch (err) {
+                    return res.status(400).json({ error: 'INVALID_URL', message: `Invalid Ollama URL: ${err.message}` });
+                }
+            }
+        }
+
         await saveOllamaApiKey(keys);
         res.json({ ollamaApiKeys: keys });
     } catch (e) {

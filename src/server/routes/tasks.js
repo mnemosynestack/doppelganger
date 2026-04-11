@@ -8,6 +8,7 @@ const {
 const { taskMutex } = require('../state');
 const { appendTaskVersion, cloneTaskForVersion } = require('../utils');
 const { handleAgent } = require('../../agent/index');
+const { fetchWithRedirectValidation } = require('../../../url-utils');
 
 const router = express.Router();
 
@@ -292,7 +293,7 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
             for (const raw of ollamaBaseUrls) {
                 try {
                     const { url: baseUrl } = parseOllamaEntry(raw);
-                    const response = await fetch(baseUrl + '/v1/chat/completions', {
+                    const response = await fetchWithRedirectValidation(baseUrl + '/v1/chat/completions', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ollama' },
                         body: JSON.stringify({ model: aiModels.ollama, messages: [{ role: 'user', content: llmPrompt }] })
@@ -425,7 +426,7 @@ Only reply with the raw JavaScript code, no markdown, no backticks, no explanati
         for (const raw of ollamaBaseUrls) {
             try {
                 const { url: baseUrl, model } = parseOllamaEntry(raw);
-                const response = await fetch(baseUrl + '/v1/chat/completions', {
+                const response = await fetchWithRedirectValidation(baseUrl + '/v1/chat/completions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ollama' },
                     body: JSON.stringify({ model, messages: [{ role: 'user', content: llmPrompt }] })
