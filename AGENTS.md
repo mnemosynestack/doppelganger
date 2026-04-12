@@ -114,6 +114,8 @@ When the user says to **finalize** after a task is complete, stage **all** modif
 
 When publishing finished work, prefer committing and pushing directly on the `main` branch unless the user explicitly asks for a separate feature branch.
 
+Commit titles should be long and descriptive enough to clearly summarize the full scope of the change, not terse or generic.
+
 ## Key Environment Variables
 
 - `PORT` / `HOST` — Express listen address (default: 11345 / 0.0.0.0)
