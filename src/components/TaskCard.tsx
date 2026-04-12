@@ -69,7 +69,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEditTask, onDeleteTask }) =
                     aria-label="Delete task"
                     title="Delete task"
                 >
-                    <MaterialIcon name="close" className="text-base" />
+                    <MaterialIcon name="delete" className="text-base" />
                 </button>
             </div>
         </div>

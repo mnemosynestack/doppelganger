@@ -174,7 +174,23 @@ const ExecutionsScreen: React.FC<ExecutionsScreenProps> = ({ onConfirm, onNotify
                     <div className="text-[9px] text-gray-500 uppercase tracking-widest">Loading executions...</div>
                 )}
                 {!loading && filtered.length === 0 && (
-                    <div className="text-[9px] text-gray-600 uppercase tracking-widest">No executions found.</div>
+                    <div className="py-20 flex flex-col items-center justify-center text-center space-y-6">
+                        <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center border border-white/5">
+                            <MaterialIcon name="history" className="text-4xl text-white/10" />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-lg font-bold text-white/80 uppercase tracking-widest">No runs recorded</h3>
+                            <p className="text-[10px] text-gray-500 max-w-[280px] mx-auto leading-relaxed uppercase tracking-wider">
+                                Your execution history is empty. Try running a task from the dashboard or editor.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            className="px-8 py-3 bg-white text-black rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all"
+                        >
+                            Go to Dashboard
+                        </button>
+                    </div>
                 )}
 
                 {!loading && filtered.length > 0 && (
