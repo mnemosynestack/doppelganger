@@ -112,22 +112,22 @@ const runExtraction = async (data) => {
         const shadowHelpers = (() => {
             const shadowQueryAll = (selector, root = window.document) => {
                 const results = [];
-                const walk = (node) => {
-                    if (!node) return;
-                    if (node.nodeType === 1) {
-                        const el = node;
-                        if (selector && el.matches && el.matches(selector)) results.push(el);
-                        if (el.tagName === 'TEMPLATE' && el.hasAttribute('data-shadowroot')) {
-                            walk(el.content);
-                        }
-                    } else if (node.nodeType === 11) {
-                        // DocumentFragment
+                if (!root || !selector) return results;
+
+                // ⚡ Bolt: Use querySelectorAll for the current root level to leverage optimized engine matching.
+                // This replaces the manual recursive DOM walk, significantly improving performance for large trees.
+                if (root.querySelectorAll) {
+                    const matches = root.querySelectorAll(selector);
+                    for (let i = 0; i < matches.length; i++) results.push(matches[i]);
+
+                    // ⚡ Bolt: Find shadow roots efficiently using querySelectorAll to skip non-shadow elements.
+                    const templates = root.querySelectorAll('template[data-shadowroot]');
+                    for (let i = 0; i < templates.length; i++) {
+                        const shadowMatches = shadowQueryAll(selector, templates[i].content);
+                        for (let j = 0; j < shadowMatches.length; j++) results.push(shadowMatches[j]);
                     }
-                    if (node.childNodes) {
-                        node.childNodes.forEach((child) => walk(child));
-                    }
-                };
-                walk(root);
+                }
+
                 return results;
             };
 
@@ -146,8 +146,12 @@ const runExtraction = async (data) => {
                             walk(el.content);
                         }
                     }
-                    if (node.childNodes) {
-                        node.childNodes.forEach((child) => walk(child));
+                    // ⚡ Bolt: Use a while loop with firstChild/nextSibling for significantly better performance in JSDOM environments
+                    // compared to node.childNodes.forEach() which creates a static NodeList.
+                    let child = node.firstChild;
+                    while (child) {
+                        walk(child);
+                        child = child.nextSibling;
                     }
                 };
                 walk(root);
