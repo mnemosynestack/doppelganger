@@ -72,6 +72,49 @@ async function testAuthForSettings() {
     console.log('--- requireAuthForSettings Security Tests Passed ---');
 }
 
+async function testApiKeyLoopbackBypass() {
+    console.log('\n--- Testing API Key Loopback Bypass (CVE Prevention) ---');
+
+    const { requireApiKey } = require('../src/server/middleware');
+
+    const mockRes = {
+        status: (code) => {
+            mockRes.statusCode = code;
+            return mockRes;
+        },
+        json: (data) => {
+            mockRes.body = data;
+            return mockRes;
+        }
+    };
+
+    // Test 1: Legitimate internal request (req.ip is loopback)
+    console.log('Test 1: Legitimate internal request');
+    let nextCalled1 = false;
+    const req1 = {
+        get: (header) => (header.toLowerCase() === 'x-internal-run' ? '1' : null),
+        socket: { remoteAddress: '127.0.0.1' },
+        ip: '127.0.0.1'
+    };
+    await requireApiKey(req1, mockRes, () => { nextCalled1 = true; });
+    assert.strictEqual(nextCalled1, true, 'Next should be called for legitimate internal request');
+    console.log('PASS');
+
+    // Test 2: Spoofed internal request via local proxy (socket is loopback, but req.ip is external)
+    console.log('Test 2: Spoofed internal request via local proxy');
+    let nextCalled2 = false;
+    const req2 = {
+        get: (header) => (header.toLowerCase() === 'x-internal-run' ? '1' : null),
+        socket: { remoteAddress: '127.0.0.1' },
+        ip: '8.8.8.8'
+    };
+    await requireApiKey(req2, mockRes, () => { nextCalled2 = true; });
+    assert.strictEqual(nextCalled2, false, 'Next should NOT be called for spoofed internal request');
+    console.log('PASS');
+
+    console.log('--- API Key Loopback Bypass Tests Passed ---');
+}
+
 async function testTaskIdSanitization() {
     console.log('\n--- Testing taskId Sanitization in agent start action ---');
 
@@ -123,6 +166,7 @@ async function testTaskIdSanitization() {
 
 async function runTests() {
     await testAuthForSettings();
+    await testApiKeyLoopbackBypass();
     await testTaskIdSanitization();
 }
 

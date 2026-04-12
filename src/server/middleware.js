@@ -108,7 +108,7 @@ const isLoopback = (ip) => {
 
 const requireApiKey = async (req, res, next) => {
     const internalRun = req.get('x-internal-run');
-    if (internalRun === '1' && isLoopback(req.socket?.remoteAddress)) {
+    if (internalRun === '1' && isLoopback(req.ip)) {
         return next();
     }
     const headerKey = req.get('x-api-key') || req.get('key');
