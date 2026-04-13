@@ -108,7 +108,9 @@ const isLoopback = (ip) => {
 
 const requireApiKey = async (req, res, next) => {
     const internalRun = req.get('x-internal-run');
-    if (internalRun === '1' && isLoopback(req.ip)) {
+    // Security: Validate both the resolved IP (req.ip) and the direct connection IP (socket.remoteAddress)
+    // to prevent spoofing of the loopback bypass when trust proxy is enabled.
+    if (internalRun === '1' && isLoopback(req.ip) && isLoopback(req.socket?.remoteAddress)) {
         return next();
     }
     const headerKey = req.get('x-api-key') || req.get('key');
