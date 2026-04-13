@@ -36,7 +36,7 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
     const [captures, setCaptures] = useState<CaptureEntry[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const loadCaptures = async () => {
+    const loadCaptures = useCallback(async () => {
         setLoading(true);
         try {
             const res = await fetch('/api/data/captures');
@@ -47,7 +47,19 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    const clearCaptures = useCallback(async () => {
+        const confirmed = await onConfirm('Clear all captures?');
+        if (!confirmed) return;
+        const res = await fetch('/api/clear-screenshots', { method: 'POST' });
+        if (res.ok) {
+            onNotify('Captures cleared.', 'success');
+            loadCaptures();
+        } else {
+            onNotify('Clear failed.', 'error');
+        }
+    }, [loadCaptures, onConfirm, onNotify]);
 
     const deleteCapture = useCallback(async (name: string) => {
         const confirmed = await onConfirm(`Delete capture ${name}?`);
@@ -63,7 +75,7 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
 
     useEffect(() => {
         loadCaptures();
-    }, []);
+    }, [loadCaptures]);
 
     // Memoize itemData to prevent FixedSizeList from re-rendering all rows on every render
     const itemData = useMemo(() => ({
@@ -92,6 +104,14 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
                             Refresh
                         </button>
                         <button
+                            onClick={clearCaptures}
+                            className="w-10 h-10 rounded-2xl border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                            title="Clear all"
+                            aria-label="Clear all captures"
+                        >
+                            <MaterialIcon name="delete" className="text-xl" />
+                        </button>
+                        <button
                             onClick={() => navigate('/executions')}
                             className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
                         >
@@ -108,7 +128,23 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
                         </div>
                     )}
                     {!loading && captures.length === 0 && (
-                        <div className="text-[9px] text-gray-600 uppercase tracking-widest">No captures found.</div>
+                        <div className="py-20 flex flex-col items-center justify-center text-center space-y-6">
+                            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center border border-white/5">
+                                <MaterialIcon name="image" className="text-4xl text-white/10" />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-lg font-bold text-white/80 uppercase tracking-widest">No captures found</h3>
+                                <p className="text-[10px] text-gray-500 max-w-[280px] mx-auto leading-relaxed uppercase tracking-wider">
+                                    Recordings and screenshots will appear here once you run your automation tasks.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => navigate('/dashboard')}
+                                className="px-8 py-3 bg-white text-black rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all"
+                            >
+                                Go to Dashboard
+                            </button>
+                        </div>
                     )}
                     {!loading && captures.length > 0 && (
                         <div className="space-y-4">
