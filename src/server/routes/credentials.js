@@ -36,7 +36,7 @@ router.post('/', requireAuthOrApiKey, async (req, res) => {
     try {
         await validateUrl(config.baseUrl);
     } catch (e) {
-        return res.status(400).json({ error: 'INVALID_BASE_URL', details: e.message });
+        return res.status(400).json({ error: 'INVALID_BASE_URL', details: 'Invalid base URL format or restricted destination' });
     }
     try {
         const credentials = await loadCredentials();
@@ -65,7 +65,7 @@ router.put('/:id', requireAuthOrApiKey, async (req, res) => {
         try {
             await validateUrl(config.baseUrl);
         } catch (e) {
-            return res.status(400).json({ error: 'INVALID_BASE_URL', details: e.message });
+            return res.status(400).json({ error: 'INVALID_BASE_URL', details: 'Invalid base URL format or restricted destination' });
         }
     }
     try {
@@ -104,8 +104,7 @@ router.get('/:id/proxy/baserow/databases', requireAuthOrApiKey, async (req, res)
             headers: { 'Authorization': `Token ${token}` }
         });
         if (!resp.ok) {
-            const text = await resp.text().catch(() => '');
-            return res.status(resp.status).json({ error: 'BASEROW_ERROR', detail: text });
+            return res.status(resp.status).json({ error: 'BASEROW_ERROR', detail: 'Failed to fetch databases from Baserow' });
         }
         const data = await resp.json();
         const items = Array.isArray(data) ? data : [];
@@ -134,7 +133,7 @@ router.get('/:id/proxy/baserow/databases', requireAuthOrApiKey, async (req, res)
         }
         res.json(databases);
     } catch (err) {
-        res.status(500).json({ error: 'PROXY_ERROR', detail: err.message });
+        res.status(500).json({ error: 'PROXY_ERROR', detail: 'Internal proxy error' });
     }
 });
 
@@ -152,14 +151,13 @@ router.get('/:id/proxy/baserow/databases/:dbId/tables', requireAuthOrApiKey, asy
             headers: { 'Authorization': `Token ${token}` }
         });
         if (!resp.ok) {
-            const text = await resp.text().catch(() => '');
-            return res.status(resp.status).json({ error: 'BASEROW_ERROR', detail: text });
+            return res.status(resp.status).json({ error: 'BASEROW_ERROR', detail: 'Failed to fetch tables from Baserow' });
         }
         const data = await resp.json();
         const tables = (Array.isArray(data) ? data : []).map(t => ({ id: String(t.id), name: t.name }));
         res.json(tables);
     } catch (err) {
-        res.status(500).json({ error: 'PROXY_ERROR', detail: err.message });
+        res.status(500).json({ error: 'PROXY_ERROR', detail: 'Internal proxy error' });
     }
 });
 

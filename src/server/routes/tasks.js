@@ -329,7 +329,7 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
         res.json({ selector });
     } catch (e) {
         console.error('Generate selector error:', e);
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
 });
 
