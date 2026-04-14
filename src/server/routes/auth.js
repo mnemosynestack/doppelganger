@@ -11,7 +11,7 @@ router.get('/check-setup', async (req, res) => {
         res.json({ setupRequired: users.length === 0 });
     } catch (e) {
         console.error('[AUTH] check-setup error:', e);
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
 });
 
@@ -50,7 +50,7 @@ router.post('/setup', authRateLimiter, async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const newUser = { id: Date.now(), name, email: normalizedEmail, password: hashedPassword };
+    const newUser = { id: Date.now(), name: trimmedName, email: normalizedEmail, password: hashedPassword };
     await saveUsers([newUser]);
 
 

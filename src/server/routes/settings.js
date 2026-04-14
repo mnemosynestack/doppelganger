@@ -39,7 +39,7 @@ router.post('/api-key', csrfProtection, dataRateLimiter, requireAuthForSettings,
         res.json({ apiKey: newKey });
     } catch (e) {
         console.error('[API_KEY] Save failed:', e);
-        res.status(500).json({ error: 'API_KEY_SAVE_FAILED', message: e.message });
+        res.status(500).json({ error: 'API_KEY_SAVE_FAILED' });
     }
 });
 
@@ -91,7 +91,7 @@ router.post('/gemini-api-key', csrfProtection, dataRateLimiter, requireAuthForSe
         res.json({ geminiApiKeys: keys });
     } catch (e) {
         console.error('[GEMINI_API_KEY] Save failed:', e);
-        res.status(500).json({ error: 'GEMINI_API_KEY_SAVE_FAILED', message: e.message });
+        res.status(500).json({ error: 'GEMINI_API_KEY_SAVE_FAILED' });
     }
 });
 
@@ -120,7 +120,7 @@ router.post('/openai-api-key', csrfProtection, dataRateLimiter, requireAuthForSe
         res.json({ openAiApiKeys: keys });
     } catch (e) {
         console.error('[OPENAI_API_KEY] Save failed:', e);
-        res.status(500).json({ error: 'OPENAI_API_KEY_SAVE_FAILED', message: e.message });
+        res.status(500).json({ error: 'OPENAI_API_KEY_SAVE_FAILED' });
     }
 });
 
@@ -149,7 +149,7 @@ router.post('/claude-api-key', csrfProtection, dataRateLimiter, requireAuthForSe
         res.json({ claudeApiKeys: keys });
     } catch (e) {
         console.error('[CLAUDE_API_KEY] Save failed:', e);
-        res.status(500).json({ error: 'CLAUDE_API_KEY_SAVE_FAILED', message: e.message });
+        res.status(500).json({ error: 'CLAUDE_API_KEY_SAVE_FAILED' });
     }
 });
 
@@ -188,7 +188,7 @@ router.post('/ollama-api-key', csrfProtection, dataRateLimiter, requireAuthForSe
                 try {
                     await validateUrl(baseUrl);
                 } catch (err) {
-                    return res.status(400).json({ error: 'INVALID_URL', message: `Invalid Ollama URL: ${err.message}` });
+                    return res.status(400).json({ error: 'INVALID_URL', message: 'Invalid Ollama URL' });
                 }
             }
         }
@@ -197,7 +197,7 @@ router.post('/ollama-api-key', csrfProtection, dataRateLimiter, requireAuthForSe
         res.json({ ollamaApiKeys: keys });
     } catch (e) {
         console.error('[OLLAMA_API_KEY] Save failed:', e);
-        res.status(500).json({ error: 'OLLAMA_API_KEY_SAVE_FAILED', message: e.message });
+        res.status(500).json({ error: 'OLLAMA_API_KEY_SAVE_FAILED' });
     }
 });
 

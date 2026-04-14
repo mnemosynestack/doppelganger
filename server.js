@@ -333,7 +333,7 @@ const executeTaskById = async (req, res) => {
             await validateUrl(webhookUrl);
             res.locals.webhookUrl = webhookUrl;
         } catch (err) {
-            return res.status(400).json({ error: 'INVALID_WEBHOOK_URL', message: err.message });
+            return res.status(400).json({ error: 'INVALID_WEBHOOK_URL', message: 'Invalid URL or restricted destination' });
         }
     }
 
