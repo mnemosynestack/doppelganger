@@ -19,6 +19,13 @@ function createNewApiKey() {
     return crypto.randomBytes(32).toString('hex');
 }
 
+async function validateProxyServer(server) {
+    if (!server || typeof server !== 'string') return;
+    let urlToCheck = server.trim();
+    if (!urlToCheck.includes('://')) urlToCheck = 'http://' + urlToCheck;
+    await validateUrl(urlToCheck);
+}
+
 // API Key
 router.get('/api-key', requireAuthForSettings, async (req, res) => {
     try {
@@ -211,11 +218,19 @@ router.get('/proxies', requireAuthForSettings, (_req, res) => {
     }
 });
 
-router.post('/proxies', csrfProtection, dataRateLimiter, requireAuthForSettings, (req, res) => {
+router.post('/proxies', csrfProtection, dataRateLimiter, requireAuthForSettings, async (req, res) => {
     const { server, username, password, label, isRotatingPool, estimatedPoolSize } = req.body || {};
     if (!server || typeof server !== 'string') {
         return res.status(400).json({ error: 'MISSING_SERVER' });
     }
+
+    // SSRF Validation
+    try {
+        await validateProxyServer(server);
+    } catch (err) {
+        return res.status(400).json({ error: 'INVALID_URL', message: err.message });
+    }
+
     try {
         const result = addProxy({ server, username, password, label, isRotatingPool, estimatedPoolSize });
         if (!result) return res.status(400).json({ error: 'INVALID_PROXY' });
@@ -226,11 +241,22 @@ router.post('/proxies', csrfProtection, dataRateLimiter, requireAuthForSettings,
     }
 });
 
-router.post('/proxies/import', csrfProtection, dataRateLimiter, requireAuthForSettings, (req, res) => {
+router.post('/proxies/import', csrfProtection, dataRateLimiter, requireAuthForSettings, async (req, res) => {
     const entries = req.body && Array.isArray(req.body.proxies) ? req.body.proxies : [];
     if (entries.length === 0) {
         return res.status(400).json({ error: 'MISSING_PROXIES' });
     }
+
+    // SSRF Validation for each entry
+    for (const entry of entries) {
+        const serverRaw = entry.server || entry.url || entry.proxy;
+        try {
+            await validateProxyServer(serverRaw);
+        } catch (err) {
+            return res.status(400).json({ error: 'INVALID_URL', message: `Invalid proxy server: ${serverRaw}. ${err.message}` });
+        }
+    }
+
     try {
         const result = addProxies(entries);
         if (!result) return res.status(400).json({ error: 'INVALID_PROXY' });
@@ -241,13 +267,21 @@ router.post('/proxies/import', csrfProtection, dataRateLimiter, requireAuthForSe
     }
 });
 
-router.put('/proxies/:id', csrfProtection, dataRateLimiter, requireAuthForSettings, (req, res) => {
+router.put('/proxies/:id', csrfProtection, dataRateLimiter, requireAuthForSettings, async (req, res) => {
     const id = String(req.params.id || '').trim();
     if (!id || id === 'host') return res.status(400).json({ error: 'INVALID_ID' });
     const { server, username, password, label, isRotatingPool, estimatedPoolSize } = req.body || {};
     if (!server || typeof server !== 'string') {
         return res.status(400).json({ error: 'MISSING_SERVER' });
     }
+
+    // SSRF Validation
+    try {
+        await validateProxyServer(server);
+    } catch (err) {
+        return res.status(400).json({ error: 'INVALID_URL', message: err.message });
+    }
+
     try {
         const result = updateProxy(id, { server, username, password, label, isRotatingPool, estimatedPoolSize });
         if (!result) return res.status(404).json({ error: 'PROXY_NOT_FOUND' });
