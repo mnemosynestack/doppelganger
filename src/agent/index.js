@@ -234,16 +234,24 @@ async function runAgent(data, options = {}) {
             return `/captures/${screenshotName}`;
         };
 
-        // ⚡ Bolt: Pre-calculate which actions need {$html} to avoid repeated JSON.stringify in loop
-        const actionNeedsHtml = actions.map(act => JSON.stringify(act).includes('{$html}'));
+        // ⚡ Bolt: Pre-calculate which actions need {$html} or loop.html to avoid repeated JSON.stringify (O(N) instead of O(N^2))
+        const actionNeedsHtml = new Array(actions.length);
+        const actionNeedsLoopHtml = new Array(actions.length);
+        for (let i = 0; i < actions.length; i++) {
+            const s = JSON.stringify(actions[i]);
+            actionNeedsHtml[i] = s.includes('{$html}');
+            actionNeedsLoopHtml[i] = s.includes('loop.html');
+        }
 
         // ⚡ Bolt: Pre-calculate foreach blocks that reference 'loop.html' to optimize innerHTML fetching
         const foreachNeedsHtml = actions.map((act, i) => {
             if (act.type !== 'foreach') return false;
             const endIndex = startToEnd[i];
             if (endIndex === undefined) return true; // Safety fallback
-            const subActions = actions.slice(i + 1, endIndex);
-            return subActions.some(sub => JSON.stringify(sub).includes('loop.html'));
+            for (let j = i + 1; j < endIndex; j++) {
+                if (actionNeedsLoopHtml[j]) return true;
+            }
+            return false;
         });
 
         // ⚡ Bolt: Hoist static action options out of the execution loop to avoid redundant object spreading (O(N))
