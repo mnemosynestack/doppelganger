@@ -5,7 +5,7 @@ const { authRateLimiter } = require('../middleware');
 
 const router = express.Router();
 
-router.get('/check-setup', async (req, res) => {
+router.get('/check-setup', authRateLimiter, async (req, res) => {
     try {
         const users = await loadUsers();
         res.json({ setupRequired: users.length === 0 });
