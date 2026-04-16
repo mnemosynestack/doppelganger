@@ -73,6 +73,11 @@ const ExecutionDetailScreen: React.FC<ExecutionDetailScreenProps> = ({ onConfirm
     }
 
     const results = toResults(execution);
+    const statusClass = execution.status >= 200 && execution.status < 300
+        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+        : execution.status >= 400
+            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+            : 'bg-blue-500/10 text-blue-400 border-blue-500/20';
 
     return (
         <main className="flex-1 p-12 overflow-y-auto custom-scrollbar animate-in fade-in duration-500">
@@ -80,8 +85,18 @@ const ExecutionDetailScreen: React.FC<ExecutionDetailScreenProps> = ({ onConfirm
                 <div className="flex items-end justify-between">
                     <div className="space-y-2">
                         <h2 className="text-3xl font-bold tracking-tighter text-white">{execution.taskName || execution.mode}</h2>
-                        <div className="text-[8px] text-gray-500 uppercase tracking-[0.2em]">
-                            {new Date(execution.timestamp).toLocaleString()} | {execution.source} | {execution.mode} | {execution.status} | {execution.durationMs}ms
+                        <div className="text-[8px] text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <span>{new Date(execution.timestamp).toLocaleString()}</span>
+                            <span className="opacity-20">|</span>
+                            <span>{execution.source}</span>
+                            <span className="opacity-20">|</span>
+                            <span>{execution.mode}</span>
+                            <span className="opacity-20">|</span>
+                            <span className={`px-1.5 py-0.5 rounded border ${statusClass}`}>
+                                {execution.status}
+                            </span>
+                            <span className="opacity-20">|</span>
+                            <span>{execution.durationMs}ms</span>
                         </div>
                     </div>
                     <button

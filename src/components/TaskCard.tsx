@@ -43,7 +43,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEditTask, onDeleteTask }) =
                 </div>
             </div>
             <div>
-                <h3 className="text-lg font-bold text-white truncate">{task.name || 'Untitled'}</h3>
+                <h3 className="text-lg font-bold text-white truncate" title={task.name || 'Untitled'}>{task.name || 'Untitled'}</h3>
                 <div className="flex items-center gap-2 mt-1 min-w-0">
                     <p className="text-[10px] text-gray-600 font-mono truncate flex-1">{task.url || 'Target undefined'}</p>
                     {task.url && (
