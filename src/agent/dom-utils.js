@@ -1,4 +1,8 @@
 function cleanHtml(withShadow) {
+    // ⚡ Bolt: Define keepAttrs once to avoid redundant Set creation during recursion.
+    // Redundant 'data-*' entries removed as they are handled by a prefix check.
+    const keepAttrs = new Set(['id', 'class', 'href', 'src', 'alt', 'title', 'name', 'value', 'type', 'placeholder', 'aria-label', 'selected', 'checked', 'disabled', 'multiple', 'for', 'action', 'method', 'content', 'datetime', 'colspan', 'rowspan', 'scope']);
+
     const stripUseless = (root) => {
         // Remove elements that can never be meaningful for extraction
         const useless = root.querySelectorAll(
@@ -6,20 +10,45 @@ function cleanHtml(withShadow) {
             'iframe, object, embed, applet, param, source, track, ' +
             'head > *:not(title)'
         );
-        useless.forEach(node => node.remove());
+        // ⚡ Bolt: Use for-loop instead of forEach for improved performance.
+        for (let i = 0, len = useless.length; i < len; i++) {
+            useless[i].remove();
+        }
 
         // Strip all attributes except those useful for extraction
-        const keepAttrs = new Set(['id', 'class', 'href', 'src', 'alt', 'title', 'name', 'value', 'type', 'placeholder', 'aria-label', 'data-id', 'data-key', 'data-value', 'data-name', 'data-url', 'data-href', 'data-src', 'data-index', 'data-type', 'data-page', 'data-price', 'data-sku', 'data-product', 'data-category', 'data-item', 'data-label', 'data-text', 'data-title', 'selected', 'checked', 'disabled', 'multiple', 'for', 'action', 'method', 'content', 'datetime', 'colspan', 'rowspan', 'scope']);
         const allEls = root.querySelectorAll('*');
-        allEls.forEach(el => {
-            const toRemove = [];
-            for (const attr of el.attributes) {
-                if (!keepAttrs.has(attr.name) && !attr.name.startsWith('data-')) {
-                    toRemove.push(attr.name);
+        for (let i = 0, len = allEls.length; i < len; i++) {
+            const el = allEls[i];
+
+            // ⚡ Bolt: Fast-path skip for elements without attributes (often 30-50% of DOM).
+            if (!el.hasAttributes || !el.hasAttributes()) continue;
+
+            // ⚡ Bolt: Use getAttributeNames() to avoid creating Attr objects for every attribute.
+            // This is significantly faster in most engines including V8/Chromium.
+            if (el.getAttributeNames) {
+                const names = el.getAttributeNames();
+                for (let j = 0, nameLen = names.length; j < nameLen; j++) {
+                    const name = names[j];
+                    if (!keepAttrs.has(name) && !name.startsWith('data-')) {
+                        el.removeAttribute(name);
+                    }
+                }
+            } else {
+                // Fallback for environments where getAttributeNames is missing
+                const attrs = el.attributes;
+                if (!attrs) continue;
+                const toRemove = [];
+                for (let j = 0, attrLen = attrs.length; j < attrLen; j++) {
+                    const attr = attrs[j];
+                    if (attr && !keepAttrs.has(attr.name) && !attr.name.startsWith('data-')) {
+                        toRemove.push(attr.name);
+                    }
+                }
+                for (let j = 0, removeLen = toRemove.length; j < removeLen; j++) {
+                    el.removeAttribute(toRemove[j]);
                 }
             }
-            toRemove.forEach(a => el.removeAttribute(a));
-        });
+        }
     };
 
     const cloneWithShadow = (root) => {
