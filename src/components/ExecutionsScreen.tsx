@@ -17,6 +17,12 @@ interface ExecutionListItemData {
 const renderExecutionRow = ({ index, style, data }: ListChildComponentProps<ExecutionListItemData>) => {
     const exec = data.items[index];
     if (!exec) return null;
+    const statusClass = exec.status >= 200 && exec.status < 300
+        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+        : exec.status >= 400
+            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+            : 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+
     return (
         <div
             style={style}
@@ -38,8 +44,18 @@ const renderExecutionRow = ({ index, style, data }: ListChildComponentProps<Exec
                 <div className="text-[10px] font-bold text-white uppercase tracking-widest truncate">
                     {exec.taskName || exec.mode}
                 </div>
-                <div className="text-[8px] text-gray-500 uppercase tracking-[0.2em]">
-                    {new Date(exec.timestamp).toLocaleString()} | {exec.source} | {exec.mode} | {exec.status} | {exec.durationMs}ms
+                <div className="text-[8px] text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <span>{new Date(exec.timestamp).toLocaleString()}</span>
+                    <span className="opacity-20">|</span>
+                    <span>{exec.source}</span>
+                    <span className="opacity-20">|</span>
+                    <span>{exec.mode}</span>
+                    <span className="opacity-20">|</span>
+                    <span className={`px-1.5 py-0.5 rounded border ${statusClass}`}>
+                        {exec.status}
+                    </span>
+                    <span className="opacity-20">|</span>
+                    <span>{exec.durationMs}ms</span>
                 </div>
                 {exec.url && (
                     <div className="text-[9px] text-white/50 truncate font-mono">
