@@ -1,5 +1,5 @@
 const express = require('express');
-const { requireAuth, requireApiKey, requireAuthOrApiKey } = require('../middleware');
+const { requireAuth, requireApiKey, requireAuthOrApiKey, dataRateLimiter } = require('../middleware');
 const {
     loadTasks, saveTasks, getTaskById, getTaskIndexById,
     loadGeminiApiKey, loadOpenAiApiKey, loadClaudeApiKey, loadOllamaApiKey,
@@ -22,14 +22,14 @@ function parseOllamaEntry(raw) {
     }
 }
 
-router.get('/', requireAuthOrApiKey, async (req, res) => {
+router.get('/', requireAuthOrApiKey, dataRateLimiter, async (req, res) => {
     const tasks = await loadTasks();
     // ⚡ Bolt: Strip large versions history from the list view to reduce payload size by ~95%
     const summary = tasks.map(({ versions, ...rest }) => rest);
     res.json(summary);
 });
 
-router.get('/list', requireApiKey, async (req, res) => {
+router.get('/list', requireApiKey, dataRateLimiter, async (req, res) => {
     const tasks = await loadTasks();
     const summary = tasks.map((task) => ({
         id: task.id,
@@ -157,7 +157,7 @@ router.post('/:id/rollback', requireAuth, async (req, res) => {
     }
 });
 
-router.post('/generate-selector', requireAuth, async (req, res) => {
+router.post('/generate-selector', requireAuth, dataRateLimiter, async (req, res) => {
     const { task, actionIndex, prompt } = req.body;
 
     if (!task || !task.actions || typeof actionIndex !== 'number' || !prompt) {
@@ -333,7 +333,7 @@ router.post('/generate-selector', requireAuth, async (req, res) => {
     }
 });
 
-router.post('/generate-script', requireAuth, async (req, res) => {
+router.post('/generate-script', requireAuth, dataRateLimiter, async (req, res) => {
     const { description } = req.body;
 
     if (!description || typeof description !== 'string' || !description.trim()) {
