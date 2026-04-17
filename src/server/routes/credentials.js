@@ -140,6 +140,10 @@ router.get('/:id/proxy/baserow/databases', requireAuthOrApiKey, async (req, res)
 // GET /api/credentials/:id/proxy/baserow/databases/:dbId/tables
 // Lists all tables within a Baserow database.
 router.get('/:id/proxy/baserow/databases/:dbId/tables', requireAuthOrApiKey, async (req, res) => {
+    // Security: Validate dbId to prevent path traversal via URL manipulation.
+    if (!/^\d+$/.test(req.params.dbId)) {
+        return res.status(400).json({ error: 'INVALID_DATABASE_ID' });
+    }
     try {
         const credentials = await loadCredentials();
         const credential = credentials.find(c => c.id === req.params.id);
