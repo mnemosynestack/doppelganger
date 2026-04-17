@@ -79,10 +79,13 @@ router.get('/screenshots', requireAuth, dataRateLimiter, async (_req, res) => {
 
 router.delete('/captures/:name', requireAuth, dataRateLimiter, (req, res) => {
     const name = req.params.name;
-    if (name.includes('..') || name.includes('/') || name.includes('\\')) {
+    // Security: Use path.basename to prevent path traversal via URL manipulation.
+    // This ensures the filename is strictly a single component and doesn't contain relative paths.
+    const safeName = path.basename(name);
+    if (safeName !== name || name.includes('..') || name.includes('/') || name.includes('\\')) {
         return res.status(400).json({ error: 'INVALID_NAME' });
     }
-    const targetPath = path.join(CAPTURES_DIR, name);
+    const targetPath = path.join(CAPTURES_DIR, safeName);
     if (fs.existsSync(targetPath)) {
         fs.unlinkSync(targetPath);
     }

@@ -81,8 +81,21 @@ function createSafeProxy(target) {
             }
         },
         getPrototypeOf(t) {
-            const realTarget = t[REAL_TARGET] || t;
-            return createSafeProxy(Reflect.getPrototypeOf(realTarget));
+            // Security: Returning a null prototype prevents sandbox escape via Object.getPrototypeOf()
+            // while still allowing the script to function for most data access patterns.
+            return null;
+        },
+        set(t, prop, value) {
+            // Security: Sandboxed scripts should not be able to modify the host data objects.
+            return false;
+        },
+        defineProperty(t, prop, descriptor) {
+            // Security: Prevent defining new properties on proxied objects.
+            return false;
+        },
+        deleteProperty(t, prop) {
+            // Security: Prevent deleting properties from proxied objects.
+            return false;
         }
     });
 
