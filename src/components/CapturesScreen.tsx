@@ -99,6 +99,8 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
                             disabled={loading}
                             aria-busy={loading}
                             className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 inline-flex items-center gap-2"
+                            title="Refresh captures"
+                            aria-label="Refresh captures"
                         >
                             <MaterialIcon name="sync" className={`text-base ${loading ? 'animate-spin' : ''}`} />
                             Refresh
@@ -113,8 +115,11 @@ const CapturesScreen: React.FC<CapturesScreenProps> = ({ onConfirm, onNotify }) 
                         </button>
                         <button
                             onClick={() => navigate('/executions')}
-                            className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
+                            className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all inline-flex items-center gap-2"
+                            title="Go to Executions (Alt + 3)"
+                            aria-label="Go to Executions (Alt + 3)"
                         >
+                            <MaterialIcon name="history" className="text-[16px]" />
                             Executions
                         </button>
                     </div>
