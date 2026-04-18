@@ -1,3 +1,6 @@
+// ⚡ Bolt: Keep useful attributes for extraction (hoisted to avoid re-allocation in every cleanHtml call)
+const keepAttrs = new Set(['id', 'class', 'href', 'src', 'alt', 'title', 'name', 'value', 'type', 'placeholder', 'aria-label', 'data-id', 'data-key', 'data-value', 'data-name', 'data-url', 'data-href', 'data-src', 'data-index', 'data-type', 'data-page', 'data-price', 'data-sku', 'data-product', 'data-category', 'data-item', 'data-label', 'data-text', 'data-title', 'selected', 'checked', 'disabled', 'multiple', 'for', 'action', 'method', 'content', 'datetime', 'colspan', 'rowspan', 'scope']);
+
 function cleanHtml(withShadow) {
     const stripUseless = (root) => {
         // Remove elements that can never be meaningful for extraction
@@ -6,20 +9,28 @@ function cleanHtml(withShadow) {
             'iframe, object, embed, applet, param, source, track, ' +
             'head > *:not(title)'
         );
-        useless.forEach(node => node.remove());
+        // ⚡ Bolt: Traditional for-loop for slightly better performance in browser contexts
+        for (let i = 0; i < useless.length; i++) {
+            useless[i].remove();
+        }
 
         // Strip all attributes except those useful for extraction
-        const keepAttrs = new Set(['id', 'class', 'href', 'src', 'alt', 'title', 'name', 'value', 'type', 'placeholder', 'aria-label', 'data-id', 'data-key', 'data-value', 'data-name', 'data-url', 'data-href', 'data-src', 'data-index', 'data-type', 'data-page', 'data-price', 'data-sku', 'data-product', 'data-category', 'data-item', 'data-label', 'data-text', 'data-title', 'selected', 'checked', 'disabled', 'multiple', 'for', 'action', 'method', 'content', 'datetime', 'colspan', 'rowspan', 'scope']);
         const allEls = root.querySelectorAll('*');
-        allEls.forEach(el => {
+        for (let i = 0; i < allEls.length; i++) {
+            const el = allEls[i];
+            // ⚡ Bolt: Short-circuit for elements with no attributes
+            if (!el.hasAttributes()) continue;
+
             const toRemove = [];
             for (const attr of el.attributes) {
                 if (!keepAttrs.has(attr.name) && !attr.name.startsWith('data-')) {
                     toRemove.push(attr.name);
                 }
             }
-            toRemove.forEach(a => el.removeAttribute(a));
-        });
+            for (let j = 0; j < toRemove.length; j++) {
+                el.removeAttribute(toRemove[j]);
+            }
+        }
     };
 
     const cloneWithShadow = (root) => {
