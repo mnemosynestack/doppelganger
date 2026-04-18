@@ -112,11 +112,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ tasks, onNewTask, onE
                             </button>
                             <button
                                 onClick={onNewTask}
-                                className="shine-effect bg-white text-black px-9 py-3 rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase transition-all hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                                aria-label="Create new task"
-                                title="Create new task"
+                                className="shine-effect bg-white text-black px-9 py-3 rounded-2xl font-bold text-[10px] tracking-[0.2em] uppercase transition-all hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 inline-flex items-center gap-2"
+                                aria-label="Create new task (Alt + N)"
+                                title="Create new task (Alt + N)"
                             >
-                                + New Task
+                                <MaterialIcon name="add" className="text-[16px]" />
+                                New Task
                             </button>
                             <input
                                 ref={fileInputRef}
